@@ -1,0 +1,15 @@
+version: "4.2"
+
+services:
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: hapcosa@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: rayadito
+      PGADMIN_MAX_LOGIN_ATTEMPTS: 10
+      PGADMIN_LISTEN_PORT: 800
+    ports:
+      - "800:800"
+    restart: always
+ 

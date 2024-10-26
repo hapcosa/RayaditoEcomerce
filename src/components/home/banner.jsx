@@ -1,0 +1,109 @@
+import logo1 from '../../../public/media/IMG_0134.jpg'
+import logo2 from '../../../public/media/IMG_0134.jpg'
+import logo3 from '../../../public/media/IMG_0134.jpg'
+import logo4 from '../../../public/media/IMG_0134.jpg'
+import logo5 from '../../../public/media/IMG_0134.jpg'
+import logo6 from '../../../public/media/IMG_0134.jpg'
+import logo from '../../../public/media/IMG_0134.jpg'
+import { Typewriter } from 'react-simple-typewriter'
+import { Link } from 'react-router-dom'
+import CarruselHome from './carrusel'
+
+const BannerPromo=() =>{
+    return (
+      <>
+      <div className="mx-auto item-center bg-white ">
+        <div className="pt-16 pb-80 sm:pt-24 sm:pb-40 lg:pt-40 lg:pb-48">
+          <div className="item-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ">
+            <div className="sm:max-w-lg py-2">
+              <h4 className=" text-4xl font font-extrabold tracking-tight text-gray-700 sm:text-6xl">
+              JOYAS Y PIEDRAS
+              </h4>
+              <h4 className=" text-4xl font font-extrabold tracking-tight text-gray-500 sm:text-5xl">
+              <Typewriter words={
+                  ['de autor', 'trabajadas a mano', 'para siempre', ]
+                      }
+                      loop={0}
+                      cursor
+                      cursorStyle='_'
+                      typeSpeed={100}
+                      deleteSpeed={50}
+                      delaySpeed={1400}/>
+              </h4>
+              <p className="mt-6 text-xl text-gray-500">
+                Joyas de autor, con piedras recolectadas en los hermosos y reconditos paisajes de la isla de Chiloe
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+  
+      </>
+      
+    )
+  }
+  export default BannerPromo
+/*                <div
+                  aria-hidden="true"
+                  className="pointer-events-none lg:absolute lg:inset-y-0 lg:max-w-7xl lg:mx-auto lg:w-full"
+                >
+                  <div className="absolute transform sm:left-1/2 py-10 sm:top-0 sm:translate-x-8 lg:left-1/2 lg:top-1/2 lg:-translate-y-1/2 lg:translate-x-8">
+                    <div className="flex items-center space-x-6 lg:space-x-8">
+                      <div className="flex-shrink-0 grid grid-cols-1 gap-y-6 lg:gap-y-8">
+                        <div className="w-36 h-44 rounded-lg overflow-hidden sm:opacity-0 lg:opacity-100">
+                          <img
+                            src={logo}
+                            alt=""
+                            className="w-full h-full object-center object-cover"
+                          />
+                        </div>
+                        <div className="w-36 h-44 rounded-lg overflow-hidden">
+                          <img
+                            src={logo2}
+                            alt=""
+                            className="w-full h-full object-center object-cover"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0 grid grid-cols-1 gap-y-6 lg:gap-y-8">
+                        <div className="w-36 h-44 rounded-lg overflow-hidden">
+                          <img
+                            src={logo1}
+                            alt=""
+                            className="w-full h-full object-center object-cover"
+                          />
+                        </div>
+                        <div className="w-36 h-44 rounded-lg overflow-hidden">
+                          <img
+                            src={logo3}
+                            alt=""
+                            className="w-full h-full object-center object-cover"
+                          />
+                        </div>
+                        <div className="w-36 h-44 rounded-lg overflow-hidden">
+                          <img
+                            src={logo4}
+                            alt=""
+                            className="w-full h-full object-center object-cover"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0 grid grid-cols-1 gap-y-6 lg:gap-y-8">
+                        <div className="w-36 h-44 rounded-lg overflow-hidden">
+                          <img
+                            src={logo5}
+                            alt=""
+                            className="w-full h-full object-center object-cover"
+                          />
+                        </div>
+                        <div className="w-36 h-44 rounded-lg overflow-hidden">
+                          <img
+                            src={logo6}
+                            alt=""
+                            className="w-full h-full object-center object-cover"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>*/

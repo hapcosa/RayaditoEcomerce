@@ -1,0 +1,12 @@
+django
+django_environ
+django-cors-headers
+djangorestframework
+pillow
+django-storages
+django-ckeditor
+psycopg2
+mercadopago
+djoser
+django-social-auth
+django-ckeditor-5
