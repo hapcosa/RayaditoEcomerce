@@ -18,8 +18,7 @@ const Layout=(props) => {
         const values = queryString.parse(location.search)
         const state = values.state ? values.state : null
         const code = values.code ? values.code : null
-        console.log('State: '+ state)
-        console.log('Code: '+code)
+
         if (state && code){
             props.googleAuthenticate(state, code)
         }

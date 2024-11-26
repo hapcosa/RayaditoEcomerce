@@ -2,7 +2,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Provider } from "react-redux";
 import { PersistGate } from 'redux-persist/integration/react'
-import {store, persistor} from "./store";
+import {store, persistor} from "./store3";
 import Error404 from "./containers/errors/error404";
 import Home from "./containers/home";
 import Piedras from './containers/piedras';
@@ -25,7 +25,9 @@ import DashboardProfile from "./containers/pages/DashboardProfile";
 import OrderDetail from "./containers/pages/OrderDetail";
 import Success from "./containers/pages/successpayment";
 import JoyasTestDetail from "./containers/pages/joyasdetail2";
+import JoyasDetailDos from "./containers/pages/joyasdetail1";
 import Perfile from "./containers/pages/Perfil";
+import PaymentBrick from "./containers/pages/brickspayment";
 function App() {
 
   return (
@@ -39,10 +41,11 @@ function App() {
             <Route exact path="/cart" element={<Cart />}/>
             <Route exact path="/checkout" element={<Checkout />}/>
             <Route exact path="/success" element={<Success />}/>
+            <Route exact path="/bricks" element={<PaymentBrick/>}/>
             {/*joyas*/ }
 
             <Route exact path="/joyas" element={<Joyas />}/>
-            <Route exact path="/joyas/:productId" element={<JoyasTestDetail/>}/>
+            <Route exact path="/joyas/:productId" element={<JoyasDetailDos/>} render={(props) => <YourComp {...props} keyProp={someValue} key={randomGen()}/>}/>
              {/*piedras*/ }
             <Route exact path="/piedras" element={<Piedras />}/>
             <Route exact path="/piedras/:productId" element={<PiedrasDetail/>}/>

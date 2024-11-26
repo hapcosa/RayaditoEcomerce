@@ -12,14 +12,14 @@ import CarruselHome from './carrusel'
 const BannerPromo=() =>{
     return (
       <>
-      <div className="mx-auto item-center bg-white ">
-        <div className="pt-16 pb-80 sm:pt-24 sm:pb-40 lg:pt-40 lg:pb-48">
-          <div className="item-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ">
-            <div className="sm:max-w-lg py-2">
-              <h4 className=" text-4xl font font-extrabold tracking-tight text-gray-700 sm:text-6xl">
+        <div className='flex items-center sm:mx-32 lg:mx-72'>
+        <div className="pt-8 item-center pb-10 sm:pt-20 sm:pb-8 lg:pt-10 lg:pb-4">
+        <div className="max-w-7xl  px-4 sm:px-6 lg:px-8 ">
+            <div className=" py-2">
+              <h3 className=" font font-extrabold tracking-tight text-gray-700 sm:text-6xl">
               JOYAS Y PIEDRAS
-              </h4>
-              <h4 className=" text-4xl font font-extrabold tracking-tight text-gray-500 sm:text-5xl">
+              </h3>
+              <h4 className=" mx-2 text-4xl font font-extrabold tracking-tight text-gray-500 sm:text-5xl">
               <Typewriter words={
                   ['de autor', 'trabajadas a mano', 'para siempre', ]
                       }
@@ -36,7 +36,9 @@ const BannerPromo=() =>{
             </div>
           </div>
         </div>
-      </div>
+
+        </div>
+        
   
       </>
       

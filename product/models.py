@@ -2,6 +2,7 @@ from django.db import models
 from datetime import datetime
 from category.models import Category
 from metaproduct.models import *
+from django.contrib.auth import get_user_model
 
 class Product(models.Model):
     name = models.CharField(max_length=255)
@@ -47,3 +48,9 @@ class GalleryProduct(models.Model):
 class JoyaMateriales(models.Model):
     joya = models.ForeignKey(Joyas , on_delete=models.CASCADE)
     material = models.ForeignKey(Material, on_delete=models.CASCADE)
+    
+class reviews(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    valor = models.IntegerField()
+
+    

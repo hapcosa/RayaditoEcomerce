@@ -329,7 +329,7 @@ export const reset_password = (email) => async dispatch => {
             dispatch({
                 type: REMOVE_AUTH_LOADING
             });
-            dispatch(setAlert('Error enviando corrreo de reseto de contraseña', 'red'));
+            dispatch(setAlert('Error enviando correo de reseto de contraseña', 'red'));
         }
     }
     catch(err){
@@ -339,7 +339,7 @@ export const reset_password = (email) => async dispatch => {
         dispatch({
             type: REMOVE_AUTH_LOADING
         });
-        dispatch(setAlert('Error enviando corrreo de reseto de contraseña', 'red'));
+        dispatch(setAlert('Error enviando correo de reseto de contraseña', 'red'));
     }
 }
 

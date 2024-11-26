@@ -8,7 +8,6 @@ class Shipping(models.Model):
     name = models.CharField(max_length=255, unique=True)
     time_to_delivery = models.CharField(max_length=255)
     description = models.TextField(max_length=1000)
-    price = models.DecimalField(max_digits=12, decimal_places=2)
     photo = models.ImageField(upload_to='logos/%y/%m')
     def __str__(self):
         return self.name

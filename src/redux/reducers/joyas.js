@@ -12,7 +12,9 @@ import {
     RELATED_JOYAS_FAIL,
     RELATED_JOYAS_SUCCESS,
     FILTER_JOYAS_FAIL,
-    FILTER_JOYAS_SUCCESS
+    FILTER_JOYAS_SUCCESS,
+    GET_MATERIAL_SUCCESS,
+    GET_MATERIAL_FAIL
 } from '../action/types';
 
 const initialState = {
@@ -23,6 +25,7 @@ const initialState = {
     related_joyas: null,
     filtered_joyas: null,
     joya_galery: null,
+    material:null
 }
 
 export default function Joyas(state = initialState, action) {
@@ -98,6 +101,16 @@ export default function Joyas(state = initialState, action) {
             return {
                 ... state,
                 search_joyas: null
+            }
+        case GET_MATERIAL_SUCCESS:
+            return {
+               ...state,
+                material: payload.material
+            }
+        case GET_MATERIAL_FAIL:
+            return{
+                ...state,
+                material: null
             }
         default:
             return state

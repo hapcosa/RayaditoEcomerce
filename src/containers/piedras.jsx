@@ -86,13 +86,13 @@ const Piedras=({
                       categories_piedras={categories_piedras}/>
                 </div>
             );
-        });
+        }); 
       }
 
       for (let i = 0; i < display.length; i += 3) {
         results.push(
           <div key={i} className='grid md:grid-cols-3 '>
-              {display[i] ? display[i] : <div className=''>hola</div>}
+              {display[i] ? display[i] : <div className=''></div>}
               {display[i+1] ? display[i+1] : <div className=''></div>}
               {display[i+2] ? display[i+2] : <div className=''></div>}
           </div>

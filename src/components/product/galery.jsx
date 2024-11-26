@@ -1,11 +1,16 @@
 import { Tab } from '@headlessui/react'
+import imagealt from "/home/obrero/RayaditoWeb/public/LogoPrincipal.png"
+
+
+// Import any actions and qualifiers required for transformations.
 
 function classNames(...classes) {
 return classes.filter(Boolean).join(' ')
 }
 
-const Galery=({galery})=>{
 
+const Galery=({galery})=>{
+  
     return(
         <>
         {/* Image gallery */}
@@ -16,12 +21,12 @@ const Galery=({galery})=>{
                 {galery && galery.map((image) => (
                   <Tab
                     key={image.id}
-                    className="relative h-24 bg-white rounded-md flex items-center justify-center text-sm font-medium uppercase text-gray-900 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring focus:ring-offset-4 focus:ring-opacity-50"
+                    className="relative h-24 w-full bg-white rounded-md flex items-center justify-center text-sm font-medium uppercase text-gray-900 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring focus:ring-offset-4 focus:ring-opacity-50"
                   >
                     {({ selected }) => (
                       <>
                         <span className="absolute inset-0 rounded-md overflow-hidden">
-                          <img src={image.photos} alt="" className="w-full h-full object-center object-cover" />
+                          <img src={image.photos} alt={imagealt} className="w-full h-full object-center object-cover" />
                         </span>
                         <span
                           className={classNames(
@@ -37,14 +42,14 @@ const Galery=({galery})=>{
               </Tab.List>
             </div>
 
-            <Tab.Panels className="w-full aspect-w-1 aspect-h-1">
+            <Tab.Panels className="bg-cover w-full aspect-w-1 aspect-h-1">
               {galery && galery.map(image =>{ 
                 if(image.id === null){
                   return(
                   <Tab.Panel key={image.id}>
                     <img
-                      src={data}
-                      alt=""
+                      src={image.photos} 
+                      alt={imagealt}
                       className="w-full h-full object-center object-cover sm:rounded-lg"
                     />
                   </Tab.Panel>
@@ -53,11 +58,8 @@ const Galery=({galery})=>{
                 else {
                   return(
                   <Tab.Panel key={image.id}>
-                    <img
-                      src={image.photos}
-                      alt=""
-                      className="w-full h-full object-center object-cover sm:rounded-lg"
-                    />
+                    <img src={image.photos} alt=""
+                    className='w-full h-96 object-center bg-center object-cover sm:rounded-lg'/>
                   </Tab.Panel>
                 )
                 }

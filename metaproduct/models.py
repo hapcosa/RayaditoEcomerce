@@ -10,6 +10,7 @@ class Material(models.Model):
     cost = models.DecimalField(max_digits=7, decimal_places=2)
     def __str__(self):
         return self.name
+    
 class NombrePiedra(models.Model):
     class Meta:
         verbose_name = 'PiedraTipo'

@@ -302,10 +302,10 @@ class JoyasDetailView(APIView):
                 {'error': 'el producto no existe'},
                 status=status.HTTP_404_NOT_FOUND)
 class ListRelatedView(APIView):
-    permission_classes = (permissions.AllowAny)
-    def get(self, request, productId, format=None):
+    permission_classes = (permissions.AllowAny,)
+    def get(self, request, product_id, format=None):
         try:
-            product_id = int(productId)
+            product_id = int(product_id)
         except:
             return Response(
                 {'error': 'La Id debe ser un entero'},
@@ -316,33 +316,22 @@ class ListRelatedView(APIView):
                 status=status.HTTP_404_NOT_FOUND)
         category = Joyas.objects.get(id=product_id).category
         if Joyas.objects.filter(category=category).exists():
-            if category.parent:
-                related_products = Joyas.objects.order_by('date_created').filter(category=category,sold=False)
-            else:
-                if not Category.objects.filter(parent=category).exists():
-                    related_products = related_products.order_by('date_created').filter(category=category, sold=False)
-                else:
-                    categories = Category.objects.filter(parent=category)
-                    filtered_categories = [category]
-                    for cat in categories:
-                        filtered_categories.append(cat)
-                    filtered_categories = tuple(filtered_categories)
-                    related_products = related_products.order_by('date_created').filter(category__in=filtered_categories)
+            related_products = Joyas.objects.order_by('date_created').filter(category=category,sold=False)
             related_products = related_products.exclude(id=product_id)
             related_products = JoyasSerializer(related_products, many=True)
             
-            if len(related_products) > 3:
+            if len(related_products.data) > 3:
                 return Response(
                     {'related_products': related_products.data[:3]},
-                     status.status.HTTP_200_OK)
-            elif len(related_products) > 0:
+                     status=status.HTTP_200_OK)
+            elif len(related_products.data) > 0:
                 return Response(
                     {'related_products': related_products.data},
-                     status.status.HTTP_200_OK)
+                     status=status.HTTP_200_OK)
             else:
                 return Response(
                     {'error': 'no hay productos relacionados'},
-                     status.status.HTTP_200_OK)
+                     status=status.HTTP_200_OK)
 class ListBySearchView(APIView):
     permission_classes=(permissions.AllowAny,)
     def post(self, request, format=None):
@@ -594,3 +583,24 @@ class ListALlBySearchView(APIView):
               return Response(
                 {'error': 'los productos no existen'},
                 status=status.HTTP_404_NOT_FOUND)                
+              
+class SaveJoyaView(APIView):
+    permission_classes = (permissions.AllowAny,)
+    def post(self, request, format=None):
+        data = self.request.data
+        if(data['joya'] is not None):
+            joya=joyas.objects.create()
+            joya.name=data['joya'].name
+            joya.type=data['joya'].type
+            joya.price=data['joya'].value
+            joya.description=data['joya'].description
+            joya.photo=data['joya'].photo
+            for photo in data['photos']:
+                galery.joya=joya.id
+                galery=GalleryProduct.objects.create()
+                galery.photo=photo
+        else:
+            return Response(
+                {'error': 'debe ingresar datos'},
+                status=status.HTTP_404_NOT_FOUND)
+        

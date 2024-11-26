@@ -20,7 +20,7 @@ import { RingLoader } from "react-spinners"
 import {countries} from '../../helpers/fixedCountries'
 import ShippingForm from '../../components/checkout/ShippingForm'
 import { Radio } from "@material-tailwind/react";
-
+import PaymentBrick from './brickspayment'
 
 const Checkout = ({
     isAuthenticated, 
@@ -280,11 +280,13 @@ const Checkout = ({
 
             <ul className="border-t border-b border-gray-200 divide-y divide-gray-200">
               {showItems()}
+              <PaymentBrick data={total}></PaymentBrick>
             </ul>
 
           </section>
 
          {AuthForm()}
+        
 
          
           

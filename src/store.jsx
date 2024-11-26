@@ -5,10 +5,11 @@ import rootReducers from './redux/reducers';
 import storage from 'redux-persist/lib/storage';
 import { composeWithDevTools } from 'redux-devtools-extension';
 
+
 const persistConfig = {
     key: 'root',
     storage,
-    blacklist: ['rootReducers.Payment', 'Alert']
+    blacklist: ['Alert','Payment'],
 
   }
 

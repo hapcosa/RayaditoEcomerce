@@ -34,7 +34,10 @@ class Order(models.Model):
     deliveryNumber = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
-        return str(self.transaction_id)
+        if (self.transaction_id is None):
+            return str(self.id)
+        else:
+            return str(self.transaction_id)
 
 
 class OrderItem(models.Model):

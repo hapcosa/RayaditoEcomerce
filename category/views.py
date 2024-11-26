@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import permissions
-
+from .serializers import *
 from .models import Category
 
 
@@ -63,3 +63,16 @@ class ListCategoriesPiedrasView(APIView):
             return Response ({'categories': result},status=status.HTTP_200_OK)
         else:
             return Response ({'error': 'no se encuentran categorias'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class GetCategoryView(APIView):
+    permission_classes = (permissions.AllowAny, )
+    def get(self, request, categoryId,format=None):
+        try:
+            category_id = int(categoryId)
+        except:
+            return Response({'error': 'Error de tipo de dato, no se pudo acceder a la categoria'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        if Category.objects.filter(id=category_id).exists():
+            category = Category.objects.get(id=category_id)
+            category = CategorySerializer(category)
+            return Response({'category': category.data}, status=status.HTTP_200_OK)

@@ -1,9 +1,16 @@
 import React, { useState } from "react";
 import { CarouselProvider, Slider, Slide, ButtonBack, ButtonNext } from "pure-react-carousel";
 import "pure-react-carousel/dist/react-carousel.es.css";
-
+import agatas from "/agatas.jpg"
+import colganteone from "/home/obrero/RayaditoWeb/public/photos/23/08/IMG_0223.jpg"
+import colgantetwo from "/home/obrero/RayaditoWeb/public/photos/23/09/IMG_0435.jpg"
+import pumillahue from "/home/obrero/RayaditoWeb/public/images.jpeg"
 /* Install pure-react-carousel using -> npm i pure-react-carousel */
 
+const foto1=agatas
+const foto2 =colganteone
+const foto3 = colgantetwo
+const foto4=pumillahue
  const CarruselHome=({props})=> {
     return (
         <div className="2xl:mx-auto 2xl:container flex justify-center">
@@ -20,15 +27,15 @@ import "pure-react-carousel/dist/react-carousel.es.css";
                             <Slide index={0}>
                                 <div className="gallery-cell lg:mr-7 mr-6 lg:w-1/2 sm:w-96 w-full h-full">
                                     <div className="relative w-full h-full lg:block hidden">
-                                        <img src="https://i.ibb.co/VSsN4Jt/carousel-2.png" alt="sitting area" className="object-center object-cover w-full h-full" />
+                                        <img src={foto1} alt="sitting area" className="object-center object-cover w-full h-full" />
                                         <div className="pl-6 pb-6 lg:pl-8 lg:pb-8 absolute left-0 bottom-0">
-                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Lounge Interior</h1>
+                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Agatas roladas</h1>
                                         </div>
                                     </div>
                                     <div className="relative w-full h-full lg:hidden">
-                                        <img src="https://i.ibb.co/tMB5CZW/behzad-ghaffarian-nh-Wg-ZNV85-LQ-unsplash-1-3-1.png" alt="sitting area" className="object-center object-cover w-full h-full" />
+                                        <img src={foto1} alt="sitting area" className="object-center object-cover w-full h-full" />
                                         <div className="pl-6 pb-6 lg:pl-8 lg:pb-8 absolute left-0 bottom-0">
-                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Lounge Interior</h1>
+                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Agatas roladas</h1>
                                         </div>
                                     </div>
                                 </div>
@@ -36,15 +43,15 @@ import "pure-react-carousel/dist/react-carousel.es.css";
                             <Slide index={1}>
                                 <div className="gallery-cell lg:mr-7 mr-6 lg:w-1/2 sm:w-96 w-full h-full">
                                     <div className="relative w-full h-full lg:block hidden">
-                                        <img src="https://i.ibb.co/phw8yGZ/sven-brandsma-Qz6-Zx4-Rjd-D8-unsplash-1.png" alt="chairs" className="object-center object-cover w-full h-full" />
+                                        <img src={foto2} alt="chairs" className="object-center object-cover w-full h-full" />
                                         <div className="pl-6 pb-6 lg:pl-8 lg:pb-8 absolute left-0 bottom-0">
-                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Lounge Interior</h1>
+                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Colgante agata sardo</h1>
                                         </div>
                                     </div>
                                     <div className="relative w-full h-full lg:hidden">
-                                        <img src="https://i.ibb.co/g74VYR2/Group-46.png" alt="chairs" className="object-center object-cover w-full h-full" />
+                                        <img src={foto2} alt="chairs" className="object-center object-cover w-full h-full" />
                                         <div className="pl-6 pb-6 lg:pl-8 lg:pb-8 absolute left-0 bottom-0">
-                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Lounge Interior</h1>
+                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Colgante agata sardo</h1>
                                         </div>
                                     </div>
                                 </div>
@@ -52,15 +59,31 @@ import "pure-react-carousel/dist/react-carousel.es.css";
                             <Slide index={2}>
                                 <div className="gallery-cell lg:mr-7 mr-6 lg:w-1/2 sm:w-96 w-full h-full">
                                     <div className="relative w-full h-full lg:block hidden">
-                                        <img src="https://i.ibb.co/92ZYJyK/behzad-ghaffarian-nh-Wg-ZNV85-LQ-unsplash-1-1.png" alt="chair" className="object-center object-cover w-full h-full" />
+                                        <img src={foto3} alt="chair" className="object-center object-cover w-full h-full" />
                                         <div className="pl-6 pb-6 lg:pl-8 lg:pb-8 absolute left-0 bottom-0">
-                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Lounge Interior</h1>
+                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Aros agata lazo</h1>
                                         </div>
                                     </div>
                                     <div className="relative w-full h-full lg:hidden">
-                                        <img src="https://i.ibb.co/372ryYP/sven-brandsma-Qz6-Zx4-Rjd-D8-unsplash-3-1.png" alt="chair" className="object-center object-cover w-full h-full" />
+                                        <img src={foto3} alt="chair" className="object-center object-cover w-full h-full" />
                                         <div className="pl-6 pb-6 lg:pl-8 lg:pb-8 absolute left-0 bottom-0">
-                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Lounge Interior</h1>
+                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Aros agata lazo</h1>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Slide>
+                            <Slide index={2}>
+                                <div className="gallery-cell lg:mr-7 mr-6 lg:w-1/2 sm:w-96 w-full h-full">
+                                    <div className="relative w-full h-full lg:block hidden">
+                                        <img src={foto4} alt="chair" className="object-center object-cover w-full h-full" />
+                                        <div className="pl-6 pb-6 lg:pl-8 lg:pb-8 absolute left-0 bottom-0">
+                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Bahía de Pumillahue</h1>
+                                        </div>
+                                    </div>
+                                    <div className="relative w-full h-full lg:hidden">
+                                        <img src={foto4} alt="chair" className="object-center object-cover w-full h-full" />
+                                        <div className="pl-6 pb-6 lg:pl-8 lg:pb-8 absolute left-0 bottom-0">
+                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Bahía de pumillahue</h1>
                                         </div>
                                     </div>
                                 </div>
@@ -86,15 +109,15 @@ import "pure-react-carousel/dist/react-carousel.es.css";
                             <Slide className="carousel__inner-slideLarge" index={0}>
                                 <div className="gallery-cell w-full h-full">
                                     <div className="relative w-full h-full lg:block hidden">
-                                        <img src="https://i.ibb.co/VSsN4Jt/carousel-2.png" alt="sitting area" className="object-center object-cover w-full h-full" />
+                                        <img src={foto1} alt="sitting area" className="object-center object-cover w-full h-full" />
                                         <div className="pl-6 pb-6 lg:pl-8 lg:pb-8 absolute left-0 bottom-0">
-                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Lounge Interior</h1>
+                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Agatas roladas</h1>
                                         </div>
                                     </div>
                                     <div className="relative w-full h-full lg:hidden">
-                                        <img src="https://i.ibb.co/tMB5CZW/behzad-ghaffarian-nh-Wg-ZNV85-LQ-unsplash-1-3-1.png" alt="sitting area" className="object-center object-cover w-full h-full" />
+                                        <img src={foto1} alt="sitting area" className="object-center object-cover w-full h-full" />
                                         <div className="pl-6 pb-6 lg:pl-8 lg:pb-8 absolute left-0 bottom-0">
-                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Lounge Interior</h1>
+                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Agatas roladas</h1>
                                         </div>
                                     </div>
                                 </div>
@@ -102,15 +125,15 @@ import "pure-react-carousel/dist/react-carousel.es.css";
                             <Slide className="carousel__inner-slideLarge" index={1}>
                                 <div className="gallery-cell w-full h-full">
                                     <div className="relative w-full h-full lg:block hidden">
-                                        <img src="https://i.ibb.co/phw8yGZ/sven-brandsma-Qz6-Zx4-Rjd-D8-unsplash-1.png" alt="chairs" className="object-center object-cover w-full h-full" />
+                                        <img src={foto2} alt="chairs" className="object-center object-cover w-full h-full" />
                                         <div className="pl-6 pb-6 lg:pl-8 lg:pb-8 absolute left-0 bottom-0">
-                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Lounge Interior</h1>
+                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Colgante agata sardo</h1>
                                         </div>
                                     </div>
                                     <div className="relative w-full h-full lg:hidden">
-                                        <img src="https://i.ibb.co/g74VYR2/Group-46.png" alt="chairs" className="object-center object-cover w-full h-full" />
+                                        <img src={foto2} alt="chairs" className="object-center object-cover w-full h-full" />
                                         <div className="pl-6 pb-6 lg:pl-8 lg:pb-8 absolute left-0 bottom-0">
-                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Lounge Interior</h1>
+                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Colgante agata sardo</h1>
                                         </div>
                                     </div>
                                 </div>
@@ -118,15 +141,31 @@ import "pure-react-carousel/dist/react-carousel.es.css";
                             <Slide className="carousel__inner-slideLarge" index={2}>
                                 <div className="gallery-cell w-full h-full">
                                     <div className="relative w-full h-full lg:block hidden">
-                                        <img src="https://i.ibb.co/92ZYJyK/behzad-ghaffarian-nh-Wg-ZNV85-LQ-unsplash-1-1.png" alt="chair" className="object-center object-cover w-full h-full" />
+                                        <img src={foto3} alt="chair" className="object-center object-cover w-full h-full" />
                                         <div className="pl-6 pb-6 lg:pl-8 lg:pb-8 absolute left-0 bottom-0">
-                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Lounge Interior</h1>
+                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Aros agata lazo</h1>
                                         </div>
                                     </div>
                                     <div className="relative w-full h-full lg:hidden">
-                                        <img src="https://i.ibb.co/372ryYP/sven-brandsma-Qz6-Zx4-Rjd-D8-unsplash-3-1.png" alt="chair" className="object-center object-cover w-full h-full" />
+                                        <img src={foto3} alt="chair" className="object-center object-cover w-full h-full" />
                                         <div className="pl-6 pb-6 lg:pl-8 lg:pb-8 absolute left-0 bottom-0">
-                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Lounge Interior</h1>
+                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Aros agata lazo</h1>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Slide>
+                            <Slide className="carousel__inner-slideLarge" index={2}>
+                                <div className="gallery-cell w-full h-full">
+                                    <div className="relative w-full h-full lg:block hidden">
+                                        <img src={foto4} alt="chair" className="object-center object-cover w-full h-full" />
+                                        <div className="pl-6 pb-6 lg:pl-8 lg:pb-8 absolute left-0 bottom-0">
+                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Bahía de Pumillahue</h1>
+                                        </div>
+                                    </div>
+                                    <div className="relative w-full h-full lg:hidden">
+                                        <img src={foto4} alt="chair" className="object-center object-cover w-full h-full" />
+                                        <div className="pl-6 pb-6 lg:pl-8 lg:pb-8 absolute left-0 bottom-0">
+                                            <h1 className="text-xl leading-5 lg:text-2xl lg:leading-normal font-medium text-white">Bahía de Pumillahue</h1>
                                         </div>
                                     </div>
                                 </div>

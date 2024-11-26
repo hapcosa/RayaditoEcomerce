@@ -11,7 +11,8 @@ class ListOrdersView(APIView):
     def get(self, request, format=None):
         user = self.request.user
         try:
-            orders = Order.objects.order_by('-date_issued').filter(user=user)
+            orders = Order.objects.order_by('-date_issued').filter(user=user,status="enviado")
+            orders.filter(status='procesado')
             result = []
             print("--------------")
             for order in orders:

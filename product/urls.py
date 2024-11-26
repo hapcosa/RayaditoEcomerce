@@ -6,7 +6,7 @@ urlpatterns = [
     path('piedras/<productId>', PiedrasDetailView.as_view()),
     path('get-piedras', ListPiedrasView.as_view()),
     path('search-piedras',  PiedrasListSearchView.as_view()),
-    path('related-piedras/<productId>', PiedrasListRelatedView.as_view()), 
+    path('related-piedras/<category_id>', PiedrasListRelatedView.as_view()), 
     path('joyas/<productId>', JoyasDetailView.as_view()), 
     path('get-joyas', ListJoyasView.as_view()),
     path('search-joyas',  ListSearchView.as_view()),
@@ -17,4 +17,5 @@ urlpatterns = [
     path('galeryproduct/<productId>', ListGalleryView.as_view()),
     path('search',  ListAllSearchView.as_view()),
     path('by/allsearch', ListALlBySearchView.as_view()),
+    path('save-Joya', SaveJoyaView.as_view()),
 ]

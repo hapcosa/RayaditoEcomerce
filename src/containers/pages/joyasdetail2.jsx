@@ -57,7 +57,7 @@ const JoyasTestDetail = ({
             <div className="flex justify-center items-center lg:flex-row   flex-col gap-8">
                 {/* <!-- Description Div --> */}
 
-                <div className="  w-full sm:w-96 md:w-8/12 lg:w-6/12 items-center">
+                <div className=" sm:w-96 md:w-8/12 lg:w-6/12 items-center">
                     <h2 className="font-semibold lg:text-4xl text-3xl lg:leading-9 leading-7 text-gray-800 ">{joya && joya.name}</h2>
 
 
@@ -85,7 +85,7 @@ const JoyasTestDetail = ({
 
                 {/* <!-- Preview Images Div For larger Screen--> */}
 
-                <div className=" w-full sm:w-96 md:w-8/12  lg:w-6/12 flex lg:flex-row flex-col lg:gap-8 sm:gap-6 gap-4">
+                <div className=" bg-cover w-full sm:w-96 md:w-8/12  lg:w-6/12 lg:gap-8 sm:gap-6 gap-4">
                 <Galery data={joya && joya.photo} galery={joya_galery && joya_galery}/>
                 </div>
             </div>

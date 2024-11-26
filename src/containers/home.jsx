@@ -23,9 +23,9 @@ const Home =({
         <>
             <Layout>
                 <div className="mt-2">
-                    <BannerPromo/>
+                    
                     <CarruselHome/>
-                    <Banner/>
+                    <BannerPromo/>
                     <Product_arrival joyas={joyas_arrival}  piedras={piedras_arrival}/>
                 </div>
             </Layout>

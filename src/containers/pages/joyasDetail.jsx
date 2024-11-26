@@ -6,7 +6,7 @@ import { get_joyas_id, get_related_joyas, get_joyas_id_galery} from "../../redux
 import { HeartIcon, } from '@heroicons/react/24/outline'
 import Galery from "../../components/product/galery"
 import {get_items, add_item, get_total, get_item_total} from "../../redux/action/cart"
-
+import { get_category } from "../../redux/action/categories"
 const JoyasDetail = ({
     get_joyas_id,
     joya,
@@ -15,7 +15,9 @@ const JoyasDetail = ({
     add_item,
     get_items,
     get_total,
-    get_item_total
+    get_item_total,
+    get_category,
+    category,
 }) =>{
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate();
@@ -56,6 +58,7 @@ const JoyasDetail = ({
       window.scrollTo(0, 0);
       get_joyas_id(productId)
       get_joyas_id_galery(productId)
+      get_category(joya.category)
   }, []);
 
     
@@ -171,7 +174,7 @@ const JoyasDetail = ({
 
                 <section aria-labelledby="details-heading" className="mt-12">
                   <h2 id="details-heading" className="sr-only">
-                    Additional details
+                    detalles
                   </h2>
                 
 
@@ -188,5 +191,6 @@ const mapStateToProps = state => ({
     joya: state.Joyas.joya,
     related_joyas: state.Joyas.related_joyas,
     joya_galery: state.Joyas.joya_galery,
+    category:state.Categories.category
 })
-export default connect(mapStateToProps, { get_joyas_id, get_related_joyas, get_joyas_id_galery, add_item, get_total, get_items, get_item_total}) (JoyasDetail)
+export default connect(mapStateToProps, {get_category, get_joyas_id, get_related_joyas, get_joyas_id_galery, add_item, get_total, get_items, get_item_total}) (JoyasDetail)

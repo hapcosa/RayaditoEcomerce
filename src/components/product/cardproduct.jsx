@@ -7,7 +7,7 @@ const ProductCard = ({data, categories, categories_piedras})=>{
         category.sub_categories.map((category,index)=>{
           if(category.id === data.category){
             return display.push(
-              <Link to={`/joyas/${data.id}`}>
+              <Link to={`/joyas/${data.id}`} key={category.id}>
                 <span aria-hidden="true" className="absolute inset-0" />
                 {data.name}
               </Link>

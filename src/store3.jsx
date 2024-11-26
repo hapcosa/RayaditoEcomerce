@@ -1,14 +1,31 @@
 import { configureStore } from '@reduxjs/toolkit'
-import rootReducer from './redux/reducers'
+import rootReducers from './redux/reducers';
+import { persistStore, persistReducer,
+  FLUSH,
+  REHYDRATE,
+  PAUSE,
+  PERSIST,
+  PURGE,
+  REGISTER,
+} from 'redux-persist';
 
-export default function configureAppStore(preloadedState) {
-  const store = configureStore({
-    reducer: rootReducer,
-  })
+import storage from 'redux-persist/lib/storage';
+const persistConfig = {
+  key: 'root',
+  storage,
+  blacklist: ['Alert','Payment'],
 
-  if (import.meta.env.ENV !== 'production' && module.hot) {
-    module.hot.accept('./redux/reducers', () => store.replaceReducer(rootReducer))
-  }
-
-  return store
 }
+const persistedReducer = persistReducer(persistConfig, rootReducers);
+export const store = configureStore({
+  reducer: persistedReducer,
+  devTools:import.meta.env.NODE_ENV !== "production",
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+      },
+    }),
+});
+
+export const persistor = persistStore(store);

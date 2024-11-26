@@ -14,6 +14,8 @@ import {
     RELATED_JOYAS_SUCCESS,
     FILTER_JOYAS_FAIL,
     FILTER_JOYAS_SUCCESS,
+    GET_MATERIAL_SUCCESS,
+    GET_MATERIAL_FAIL
 } from './types';
 
 export const get_joyas = () => async dispatch =>{
@@ -92,14 +94,14 @@ export const get_joyas_id = (productId) => async dispatch =>{
     }
 }
 
-export const get_related_joyas = (productId) => async dispatch =>{
+export const get_related_joyas = (category_Id) => async dispatch =>{
     const config = {
         headers:{
             'Accept': 'application/json'
         }
     };
     try{   
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/product/related-joyas${productId}`, config)
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/product/related-joyas/${category_Id}`, config)
             if(res.status===200) {
                 dispatch({
                     type: RELATED_JOYAS_SUCCESS,
@@ -208,6 +210,31 @@ export const get_joyas_id_galery = (productId) => async dispatch =>{
     catch(err) {
         dispatch({
             type:GET_JOYA_GALERY_FAIL
+        });
+    }
+}
+export const get_material = (materialId)=>async dispatch=>{
+    const config = {
+        headers:{
+            'Accept': 'application/json'
+        }
+    };
+    try{   
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/meta/get-material/${materialId}`, config)
+            if(res.status===200) {
+                dispatch({
+                    type: GET_MATERIAL_SUCCESS,
+                    payload: res.data
+                })
+            }else{
+                dispatch({
+                    type: GET_MATERIAL_FAIL
+                });
+            }
+    }
+    catch(err) {
+        dispatch({
+            type: GET_MATERIAL_FAIL
         });
     }
 }
