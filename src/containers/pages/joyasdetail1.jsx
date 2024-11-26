@@ -187,6 +187,9 @@ const JoyasDetailDos = ({
           Creaciones relacionadas: {""}
         </p>
       </div>
+      {related_joyas &&
+            related_joyas !== null &&
+            related_joyas !== undefined  ?
       <Carousel
         swipeable={false}
         draggable={false}
@@ -224,7 +227,7 @@ const JoyasDetailDos = ({
                 </div>
               </div>
             ))}
-      </Carousel>
+      </Carousel>:<h1>no hay mas productos relacionados</h1>}
     </section>
     
     </Layout>

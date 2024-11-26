@@ -159,13 +159,13 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
-STATIC_ROOT = os.path.join(BASE_DIR, 'dist')
-STATIC_URL = '/dist/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'assets')
+STATIC_URL = '/assets/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'public')
 MEDIA_URL = '/public/'
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, '/dist/assets/static/')
+    os.path.join(BASE_DIR, 'dist/assets')
 ]
 REACT_APP_BUILD_PATH = "/dist/"
 
