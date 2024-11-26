@@ -148,7 +148,7 @@ class ProcessPaymentView(APIView):
             order = Order.objects.create()
         preference_data = { 
             "items": items,
-            "notification_url": "https://7f53-191-127-233-0.ngrok-free.app/api/payment/webhook",
+            "notification_url": "rayaditoecomerce-production.up.railway.app/api/payment/webhook",
             "back_urls": {
                 "success": "http://127.0.0.1:5173/",
                 "failure": "http://127.0.0.1:5173/",

@@ -11,25 +11,25 @@ class ListOrdersView(APIView):
     def get(self, request, format=None):
         user = self.request.user
         try:
-            orders = Order.objects.order_by('-date_issued').filter(user=user,status="enviado")
-            orders.filter(status='procesado')
-            result = []
+            orders = Order.objects.order_by('-date_issued').filter(user=user)
             print("--------------")
+            print(orders)
             for order in orders:
-                item = {}
-                item['id'] = order.id
-                item['status'] = order.status
-                item['transaction_id'] = order.transaction_id
-                item['amount'] = order.amount
-                item['date_issued'] = order.date_issued
-                item['address_line_1'] = order.address_line_1
-                shipping = Shipping.objects.get(id=order.shipping_id.id)
-                shipping = ShippingSerializer(shipping)
-                item['shipping'] = shipping.data
-                
-                orderitems = OrderItem.objects.filter(order = order)
-                item['count'] = orderitems.count()
-                result.append(item)
+                if order.status == 'procesado' or order.status == 'enviado':
+                    item = {}
+                    item['id'] = order.id
+                    item['status'] = order.status
+                    item['transaction_id'] = order.transaction_id
+                    item['amount'] = order.amount
+                    item['date_issued'] = order.date_issued
+                    item['address_line_1'] = order.address_line_1
+                    shipping = Shipping.objects.get(id=order.shipping_id.id)
+                    shipping = ShippingSerializer(shipping)
+                    item['shipping'] = shipping.data
+                    
+                    orderitems = OrderItem.objects.filter(order = order)
+                    item['count'] = orderitems.count()
+                    result.append(item)
             return Response(
                 {'orders': result},
                 status=status.HTTP_200_OK
