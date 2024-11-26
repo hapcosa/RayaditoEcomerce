@@ -80,7 +80,6 @@ const JoyasDetailDos = ({
   const params = useParams()
   const productId = params.productId
   useEffect(() => {
-    
     console.log("useffect")
     window.scrollTo(0, 0);
     get_joyas_id(productId)
@@ -88,6 +87,7 @@ const JoyasDetailDos = ({
     get_category(joya.category)
     get_related_joyas(productId)
     get_category(joya.category)
+    get_material(joya.material)
 
 }, []);
 
@@ -104,7 +104,7 @@ const JoyasDetailDos = ({
 
       <div className="  sm:mx-2 md:mx-8  px-5 lg:px-5">
         <h2 className="pt-3 text-2xl font-bold lg:pt-0">
-          {joya.name}
+          {joya && joya.name}
         </h2>
         <div className="mt-1">
           <div className="flex items-center">
@@ -121,7 +121,7 @@ const JoyasDetailDos = ({
         </div>
         <p className="mt-5 font-bold">
           Disponible:{" "}
-          {joya.sold ? (
+          {joya && joya.sold ? (
             <span className="text-red-600">Agotado</span>
             
           ) : (
@@ -131,7 +131,7 @@ const JoyasDetailDos = ({
         </p>
         <p className="font-bold">
           Material: {""}
-           <span className="font-normal">{joya.material}</span>
+           <span className="font-normal">{joya && joya.material}</span>
         </p>
         <p className="font-bold">
           Categoria:{" "}
@@ -141,13 +141,13 @@ const JoyasDetailDos = ({
           SKU: <span className="font-normal">000010{joya.id}</span>
         </p>
         <p className="mt-4 text-4xl font-bold text-violet-900">
-          ${joya.price}{" "}
+          ${joya && joya.price}{" "}
           <span className="text-xs text-gray-400 line-through">
-            ${joya.compareprice}
+            ${joya && joya.compareprice}
           </span>
         </p>
         <p className="pt-5 text-sm leading-5 text-gray-500">
-          {joya.description}
+          {joya && joya.description}
         </p>
         {/*<div className="mt-6">
           <p className="pb-2 text-xs text-gray-500">Size</p>
@@ -208,7 +208,7 @@ const JoyasDetailDos = ({
               <div key={joya.id} className="group relative bg-cover">
                 <div className="mt-5 w-80 min-h-40 bg-gray-200  rounded-md overflow-hidden group-hover:opacity-75 lg:h-52 lg:aspect-none">
                   <img
-                    src={joya.photo}
+                    src={joya && joya.photo}
                     alt=""
                     className="w-full h-full object-center object-cover lg:w-full lg:h-full"
                   />
@@ -219,7 +219,7 @@ const JoyasDetailDos = ({
                       <Link  onClick={()=>{window.open(`${window.location.origin}/joyas/${joya.id}`)}} >
                       
                         <span aria-hidden="true" className="absolute inset-0" />
-                        {joya.name}
+                        {joya && joya.name}
                       </Link>
                     </h3>
                   </div>
@@ -236,7 +236,6 @@ const JoyasDetailDos = ({
 
 const mapStateToProps = (state) => ({
   joya: state.Joyas.joya,
-  related_joyas: state.Joyas.related_joyas,
   joya_galery: state.Joyas.joya_galery,
   material: state.Joyas.material,
   category: state.Categories.category,
@@ -252,5 +251,4 @@ export default connect(mapStateToProps, {
   get_item_total,
   get_material,
   get_category,
-  get_related_joyas
 })(JoyasDetailDos)

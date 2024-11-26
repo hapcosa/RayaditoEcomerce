@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import { CarouselProvider, Slider, Slide, ButtonBack, ButtonNext } from "pure-react-carousel";
 import "pure-react-carousel/dist/react-carousel.es.css";
 import agatas from "/agatas.jpg"
-import colganteone from "/home/obrero/RayaditoWeb/public/photos/23/08/IMG_0223.jpg"
-import colgantetwo from "/home/obrero/RayaditoWeb/public/photos/23/09/IMG_0435.jpg"
-import pumillahue from "/home/obrero/RayaditoWeb/public/images.jpeg"
+import colganteone from "/photos/23/08/IMG_0223.jpg"
+import colgantetwo from "/photos/23/09/IMG_0435.jpg"
+import pumillahue from "/images.jpeg"
 /* Install pure-react-carousel using -> npm i pure-react-carousel */
 
 const foto1=agatas

@@ -201,12 +201,12 @@ function NavbarHero({
                 <div className="relative z-20">
                     <div className="max-w-7xl mx-auto flex justify-between items-center px-4 py-5 sm:px-6 sm:py-4 lg:px-8 md:justify-start md:space-x-10">
                         <div>
-                            <a href="/" className="flex">
+                            <Link href="/" className="flex">
                                 <span className="sr-only">Workflow</span>
                                 <img src={logo}
                                     width={136}
                                     alt=""/>
-                            </a>
+                            </Link>
                         </div>
                         <div className="mr-2 my-2 md:hidden flex">
                             <Link to='/cart' className="bg-gray-200 rounded-md p-1 mr-2 inline-flex items-center justify-center text-gray-400 hover:text-gray-500 hover:bg-gray-300">

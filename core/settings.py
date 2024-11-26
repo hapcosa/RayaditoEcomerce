@@ -19,7 +19,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG')
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS_DEV')
+
 
 
 # Application definition
@@ -114,7 +114,7 @@ WSGI_APPLICATION = 'core.wsgi.application'
   #      'ENGINE': 'django.db.backends.postgresql',
    #     'NAME': 'piedrasrayadito',
     #    'USER': 'root',
-     #   'PASSWORD': 'sio28148',
+     #   'PASSWORD': '',
     #    'HOST': '127.0.0.1',
     #    'PORT': '15432',
     #}
@@ -122,11 +122,11 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'railway',
-        'USER': 'postgres',
-        'PASSWORD': 'LIpvUrwYVvmdgfBKjdRAfELOpyRikwmD',
-        'HOST': 'junction.proxy.rlwy.net',
-        'PORT': '48409',
+        'NAME': os.environ.get('DBNAME'),
+        'USER': os.environ.get('USERDB'),
+        'PASSWORD': os.environ.get('DBPASSWD'),
+        'HOST': os.environ.get('DATABASE_URL'),
+        'PORT': os.environ.get('PORTDB'),
     }
 }
 # Password validation
@@ -279,8 +279,8 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '143990801111-ls9l8outm2qaf133bghmh962hgp0uqto.apps.googleusercontent.com'
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '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'
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('GOOGLE_CLIENT_KEY')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",
@@ -323,6 +323,25 @@ DJOSER = {
 }
 
 AUTH_USER_MODEL='user.UserAccount'
+CORS_ORIGIN_ALLOW_ALL = True
+
+CORS_ALLOW_CREDENTIALS = True
+
+EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend'
+
+ALLOWED_HOSTS=env.list('ALLOWED_HOSTS_DEPLOY')
+
+DEFAULT_FROM_EMAIL = 'Piedras rayadito - Taller de joyeria y lapidacion <piedrasrayadito@gmail.com>'
+    #EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    #EMAIL_HOST = env('EMAIL_HOST')
+    #EMAIL_HOST_USER = env('EMAIL_HOST_USER')
+    #EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+    #EMAIL_PORT = env('EMAIL_PORT')
+    #EMAIL_USE_TLS= env('EMAIL_USE_TLS')
+    #DATABASES = {
+        #"default": env.db("DATABASE_URL"),
+    #}
+
 CORS_ALLOWED_ORIGINS=['http://localhost:5173',
                       'http://127.0.0.1:5173',
                       ]
@@ -330,28 +349,4 @@ CORS_ORIGIN_WHITELIST = ['http://localhost:5173',
                       'http://127.0.0.1:5173',
                       ]
 CSRF_TRUSTED_ORIGINS = ['http://localhost:5173',
-                      'http://127.0.0.1:5173',
-                      ]
-CORS_ORIGIN_ALLOW_ALL = True
-
-CORS_ALLOW_CREDENTIALS = True
-
-EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend'
-
-
-
-if not DEBUG:
-    ALLOWED_HOSTS=env.list('ALLOWED_HOSTS_DEPLOY')
-    CORS_ORIGIN_WHITELIST = env.list('CORS_ORIGIN_WHITELIST_DEPLOY')
-    CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS_DEPLOY')
-    DEFAULT_FROM_EMAIL = 'Piedras rayadito - Taller de joyeria y lapidacion <piedrasrayadito@gmail.com>'
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = env('EMAIL_HOST')
-    EMAIL_HOST_USER = env('EMAIL_HOST_USER')
-    EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
-    EMAIL_PORT = env('EMAIL_PORT')
-    EMAIL_USE_TLS= env('EMAIL_USE_TLS')
-    DATABASES = {
-        "default": env.db("DATABASE_URL"),
-    }
-    DATABASES["default"]["ATOMIC_REQUESTS"] = True
+                      'http://127.0.0.1:5173',]

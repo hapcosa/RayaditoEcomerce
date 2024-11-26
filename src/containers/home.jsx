@@ -4,7 +4,7 @@ import {get_piedras_by_arrival} from "../redux/action/piedras";
 import {connect} from "react-redux";
 import {useEffect} from "react";
 import BannerPromo from "../components/home/banner"
-import Banner from "../components/home/banner2";
+
 import Product_arrival from "../components/home/Product_arrival";
 import CarruselHome from "../components/home/carrusel";
 const Home =({

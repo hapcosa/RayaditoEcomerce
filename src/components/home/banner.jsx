@@ -1,13 +1,7 @@
-import logo1 from '../../../public/media/IMG_0134.jpg'
-import logo2 from '../../../public/media/IMG_0134.jpg'
-import logo3 from '../../../public/media/IMG_0134.jpg'
-import logo4 from '../../../public/media/IMG_0134.jpg'
-import logo5 from '../../../public/media/IMG_0134.jpg'
-import logo6 from '../../../public/media/IMG_0134.jpg'
-import logo from '../../../public/media/IMG_0134.jpg'
+
 import { Typewriter } from 'react-simple-typewriter'
-import { Link } from 'react-router-dom'
-import CarruselHome from './carrusel'
+
+
 
 const BannerPromo=() =>{
     return (
