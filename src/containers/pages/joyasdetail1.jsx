@@ -84,10 +84,10 @@ const JoyasDetailDos = ({
     window.scrollTo(0, 0);
     get_joyas_id(productId)
     get_joyas_id_galery(productId)
-    get_category(joya.category)
+    get_category(joya && joya.category)
     get_related_joyas(productId)
-    get_category(joya.category)
-    get_material(joya.material)
+    get_category(joya && joya.category)
+    get_material(joya && joya.material)
 
 }, []);
 
@@ -135,10 +135,10 @@ const JoyasDetailDos = ({
         </p>
         <p className="font-bold">
           Categoria:{" "}
-          <span className="font-normal">{category.name}</span>
+          <span className="font-normal">{category && category.name}</span>
         </p>
         <p className="font-bold">
-          SKU: <span className="font-normal">000010{joya.id}</span>
+          SKU: <span className="font-normal">000010{joya && joya.id}</span>
         </p>
         <p className="mt-4 text-4xl font-bold text-violet-900">
           ${joya && joya.price}{" "}

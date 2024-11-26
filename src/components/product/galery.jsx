@@ -1,5 +1,5 @@
 import { Tab } from '@headlessui/react'
-import imagealt from "/home/obrero/RayaditoWeb/public/LogoPrincipal.png"
+import imagealt from "/public/LogoPrincipal.png"
 
 
 // Import any actions and qualifiers required for transformations.
