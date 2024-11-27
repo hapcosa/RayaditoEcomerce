@@ -66,8 +66,8 @@ const Piedras=({
             return display.push(
                 <div key={piedra.id}>
                     <ProductCard data={piedra}
-                      categories={categories}
-                      categories_piedras={categories_piedras}
+                      categories={categories && categories}
+                      categories_piedras={categories && categories_piedras}/>
                     />
                 </div>
             );
