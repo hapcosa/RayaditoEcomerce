@@ -38,7 +38,7 @@ export const check_authenticated = () => async dispatch => {
         });
 
         try {
-            const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/jwt/verify/`, body, config);
+            const res = await axios.post(`/auth/jwt/verify/`, body, config);
 
             if (res.status === 200) {
                 dispatch({
@@ -313,7 +313,7 @@ export const reset_password = (email) => async dispatch => {
     const body = JSON.stringify({ email });
 
     try{
-        const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/users/reset_password/`, body, config);
+        const res = await axios.post(`/auth/users/reset_password/`, body, config);
         if (res.status === 204) {
             dispatch({
                 type: RESET_PASSWORD_SUCCESS
@@ -371,7 +371,7 @@ export const reset_password_confirm = (uid, token, new_password, re_new_password
         dispatch(setAlert('Contraseñas no coinciden', 'red'));
     } else {
         try {
-            const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/users/reset_password_confirm/`, body, config);
+            const res = await axios.post(`/auth/users/reset_password_confirm/`, body, config);
         
             if (res.status === 204) {
                 dispatch({

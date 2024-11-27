@@ -67,8 +67,8 @@ const Joyas=({
             return display.push(
                 <div className='md:ml-5' key={joya.id}>
                     <ProductCard data={joya}
-                      categories={categories}
-                      categories_piedras={categories_piedras}
+                      categories={categories && categories}
+                      categories_piedras={categories_piedras && categories_piedras}
                     />
                 </div>
             );
@@ -83,8 +83,8 @@ const Joyas=({
             return display.push(
                 <div key={joya.id}>
                     <ProductCard data={joya}
-                      categories={categories}
-                      categories_piedras={categories_piedras}
+                      categories={categories && categories}
+                      categories_piedras={categories_piedras && categories_piedras}
                     />
                 </div>
             );
