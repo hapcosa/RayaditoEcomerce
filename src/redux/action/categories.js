@@ -8,7 +8,7 @@ import {
     GET_CATEGORY_FAIL,
    
  } from "./types";
-
+const prod=""
 
 export const get_categories = () => async dispatch =>{
     const config = {
@@ -42,7 +42,7 @@ export const get_categories_piedras = () => async dispatch =>{
         }
     };
     try{
-        const res = await axios.get(`/api/category/piedrascategory`, config)
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/category/piedrascategory`, config)
         if(res.status===200) {
             dispatch({
                 type: GET_CATEGORIES_PIEDRAS_SUCCESS,
@@ -66,7 +66,7 @@ export const get_category = (categoryId) => async dispatch => {
         }
     };
     try{
-        const res = await axios.get(`/api/category/get-category/${categoryId}`, config)
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/category/get-category/${categoryId}`, config)
         if(res.status===200) {
             dispatch({
                 type: GET_CATEGORY_SUCCESS,

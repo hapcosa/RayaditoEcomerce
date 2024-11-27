@@ -14,7 +14,8 @@ export const get_shipping_options = () => async dispatch => {
     };
 
     try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/shipp/get-shipping-options`, config);
+        const res = await axios.get(import.meta.env.NODE_ENV == "production"?`/api/shipp/get-shipping-options`:`${import.meta.env.VITE_API_URL}/api/shipp/get-shipping-options`
+            ,config);
 
         if (res.status === 200) {
             dispatch({
