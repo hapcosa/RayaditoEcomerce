@@ -3,7 +3,6 @@ import { Link,  } from "react-router-dom"
 import Rater from "react-rater";
 import { Rings } from 'react-loader-spinner';
 import "react-rater/lib/react-rater.css";
-import { connect } from "react-redux";
 import Layout from "../../hocs/layout/layout"
 import { useParams, useNavigate} from "react-router-dom"
 import { useEffect, useState } from "react"
