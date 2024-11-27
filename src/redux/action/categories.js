@@ -8,7 +8,7 @@ import {
     GET_CATEGORY_FAIL,
    
  } from "./types";
-const prod=""
+
 
 export const get_categories = () => async dispatch =>{
     const config = {
