@@ -1,12 +1,17 @@
 import { connect } from "react-redux"
+import { Link,  } from "react-router-dom"
+import Rater from "react-rater";
+import { Rings } from 'react-loader-spinner';
+import "react-rater/lib/react-rater.css";
+import { connect } from "react-redux";
 import Layout from "../../hocs/layout/layout"
 import { useParams, useNavigate} from "react-router-dom"
 import { useEffect, useState } from "react"
 import { get_category } from "../../redux/action/categories"
 import { get_piedras_id, get_related_piedras, get_piedras_id_galery} from "../../redux/action/piedras"
-import { HeartIcon } from '@heroicons/react/24/outline'
+
 import Galery from "../../components/product/galery"
-import { RingLoader } from "react-spinners"
+
 import {get_items, add_item, get_total, get_item_total} from "../../redux/action/cart"
 
 const PiedrasDetail = ({
