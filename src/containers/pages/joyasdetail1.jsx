@@ -86,7 +86,6 @@ const JoyasDetailDos = ({
     get_joyas_id_galery(productId)
     get_category(joya && joya.category)
     get_related_joyas(productId)
-    get_category(joya && joya.category)
     get_material(joya && joya.material)
 
 }, []);
