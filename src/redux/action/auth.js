@@ -81,7 +81,7 @@ export const signup = (first_name, last_name, email, password, re_password) => a
     });
 
     try {
-        const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/users/`, body, config);
+        const res = await axios.post(`/auth/users/`, body, config);
 
         if (res.status === 201) {
             dispatch({
@@ -119,7 +119,7 @@ export const load_user = () => async dispatch => {
         };
 
         try {
-            const res = await axios.get(`${import.meta.env.VITE_API_URL}/auth/users/me/`, config);
+            const res = await axios.get(`/auth/users/me/`, config);
             if (res.status === 200) {
                 dispatch({
                     type: USER_LOADED_SUCCESS,
@@ -160,7 +160,7 @@ export const login = (email, password) => async dispatch => {
     });
 
     try {
-        const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/jwt/create/`, body, config);
+        const res = await axios.post(`/auth/jwt/create/`, body, config);
         if (res.status === 200) {
             dispatch({
                 type: LOGIN_SUCCESS,
@@ -203,7 +203,7 @@ export const googleAuthenticate = (state, code) => async dispatch =>{
         }
         const formBody = Object.keys(details).map(key=> encodeURIComponent(key)+'='+encodeURIComponent(details[key])).join('&')
         try{
-            const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/o/google-oauth2/?${formBody}`, config);
+            const res = await axios.post(`/auth/o/google-oauth2/?${formBody}`, config);
             console.log(res.data)
             dispatch({
                 type:GOOGLE_AUTH_SUCCESS,
@@ -235,7 +235,7 @@ export const activate = (uid, token) => async dispatch => {
     });
 
     try {
-        const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/users/activation/`, body, config);
+        const res = await axios.post(`/auth/users/activation/`, body, config);
         if (res.status === 204) {
             dispatch({
                 type: ACTIVATION_SUCCESS
@@ -276,7 +276,7 @@ export const refresh = () => async dispatch => {
         });
 
         try {
-            const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/jwt/refresh/`, body, config);
+            const res = await axios.post(`/auth/jwt/refresh/`, body, config);
             if (res.status === 200) {
                 dispatch({
                     type: REFRESH_SUCCESS,
