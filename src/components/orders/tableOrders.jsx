@@ -37,7 +37,7 @@ function tableOrders({orders}) {
                     <table className="w-full whitespace-nowrap">
                         <thead>
                             <tr className="h-16 w-full text-sm leading-none text-gray-800">
-                                <th className="font-normal text-left pl-4">Project</th>
+                                <th className="font-normal text-left pl-4"></th>
                                 <th className="font-normal text-left pl-12">Progress</th>
                                 <th className="font-normal text-left pl-12">Tasks</th>
                                 <th className="font-normal text-left pl-20">Budget</th>
