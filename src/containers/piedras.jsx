@@ -62,10 +62,10 @@ const Piedras=({
         filtered_piedras !== undefined &&
         filtered
       ) {
-        filtered_piedras.map((joya, index) => {
+        filtered_piedras.map((piedra, index) => {
             return display.push(
-                <div key={joya.id}>
-                    <ProductCard data={joya}
+                <div key={piedra.id}>
+                    <ProductCard data={piedra}
                       categories={categories}
                       categories_piedras={categories_piedras}
                     />
@@ -78,12 +78,12 @@ const Piedras=({
           piedras !== null && 
           piedras !== undefined
       ) {
-          piedras.map((joya, index) => {
+          piedras.map((piedra, index) => {
             return display.push(
-                <div key={joya.id}>
-                    <ProductCard data={joya}
-                      categories={categories}
-                      categories_piedras={categories_piedras}/>
+                <div key={piedra.id}>
+                    <ProductCard data={piedra}
+                      categories={categories && categories}
+                      categories_piedras={categories && categories_piedras}/>
                 </div>
             );
         }); 
