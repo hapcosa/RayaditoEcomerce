@@ -201,7 +201,7 @@ function NavbarHero({
                 <div className="relative z-20">
                     <div className="max-w-7xl mx-auto flex justify-between items-center px-4 py-5 sm:px-6 sm:py-4 lg:px-8 md:justify-start md:space-x-10">
                         <div>
-                            <Link href="/" className="flex">
+                            <Link to="/" className="flex">
                                 <span className="sr-only">Workflow</span>
                                 <img src={logo}
                                     width={136}
