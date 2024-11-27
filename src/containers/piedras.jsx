@@ -68,7 +68,6 @@ const Piedras=({
                     <ProductCard data={piedra}
                       categories={categories && categories}
                       categories_piedras={categories && categories_piedras}/>
-                    />
                 </div>
             );
         });

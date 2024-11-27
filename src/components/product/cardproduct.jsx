@@ -2,7 +2,9 @@ import { Link } from "react-router-dom"
 const ProductCard = ({data, categories, categories_piedras})=>{
   const joyaorstone = () =>{
     let display = []
-    categories.map((category,index)=>{
+    console.log("categories: " + categories)
+    console.log(categories)
+    categories && categories.map((category,index)=>{
       if(category.sub_categories.length > 0){
         category.sub_categories.map((category,index)=>{
           if(category.id === data.category){
@@ -26,7 +28,7 @@ const ProductCard = ({data, categories, categories_piedras})=>{
           </Link>
         )
       }})
-    categories_piedras.map((category,index)=>{
+    categories_piedras && categories_piedras.map((category,index)=>{
       if(category.sub_categories.length > 0){
         category.sub_categories.map((category,index)=>{
           if(category.id === data.category){
