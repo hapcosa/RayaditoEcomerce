@@ -28,7 +28,7 @@ export const get_payment_total = (shipping_id, coupon_name) => async dispatch =>
     };
 
     try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/payment/get-payment-total?shipping_id=${shipping_id}&coupon_name=${coupon_name}`, config);
+        const res = await axios.get(`/api/payment/get-payment-total?shipping_id=${shipping_id}&coupon_name=${coupon_name}`, config);
 
         if (res.status === 200 && !res.data.error) {
             dispatch({
@@ -56,7 +56,7 @@ export const get_client_token = () => async dispatch => {
     };
 
     try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/payment/get-token`, config);
+        const res = await axios.get(`/api/payment/get-token`, config);
 
         if (res.status === 200) {
             dispatch({
@@ -114,7 +114,7 @@ export const process_payment = (
     });
 
     try {
-        const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/payment/make-payment`, body, config);
+        const res = await axios.post(`/api/payment/make-payment`, body, config);
         if (res.status === 200) {
             let cart = [];
             let new_cart = [];
@@ -189,7 +189,7 @@ export const process_payment_auth = (
     
         try {
             console.log(body)
-            const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/payment/make-payment`, body, config);
+            const res = await axios.post(`/api/payment/make-payment`, body, config);
             if (res.status === 200) {
     
                 dispatch({
@@ -239,7 +239,7 @@ export const process_repayment_auth =(orderId) => async dispatch => {
 
     try {
         console.log(body)
-        const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/payment/make-payment`, body, config);
+        const res = await axios.post(`/api/payment/make-payment`, body, config);
         if (res.status === 200) {
 
             dispatch({
@@ -276,7 +276,7 @@ export const statuspayment = (merchantId, paymentId, externalReference) =>  asyn
     }
     //config['headers']['Authorization'] = `JWT ${localStorage.getItem('access')}`
     try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/payment/status-payment/?status=approved&payment_id=${paymentId}&merchant_id=${merchantId}&external_reference=${externalReference}`,  config);
+        const res = await axios.get(`/api/payment/status-payment/?status=approved&payment_id=${paymentId}&merchant_id=${merchantId}&external_reference=${externalReference}`,  config);
         if (res.status === 200) {
             dispatch({
                 type: STATUS_PAYMENT_SUCCESS,

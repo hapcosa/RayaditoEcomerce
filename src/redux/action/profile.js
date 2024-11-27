@@ -18,7 +18,7 @@ export const get_user_profiles = () => async dispatch => {
             }
         };
         try {
-            const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/profile/user`, config);
+            const res = await axios.get(`/api/profile/user`, config);
 
             if (res.status === 200) {
                 dispatch({
@@ -68,7 +68,7 @@ export const update_user_profile = (
         });
 
         try {
-            const res = await axios.put(`${import.meta.env.VITE_API_URL}/api/profile/update`, body, config);
+            const res = await axios.put(`/api/profile/update`, body, config);
 
             if (res.status === 200) {
                 dispatch({
@@ -120,7 +120,7 @@ export const create_user_profile = (
         });
 
         try {
-            const res = await axios.put(`${import.meta.env.VITE_API_URL}/api/profile/create`, body, config);
+            const res = await axios.put(`/api/profile/create`, body, config);
 
             if (res.status === 200) {
                 dispatch({
@@ -158,7 +158,7 @@ export const delete_user_profile = (profile_id) => async dispatch =>{
         console.log("eliminar in")
 
         try{
-            const res = await axios.delete(`${import.meta.env.VITE_API_URL}/api/profile/delete`, body, config)
+            const res = await axios.delete(`/api/profile/delete`, body, config)
             if(res.status===200){
                 dispatch({
                     type: DELETE_USER_PROFILE_SUCCESS
