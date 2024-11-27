@@ -345,9 +345,9 @@ DEFAULT_FROM_EMAIL = 'Piedras rayadito - Taller de joyeria y lapidacion <piedras
 CORS_ORIGIN_WHITELIST = ['http://localhost:5173',
                       'http://127.0.0.1:5173','https://rayaditoecomerce-production.up.railway.app',
                       'https://7bdd-191-127-236-145.ngrok-free.app'
-                      ,'http://127.0.0.1:8000'
-                      ]
+                      ,'http://127.0.0.1:8000','rayaditoecomerce.railway.internal']
+                      
 CSRF_TRUSTED_ORIGINS = ['http://localhost:5173',
                       'http://127.0.0.1:5173','https://rayaditoecomerce-production.up.railway.app',
                       'https://7bdd-191-127-236-145.ngrok-free.app'
-                      ,'http://127.0.0.1:8000']
+                      ,'http://127.0.0.1:8000','rayaditoecomerce.railway.internal']
