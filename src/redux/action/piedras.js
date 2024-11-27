@@ -23,7 +23,7 @@ export const get_piedras = () => async dispatch =>{
         }
     };
     try{   
-        const res = await axios.get(`/api/product/get-piedras`, config)
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/product/get-piedras`, config)
             if(res.status===200) {
                 dispatch({
                     type: GET_PIEDRAS_SUCCESS,
@@ -48,7 +48,7 @@ export const get_piedras_by_arrival = () => async dispatch =>{
         }
     };
     try{   
-        const res = await axios.get(`/api/product/get-piedras?sortBy=date_create&order=desc&limit=4`, config)
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/product/get-piedras?sortBy=date_create&order=desc&limit=4`, config)
             if(res.status===200) {
                 dispatch({
                     type: GET_PIEDRAS_BY_ARRIVAL_SUCCESS,
@@ -73,7 +73,7 @@ export const get_piedras_id = (productId) => async dispatch =>{
         }
     };
     try{   
-        const res = await axios.get(`/api/product/piedras/${productId}`, config)
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/product/piedras/${productId}`, config)
             if(res.status===200) {
                 console.log("success")
                 dispatch({
@@ -101,7 +101,7 @@ export const get_related_piedras = (productId) => async dispatch =>{
         }
     };
     try{   
-        const res = await axios.get(`/api/product/related-piedras${productId}`, config)
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/product/related-piedras${productId}`, config)
             if(res.status===200) {
                 dispatch({
                     type: RELATED_PIEDRAS_SUCCESS,
@@ -135,7 +135,7 @@ export const get_filtered_piedras = (category_id, price_range, sortBy, order) =>
     });
     console.log('out')
     try{   
-        const res = await axios.post(`/api/product/piedras/by/search`, body, config);
+        const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/product/piedras/by/search`, body, config);
             if(res.status===200 && !res.data.error) {
                 console.log(res.data)
                 dispatch({
@@ -168,7 +168,7 @@ export const get_search_piedras = (search, category_id) => async dispatch => {
        category_id,
     });
     try{   
-        const res = await axios.post(`/api/product/piedras/by/search`,body, config)
+        const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/product/piedras/by/search`,body, config)
             if(res.status===200 && res.data.error) {
                 dispatch({
                     type: SEARCH_PIEDRAS_SUCCESS,
@@ -196,7 +196,7 @@ export const get_piedras_id_galery = (productId) => async dispatch =>{
     };
     console.log("antes try");
     try{   
-        const res = await axios.get(`/api/product/galeryproduct/${productId}`, config)
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/product/galeryproduct/${productId}`, config)
             if(res.status===200) {
                 console.log("success")
                 dispatch({

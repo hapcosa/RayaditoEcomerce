@@ -24,6 +24,7 @@ const PiedrasDetail = ({
     get_item_total,
     category,
     get_category,
+    related_piedras
 }) =>{
   
     const responsive = {

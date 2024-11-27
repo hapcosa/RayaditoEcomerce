@@ -25,7 +25,7 @@ export const get_joyas = () => async dispatch =>{
         }
     };
     try{   
-        const res = await axios.get(`/api/product/get-joyas`, config)
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/product/get-joyas`, config)
             if(res.status===200) {
                 dispatch({
                     type: GET_JOYAS_SUCCESS,
@@ -50,7 +50,7 @@ export const get_joyas_by_arrival = () => async dispatch =>{
         }
     };
     try{   
-        const res = await axios.get(`/api/product/get-joyas?sortBy=date_create&order=desc&limit=4`, config)
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/product/get-joyas?sortBy=date_create&order=desc&limit=4`, config)
             if(res.status===200) {
                 dispatch({
                     type: GET_JOYAS_BY_ARRIVAL_SUCCESS,
