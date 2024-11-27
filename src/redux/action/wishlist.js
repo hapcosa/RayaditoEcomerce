@@ -20,7 +20,7 @@ export const get_wishlist_items = () => async dispatch => {
             }
         };
         try {
-            const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/wishlist/wishlist-items`, config);
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/wishlist/wishlist-items`, config);
 
             if (res.status === 200) {
                 dispatch({
@@ -55,7 +55,7 @@ export const add_wishlist_item = product_id => async dispatch => {
         });
 
         try {
-            const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/wishlist/add-item`, body, config);
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/wishlist/add-item`, body, config);
 
             if (res.status === 201) {
                 dispatch({
@@ -84,7 +84,7 @@ export const get_wishlist_item_total = () => async dispatch => {
             }
         };
         try {
-            const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/wishlist/get-item-total`, config);
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/wishlist/get-item-total`, config);
 
             if (res.status === 200) {
                 dispatch({
@@ -120,7 +120,7 @@ export const remove_wishlist_item = product_id => async dispatch => {
         };
 
         try {
-            const res = await axios.delete(`${process.env.REACT_APP_API_URL}/api/wishlist/remove-item`, config);
+            const res = await axios.delete(`${import.meta.env.VITE_API_URL}/api/wishlist/remove-item`, config);
 
             if (res.status === 200) {
                 dispatch({

@@ -75,7 +75,7 @@ export const get_joyas_id = (productId) => async dispatch =>{
         }
     };
     try{   
-        const res = await axios.get(`/api/product/joyas/${productId}`, config)
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/product/joyas/${productId}`, config)
             if(res.status===200) {
                 dispatch({
                     type:GET_JOYA_SUCCESS,
@@ -101,7 +101,7 @@ export const get_related_joyas = (category_Id) => async dispatch =>{
         }
     };
     try{   
-        const res = await axios.get(`/api/product/related-joyas/${category_Id}`, config)
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/product/related-joyas/${category_Id}`, config)
             if(res.status===200) {
                 dispatch({
                     type: RELATED_JOYAS_SUCCESS,
@@ -135,7 +135,7 @@ export const get_filtered_joyas = (category_id, price_range, sortBy, order) => a
     });
     console.log('out')
     try{   
-        const res = await axios.post(`/api/product/by/search`, body, config);
+        const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/product/by/search`, body, config);
             if(res.status===200 && !res.data.error) {
                 console.log(res.data)
                 dispatch({
@@ -168,7 +168,7 @@ export const get_search_joyas = (search, category_id) => async dispatch => {
        category_id,
     });
     try{   
-        const res = await axios.post(`/api/product/by/search`,body, config)
+        const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/product/by/search`,body, config)
             if(res.status===200 && res.data.error) {
                 dispatch({
                     type: SEARCH_JOYAS_SUCCESS,
@@ -195,7 +195,7 @@ export const get_joyas_id_galery = (productId) => async dispatch =>{
         }
     };
     try{   
-        const res = await axios.get(`/api/product/galeryproduct/${productId}`, config)
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/product/galeryproduct/${productId}`, config)
             if(res.status===200) {
                 dispatch({
                     type:GET_JOYA_GALERY_SUCCESS,
@@ -220,7 +220,7 @@ export const get_material = (materialId)=>async dispatch=>{
         }
     };
     try{   
-        const res = await axios.get(`/api/meta/get-material/${materialId}`, config)
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/meta/get-material/${materialId}`, config)
             if(res.status===200) {
                 dispatch({
                     type: GET_MATERIAL_SUCCESS,

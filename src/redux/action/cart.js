@@ -39,7 +39,7 @@ export const add_item = (product) => async dispatch => {
         const product_id = product.id;
         const body = JSON.stringify({ product_id });
         try {
-            const res = await axios.put(`/api/cart/add-item`, body, config);
+            const res = await axios.put(`${import.meta.env.VITE_API_URL}/api/cart/add-item`, body, config);
             if (res.status === 201) {
                 dispatch({
                     type: ADD_ITEM_SUCCESS,
@@ -102,7 +102,7 @@ export const get_items = () => async dispatch => {
         };
 
         try {
-            const res = await axios.get(`/api/cart/cart-items`, config);
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/cart/cart-items`, config);
 
             if (res.status === 200) {
                 dispatch({
@@ -136,7 +136,7 @@ export const get_total = () => async dispatch => {
         };
 
         try {
-            const res = await axios.get(`/api/cart/get-total`, config);
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/cart/get-total`, config);
 
             if (res.status === 200) {
                 dispatch({
@@ -185,7 +185,7 @@ export const get_item_total = () => async dispatch => {
         };
 
         try {
-            const res = await axios.get(`/api/cart/get-item-total`, config);
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/cart/get-item-total`, config);
 
             if (res.status === 200) {
                 dispatch({
@@ -230,7 +230,7 @@ export const update_item = (item, count) => async dispatch => {z
         const body = JSON.stringify({ product_id, count });
 
         try {
-            const res = await axios.put(`/api/cart/update-item`, body, config);
+            const res = await axios.put(`${import.meta.env.VITE_API_URL}/api/cart/update-item`, body, config);
 
             if (res.status === 200 && !res.data.error) {
                 dispatch({
@@ -285,7 +285,7 @@ export const remove_item = item => async dispatch => {
         };
 
         try {
-            const res = await axios.delete(`/api/cart/remove-item`, config);
+            const res = await axios.delete(`${import.meta.env.VITE_API_URL}/api/cart/remove-item`, config);
 
             if (res.status === 200) {
                 dispatch({
@@ -333,7 +333,7 @@ export const empty_cart = () => async dispatch => {
         };
 
         try {
-            const res = await axios.delete(`/api/cart/empty-cart`, config);
+            const res = await axios.delete(`${import.meta.env.VITE_API_URL}/api/cart/empty-cart`, config);
 
             if (res.status === 200) {
                 dispatch({
@@ -380,7 +380,7 @@ export const synch_cart = () => async dispatch => {
     console.log(JSON.stringify(cart_items));
     const body = JSON.stringify({cart_items});
     try {
-        const res = await axios.post(`/api/cart/synch`, body, config);
+        const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/cart/synch`, body, config);
         if (res.status === 200) {
             dispatch({
                 type: SYNCH_CART_SUCCESS,

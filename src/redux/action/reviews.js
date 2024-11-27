@@ -225,7 +225,7 @@ export const filter_reviews = (product_id, rating) => async dispatch => {
 
         try {
             const res = await axios.get(
-                `/api/reviews/filter-reviews/${product_id}?rating=${myRating}`,
+                `${import.meta.env.VITE_API_URL}/api/reviews/filter-reviews/${product_id}?rating=${myRating}`,
                 config
             );
     

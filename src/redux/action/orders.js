@@ -17,7 +17,7 @@ export const list_orders = () => async dispatch => {
         };
 
         try {
-            const res = await axios.get(`/api/orders/get-orders`, config);
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/orders/get-orders`, config);
 
             if (res.status === 200) {
                 dispatch({
@@ -47,7 +47,7 @@ export const get_order_detail = (transactionId) => async dispatch => {
             }
         };
         try {
-            const res = await axios.get(`/api/orders/get-order/${transactionId}`, config);
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/orders/get-order/${transactionId}`, config);
             console.log('dentro')
             if (res.status === 200) {
                 dispatch({
