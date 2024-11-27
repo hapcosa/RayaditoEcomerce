@@ -109,26 +109,28 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
 
-#DATABASES = {
- #   'default': {
-  #      'ENGINE': 'django.db.backends.postgresql',
-   #     'NAME': 'piedrasrayadito',
-    #    'USER': 'root',
-     #   'PASSWORD': '',
-    #    'HOST': '127.0.0.1',
-    #    'PORT': '15432',
-    #}
-#}
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DBNAME'),
-        'USER': os.environ.get('USERDB'),
-        'PASSWORD': os.environ.get('DBPASSWD'),
-        'HOST': os.environ.get('DATABASE_URL'),
-        'PORT': os.environ.get('PORTDB'),
+if DEBUG: 
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'piedrasrayadito',
+            'USER': 'root',
+            'PASSWORD': 'sio28148',
+            'HOST': '127.0.0.1',
+            'PORT': '15432',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DBNAME'),
+            'USER': os.environ.get('USERDB'),
+            'PASSWORD': os.environ.get('DBPASSWD'),
+            'HOST': os.environ.get('DATABASE_URL'),
+            'PORT': os.environ.get('PORTDB'),
+        }
+    }
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
 
