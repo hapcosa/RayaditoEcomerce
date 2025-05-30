@@ -9,16 +9,5 @@ Currently, two official plugins are available:
 # RayaditoEccomerce
 Ecomerce en proceso de creación, para tienda de joyeria y lapidacion de piedras preciosas. Este proyecto integra una base de datos SQL postgresql, una API escrita en Django para el backend y un frontend hecho en React con redux
 
-instrucciones para instalar:
- 
-  git clone "https://github.com/hapcosa/RayaditoEccomerce.git"
-  
-  python3 venv rayaditoenv/
-  
-  pip install -r requeriments.txt
-  
-  npm install
-  
-  npm run host
-  
-  python3 manage.py runserver
+
+
