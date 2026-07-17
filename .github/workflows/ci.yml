@@ -1,0 +1,73 @@
+name: CI
+
+# Gate de calidad. El merge a master lo hace el usuario y requiere este CI en verde.
+on:
+  push:
+    branches-ignore:
+      - master        # master solo recibe merges vía PR
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  backend:
+    name: Backend (Django + tests)
+    runs-on: ubuntu-latest
+    # TODO: quitar continue-on-error tras completar Fase 0 (limpieza de requirements.txt).
+    #       Hoy hay dependencias legacy que no instalan en Python moderno.
+    continue-on-error: true
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: piedrasrayadito
+        ports:
+          - 15432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DEBUG: "true"
+      SECRET_KEY: ci-not-a-real-secret
+      ALLOWED_HOSTS_DEPLOY: "127.0.0.1,localhost"
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Django system checks
+        run: python manage.py check
+      - name: Run migrations
+        run: python manage.py migrate --noinput
+      - name: Run tests
+        run: python manage.py test --verbosity 2
+
+  frontend:
+    name: Frontend (lint + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Lint
+        run: npm run lint --if-present
+      - name: Build
+        run: npm run build
