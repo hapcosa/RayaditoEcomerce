@@ -1,0 +1,80 @@
+name: CI
+
+# Gate de calidad. El merge a master lo hace el usuario y requiere este CI en verde.
+on:
+  push:
+    branches-ignore:
+      - master        # master solo recibe merges vía PR
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  backend:
+    name: Backend (Django + tests)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci_user
+          POSTGRES_PASSWORD: ci_pass
+          POSTGRES_DB: piedrasrayadito
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # DEBUG != 'true' hace que core/settings.py use el branch de DB basado en env.
+      # (Fase 0 del ROADMAP normaliza settings + secretos; esto es config de CI.)
+      DEBUG: "false"
+      SECRET_KEY: ci-not-a-real-secret
+      ALLOWED_HOSTS_DEPLOY: "127.0.0.1,localhost"
+      DBNAME: piedrasrayadito
+      USERDB: ci_user
+      DBPASSWD: ci_pass
+      DATABASE_URL: "127.0.0.1"   # settings.py usa esta env var como HOST de la DB
+      PORTDB: "5432"
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Django system checks
+        run: python manage.py check
+      - name: Run migrations
+        run: python manage.py migrate --noinput
+      - name: Run tests
+        run: python manage.py test --verbosity 2
+
+  frontend:
+    name: Frontend (build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      # Lint informativo: el front legacy se reemplaza por Next.js (ROADMAP Fase 4);
+      # no bloquea el merge todavía. El gate real del front actual es el build.
+      - name: Lint (informativo, no bloquea)
+        run: npm run lint --if-present
+        continue-on-error: true
+      - name: Build
+        run: npm run build
