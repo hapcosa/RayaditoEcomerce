@@ -1,45 +1,35 @@
-# Use root/example as user/password credentials
-version: '3.8'
+# Servicios locales de desarrollo: PostgreSQL + pgAdmin.
+# Las credenciales se toman de .env (ver .env.example). No usar en producción.
 
 services:
-
   db:
-    image: mysql:8.0.38
+    image: postgres:16
+    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: sio28148
-      MYSQL_DATABASE: mydatabase
-      MYSQL_USER: obrero
-      MYSQL_PASSWORD: sio28148
+      POSTGRES_USER: ${DB_USER:-rayadito}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-rayadito}
+      POSTGRES_DB: ${DB_NAME:-piedrasrayadito}
     ports:
-      - "3306:3306"
-  
-  database:
-    image: 'postgres:latest'
-    restart: always
-    environment:
-      - POSTGRES_USER=root
-      - POSTGRES_PASSWORD=sio28148
-    ports:
-      - 15432:5432
-    networks:
-      - postgres-network
+      - "${DB_PORT:-15432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-rayadito} -d ${DB_NAME:-piedrasrayadito}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  
   pgadmin:
     image: dpage/pgadmin4
+    restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: hapcosa@gmail.com
-      PGADMIN_DEFAULT_PASSWORD: sio28148
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@rayadito.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
     ports:
-      - 8888:80
+      - "8888:80"
     depends_on:
-      - database
-    networks:
-      - postgres-network
+      db:
+        condition: service_healthy
 
-
-networks: 
-  postgres-network:
-    driver: bridge
-     
-    # (this is just an example, not intended to be a production configuration)
+volumes:
+  pgdata:

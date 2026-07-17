@@ -30,16 +30,14 @@ jobs:
           --health-retries 5
 
     env:
-      # DEBUG != 'true' hace que core/settings.py use el branch de DB basado en env.
-      # (Fase 0 del ROADMAP normaliza settings + secretos; esto es config de CI.)
-      DEBUG: "false"
+      DEBUG: "true"
       SECRET_KEY: ci-not-a-real-secret
-      ALLOWED_HOSTS_DEPLOY: "127.0.0.1,localhost"
-      DBNAME: piedrasrayadito
-      USERDB: ci_user
-      DBPASSWD: ci_pass
-      DATABASE_URL: "127.0.0.1"   # settings.py usa esta env var como HOST de la DB
-      PORTDB: "5432"
+      ALLOWED_HOSTS: "127.0.0.1,localhost"
+      DB_NAME: piedrasrayadito
+      DB_USER: ci_user
+      DB_PASSWORD: ci_pass
+      DB_HOST: "127.0.0.1"
+      DB_PORT: "5432"
 
     steps:
       - uses: actions/checkout@v4
