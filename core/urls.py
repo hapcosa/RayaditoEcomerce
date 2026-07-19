@@ -17,6 +17,7 @@ urlpatterns = [
     path('api/profile/', include('user_profile.urls')),
     path('api/orders/', include('orders.urls')),
     path('api/payment/', include('payment.urls')),
+    path('api/suggestions/', include('suggestions.urls')),
     path("admin/", admin.site.urls),
     path("ckeditor5/", include('django_ckeditor_5.urls')),
     path("api/meta/", include('metaproduct.urls')),
