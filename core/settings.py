@@ -40,6 +40,7 @@ PROJECT_APPS = [
     'orders',
     'user_profile',
     'payment',
+    'suggestions',
 ]
 
 THIRD_PARTY_APPS = [
