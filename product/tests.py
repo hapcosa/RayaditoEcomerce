@@ -79,3 +79,19 @@ class ReviewApiTests(APITestCase):
         dele = self.client.delete(self._url('delete-review'))
         self.assertEqual(dele.status_code, 200)
         self.assertEqual(dele.data['reviews'], [])
+
+
+class OpenAPISchemaTests(APITestCase):
+    """El esquema OpenAPI y las docs se sirven sin errores (drf-spectacular)."""
+
+    def test_schema_endpoint_ok(self):
+        res = self.client.get('/api/schema')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+    def test_swagger_ui_ok(self):
+        res = self.client.get('/api/docs')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+    def test_redoc_ok(self):
+        res = self.client.get('/api/redoc')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
