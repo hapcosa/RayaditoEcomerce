@@ -102,7 +102,7 @@ class PiedrasDetailView(APIView):
                 {'error': 'el producto no existe'},
                 status=status.HTTP_404_NOT_FOUND)
 class PiedrasListRelatedView(APIView):
-    permission_classes = (permissions.AllowAny)
+    permission_classes = (permissions.AllowAny,)  # coma: debe ser tupla, no la clase
     def get(self, request, productId, format=None):
         try:
             product_id = int(productId)

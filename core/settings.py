@@ -50,6 +50,7 @@ THIRD_PARTY_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'django_ckeditor_5',
+    'drf_spectacular',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + PROJECT_APPS + THIRD_PARTY_APPS
@@ -211,6 +212,16 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'PAGE_SIZE': 12,
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# OpenAPI (drf-spectacular). Esquema en /api/schema, docs en /api/docs.
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Piedras Rayadito API',
+    'DESCRIPTION': 'API del ecommerce artesanal de joyería y lapidación de '
+                   'piedras de Chiloé. Dinero en entero CLP.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }
 
 
