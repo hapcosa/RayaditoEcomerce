@@ -20,7 +20,7 @@ class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)
     email=models.EmailField(blank=True, null=True)
     transaction_id = models.CharField(max_length=255, null=True)
-    amount = models.DecimalField(max_digits=12, decimal_places=3, null=True)
+    amount = models.PositiveIntegerField(null=True)  # total en entero CLP
     full_name = models.CharField(max_length=255, blank=True, null=True)
     address_line_1 = models.CharField(max_length=255, blank=True, null=True)
     city = models.CharField(max_length=255, blank=True, null=True)
@@ -44,7 +44,7 @@ class OrderItem(models.Model):
     product = models.ForeignKey(Product, on_delete=models.DO_NOTHING)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
-    price = models.DecimalField(max_digits=8, decimal_places=2)
+    price = models.PositiveIntegerField()  # entero CLP
     date_added = models.DateTimeField(auto_now_add=datetime.now)
 
     def __str__(self):

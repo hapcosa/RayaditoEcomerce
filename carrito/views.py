@@ -89,15 +89,14 @@ class GetTotalView(APIView):
             cart = Carrito.objects.get(user=user)
             cart_items = CarritoItem.objects.filter(carrito=cart)
 
-            total_cost = 0.0
-            total_compare_cost = 0.0
+            # Dinero en entero CLP: se suma como entero, sin floats ni redondeos.
+            total_cost = 0
+            total_compare_cost = 0
 
             if cart_items.exists():
                 for cart_item in cart_items:
-                    total_cost += (float(cart_item.product.price))
-                    total_compare_cost += (float(cart_item.product.compare_price))
-                total_cost = round(total_cost, 2)
-                total_compare_cost = round(total_compare_cost, 2)
+                    total_cost += int(cart_item.product.price)
+                    total_compare_cost += int(cart_item.product.compare_price)
             return Response(
                 {'total_cost': total_cost, 'total_compare_cost': total_compare_cost},
                 status=status.HTTP_200_OK)
