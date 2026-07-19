@@ -63,8 +63,8 @@ class ProcessPaymentView(APIView):
                     productos['description'] = producto.description
                     productos['category_id'] = producto.category.id
                     productos['quantity'] = 1
-                    productos['unit_price'] = float(producto.price)
-                    total_amount += float(producto.price)
+                    productos['unit_price'] = int(producto.price)
+                    total_amount += int(producto.price)
                     items.append(productos)
             else:
                 return Response(
@@ -106,8 +106,8 @@ class ProcessPaymentView(APIView):
                     productos['description'] = producto.description
                     productos['category_id'] = producto.category.id
                     productos['quantity'] = 1
-                    productos['unit_price'] = float(producto.price)
-                    total_amount += float(producto.price)
+                    productos['unit_price'] = int(producto.price)
+                    total_amount += int(producto.price)
                     items.append(productos)
             else:
 
@@ -137,8 +137,8 @@ class ProcessPaymentView(APIView):
                         productos['description'] = str(product['description'])
                         productos['category_id'] = str(product['category'])
                         productos['quantity'] = 1
-                        productos['unit_price'] = float(product['price'])
-                        total_amount += float(product['price'])
+                        productos['unit_price'] = int(product['price'])
+                        total_amount += int(product['price'])
                         items.append(productos)
 
             
@@ -299,8 +299,8 @@ class PaymentsBricks(APIView):
                 productos['description'] = producto.description
                 productos['category_id'] = producto.category.id
                 productos['quantity'] = 1
-                productos['unit_price'] = float(producto.price)
-                total_amount += float(producto.price)
+                productos['unit_price'] = int(producto.price)
+                total_amount += int(producto.price)
                 items.append(productos)
         else:
 
@@ -329,8 +329,8 @@ class PaymentsBricks(APIView):
                     productos['description'] = str(product['description'])
                     productos['category_id'] = str(product['category'])
                     productos['quantity'] = 1
-                    productos['unit_price'] = float(product['price'])
-                    total_amount += float(product['price'])
+                    productos['unit_price'] = int(product['price'])
+                    total_amount += int(product['price'])
                     items.append(productos)
 
             
@@ -347,7 +347,7 @@ class PaymentsBricks(APIView):
             }
         
         payment_data = {
-            "transaction_amount": float(request.POST.get("transaction_amount")),
+            "transaction_amount": int(request.POST.get("transaction_amount")),
             "token": request.POST.get("token"),
             "description": request.POST.get("description"),
             "installments": int(request.POST.get("installments")),
