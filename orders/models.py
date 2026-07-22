@@ -45,6 +45,7 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     price = models.PositiveIntegerField()  # entero CLP
+    count = models.PositiveIntegerField(default=1)
     date_added = models.DateTimeField(auto_now_add=datetime.now)
 
     def __str__(self):

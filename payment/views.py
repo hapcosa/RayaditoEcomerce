@@ -1,526 +1,375 @@
-from django.shortcuts import render
-from django.conf import settings
-from rest_framework.views import APIView
-from django.core.mail import send_mail
-from rest_framework.response import Response
-from rest_framework import permissions, status
-from product.models import Product
-from product.serializers import ProductSerializer
-from carrito.models import Carrito,CarritoItem
-from orders.models import *
-from user_profile.models import UserProfile
-from shipping.models import Shipping
-User = settings.AUTH_USER_MODEL
-import environ
-import mercadopago
-from mercadopago.resources import MerchantOrder
-from .models import Payments
+import hashlib
+import hmac
 import os
-import environ
-import requests
-import json
-env = environ.Env()
-environ.Env.read_env()
+
+import mercadopago
+from django.db import transaction
+from django.db.models import Sum
+from django.shortcuts import get_object_or_404
+from django.utils.text import slugify
+from rest_framework import permissions, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from carrito.models import Carrito, CarritoItem
+from orders.models import Order, OrderItem
+from product.models import Product
+from shipping.models import Shipping
+from user_profile.models import UserProfile
+from .models import Payments
+
+
+PAYMENT_TO_ORDER_STATUS = {
+    Payments.PaymentStatus.APPROVED.value: Order.OrderStatus.processed,
+    Payments.PaymentStatus.REJECTED.value: Order.OrderStatus.refused,
+    Payments.PaymentStatus.CANCELLED.value: Order.OrderStatus.cancelled,
+    Payments.PaymentStatus.REFUNDED.value: Order.OrderStatus.cancelled,
+    Payments.PaymentStatus.CHARGED_BACK.value: Order.OrderStatus.cancelled,
+}
+
+
+def _mercadopago_token():
+    return os.environ.get('MERCADOPAGO_ACCESS_TOKEN') or os.environ.get('TOKENMERCADOPAGOTEST')
+
+
+def _sdk():
+    return mercadopago.SDK(_mercadopago_token())
+
+
+def _frontend_url():
+    return os.environ.get('FRONTEND_BASE_URL', 'http://127.0.0.1:5173')
+
+
+def _notification_url(request):
+    configured = os.environ.get('MERCADOPAGO_NOTIFICATION_URL')
+    if configured:
+        return configured
+    return request.build_absolute_uri('/api/payment/webhook')
+
+
+def _order_items_payload(order):
+    return [
+        {
+            'id': str(item.product_id),
+            'title': item.name,
+            'currency_id': 'CLP',
+            'description': item.product.description,
+            'category_id': str(item.product.category_id),
+            'quantity': item.count,
+            'unit_price': int(item.price),
+        }
+        for item in OrderItem.objects.select_related('product').filter(order=order)
+    ]
+
+
+def _preference_data(request, order):
+    base_url = _frontend_url()
+    return {
+        'items': _order_items_payload(order),
+        'notification_url': _notification_url(request),
+        'back_urls': {
+            'success': f'{base_url}/success',
+            'failure': f'{base_url}/checkout',
+            'pending': f'{base_url}/checkout',
+        },
+        'auto_return': 'approved',
+        'external_reference': str(order.id),
+        'expires': True,
+        'payer': {
+            'name': (order.full_name or '').split(' ', 1)[0],
+            'surname': (order.full_name or '').split(' ', 1)[1] if ' ' in (order.full_name or '') else '',
+            'email': order.user.email if order.user_id else order.email,
+            'phone': {'area_code': '+56', 'number': order.telephone_number},
+            'address': {
+                'street_name': order.address_line_1,
+                'street_number': '',
+                'zip_code': order.postal_zip_code,
+            },
+        },
+    }
+
+
+def _sync_cart_total(cart):
+    total = CarritoItem.objects.filter(carrito=cart).aggregate(total=Sum('count'))['total'] or 0
+    Carrito.objects.filter(id=cart.id).update(total_items=total)
+
+
+def _has_stock(product, count):
+    variant_stock = product.variants.filter(is_active=True).aggregate(total=Sum('stock'))['total']
+    if variant_stock is None:
+        return not product.sold
+    return variant_stock >= count
+
+
+def _deduct_product_stock(product, count):
+    variants = product.variants.filter(is_active=True).order_by('id')
+    if not variants.exists():
+        product.sold = True
+        product.save(update_fields=['sold'])
+        return
+
+    remaining = count
+    for variant in variants:
+        if remaining <= 0:
+            break
+        quantity = min(variant.stock, remaining)
+        variant.stock -= quantity
+        variant.save(update_fields=['stock'])
+        remaining -= quantity
+
+
+def _create_order_item(order, product, count):
+    OrderItem.objects.create(
+        product=product,
+        order=order,
+        name=product.name,
+        price=int(product.price),
+        count=count,
+    )
+
+
+def _create_authenticated_order(request):
+    profile = get_object_or_404(UserProfile, id=int(request.data['profile_id']), user=request.user)
+    shipping = get_object_or_404(Shipping, id=int(request.data['shipping_id']))
+    cart = get_object_or_404(Carrito, user=request.user)
+    cart_items = CarritoItem.objects.select_related('product').filter(carrito=cart)
+    if not cart_items.exists():
+        return None, Response({'error': 'No tienes productos en tu carrito'},
+                              status=status.HTTP_404_NOT_FOUND)
+
+    for item in cart_items:
+        if not _has_stock(item.product, item.count):
+            return None, Response({'error': f'Stock insuficiente para {item.product.name}'},
+                                  status=status.HTTP_409_CONFLICT)
+
+    amount = sum(int(item.product.price) * item.count for item in cart_items)
+    order = Order.objects.create(
+        user=request.user,
+        profile=profile,
+        amount=amount,
+        full_name=f'{profile.first_name} {profile.last_name}'.strip(),
+        address_line_1=profile.address_line_1,
+        city=profile.city,
+        region=profile.country_region,
+        postal_zip_code=profile.zipcode,
+        telephone_number=profile.phone,
+        shipping_id=shipping,
+    )
+    for item in cart_items:
+        _create_order_item(order, item.product, item.count)
+    return order, None
+
+
+def _create_guest_order(request):
+    shipping = get_object_or_404(Shipping, id=int(request.data['shipping_id']))
+    items = request.data.get('items') or []
+    if not items:
+        return None, Response({'error': 'No tienes productos en tu carrito'},
+                              status=status.HTTP_404_NOT_FOUND)
+
+    normalized_items = []
+    for entry in items:
+        product_data = entry.get('product', entry)
+        product = get_object_or_404(Product, id=int(product_data['id']))
+        count = max(int(entry.get('count', product_data.get('count', 1))), 1)
+        if not _has_stock(product, count):
+            return None, Response({'error': f'Stock insuficiente para {product.name}'},
+                                  status=status.HTTP_409_CONFLICT)
+        normalized_items.append((product, count))
+
+    amount = sum(int(product.price) * count for product, count in normalized_items)
+    order = Order.objects.create(
+        email=request.data.get('email', ''),
+        amount=amount,
+        full_name=f"{request.data.get('first_name', '')} {request.data.get('last_name', '')}".strip(),
+        address_line_1=request.data.get('address_line_1', ''),
+        city=request.data.get('city', ''),
+        region=request.data.get('state_province_region', ''),
+        postal_zip_code=request.data.get('postal_zip_code', ''),
+        telephone_number=request.data.get('telephone_number', ''),
+        shipping_id=shipping,
+    )
+    for product, count in normalized_items:
+        _create_order_item(order, product, count)
+    return order, None
+
+
+def _create_preference(request, order):
+    preference_response = _sdk().preference().create(_preference_data(request, order))
+    return preference_response.get('response', preference_response)
+
+
+def _extract_payment_id(request):
+    return (
+        request.query_params.get('data.id')
+        or request.query_params.get('id')
+        or (request.data.get('data') or {}).get('id')
+        or request.data.get('id')
+    )
+
+
+def _signature_parts(x_signature):
+    parts = {}
+    for part in (x_signature or '').split(','):
+        key, separator, value = part.partition('=')
+        if separator:
+            parts[key.strip()] = value.strip()
+    return parts
+
+
+def _valid_webhook_signature(request, data_id):
+    secret = os.environ.get('MERCADOPAGO_WEBHOOK_SECRET', '')
+    if not secret:
+        return True
+
+    x_signature = request.headers.get('x-signature', '')
+    x_request_id = request.headers.get('x-request-id', '')
+    parts = _signature_parts(x_signature)
+    timestamp = parts.get('ts')
+    received_signature = parts.get('v1')
+    if not timestamp or not received_signature or not x_request_id or not data_id:
+        return False
+
+    manifest = f'id:{str(data_id).lower()};request-id:{x_request_id};ts:{timestamp};'
+    expected_signature = hmac.new(
+        secret.encode(),
+        msg=manifest.encode(),
+        digestmod=hashlib.sha256,
+    ).hexdigest()
+    return hmac.compare_digest(expected_signature, received_signature)
+
+
+def _payment_status(raw_status):
+    value = slugify(raw_status or '').replace('-', '_')
+    valid_statuses = {choice.value for choice in Payments.PaymentStatus}
+    if value in valid_statuses:
+        return value
+    return Payments.PaymentStatus.UNKNOWN
+
+
+def _apply_approved_payment(payment):
+    if payment.stock_deducted:
+        return
+
+    for item in OrderItem.objects.select_related('product').filter(order=payment.order):
+        _deduct_product_stock(item.product, item.count)
+
+    if payment.order.user_id:
+        cart = Carrito.objects.filter(user=payment.order.user).first()
+        if cart:
+            product_ids = OrderItem.objects.filter(order=payment.order).values_list('product_id', flat=True)
+            CarritoItem.objects.filter(carrito=cart, product_id__in=product_ids).delete()
+            _sync_cart_total(cart)
+
+    payment.stock_deducted = True
+    payment.save(update_fields=['stock_deducted', 'updated_at'])
+
+
+def _record_payment(payment_data):
+    external_reference = str(payment_data.get('external_reference') or '')
+    order = get_object_or_404(Order, id=int(external_reference))
+    payment_status = _payment_status(payment_data.get('status'))
+    order_status = PAYMENT_TO_ORDER_STATUS.get(payment_status, Order.OrderStatus.not_processed)
+
+    with transaction.atomic():
+        order.status = order_status
+        order.transaction_id = str(payment_data['id'])
+        order.save(update_fields=['status', 'transaction_id'])
+
+        installments = int(payment_data.get('installments') or 1)
+        payment, _created = Payments.objects.update_or_create(
+            order=order,
+            defaults={
+                'payment_id': int(payment_data['id']),
+                'status': payment_status,
+                'status_detail': payment_data.get('status_detail') or '',
+                'external_reference': external_reference,
+                'payment_method_id': payment_data.get('payment_method_id') or '',
+                'typepayment': payment_data.get('payment_type_id') or '',
+                'cuotas': installments > 1,
+                'raw_response': payment_data,
+            },
+        )
+        if payment_status == Payments.PaymentStatus.APPROVED:
+            _apply_approved_payment(payment)
+    return order
+
 
 class ProcessPaymentView(APIView):
     permission_classes = (permissions.AllowAny,)
+
     def post(self, request, format=None):
-        
-        data=self.request.data
-        user=self.request.user
-        orderKey='orderId'
-        print(data)
-        if orderKey in data:
-            try:
-                print(orderKey)
-                orderId=data[orderKey]
-            except:
-                return Response(
-                        {'error': 'El dato identificador de la orden debe ser un numero entero'},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                    )
-            if Order.objects.filter(id=orderId).exists():
-                order = Order.objects.get(id=orderId)
-                shipping=Shipping.objects.get(id=order.shipping_id.id)
-                total_amount = 0
-                items = []
-                email=user.email
-                first_name = user.first_name
-                last_name = user.last_name
-                address_line_1 = order.address_line_1
-                city=order.city
-                state_province_region =order.region
-                postal_zip_code =order.postal_zip_code
-                telephone_number =order.telephone_number
-                products = OrderItem.objects.filter(order=order)
-                for product in products:
-                    producto= Product.objects.get(id=product.product.id)
-                    print(producto)
-                    productos = {}
-                    productos['id'] = producto.id
-                    productos['title'] = producto.name
-                    productos['currency_id'] = 'CLP'
-                    productos['description'] = producto.description
-                    productos['category_id'] = producto.category.id
-                    productos['quantity'] = 1
-                    productos['unit_price'] = int(producto.price)
-                    total_amount += int(producto.price)
-                    items.append(productos)
+        if not _mercadopago_token():
+            return Response({'error': 'MercadoPago no está configurado'},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        try:
+            if 'orderId' in request.data:
+                order = get_object_or_404(Order, id=int(request.data['orderId']))
+                if order.user_id and (not request.user.is_authenticated or order.user_id != request.user.id):
+                    return Response({'error': 'No tienes permiso para pagar esta orden'},
+                                    status=status.HTTP_403_FORBIDDEN)
+            elif request.user.is_authenticated:
+                order, error = _create_authenticated_order(request)
+                if error:
+                    return error
             else:
-                return Response(
-                        {'error': 'No existe la orden, vuelve a intentarlo'},
-                        status=status.HTTP_404_NOT_FOUND
-                    )
-        
-        else:
-            print("---payment----")
-            shipping_id = str(data['shipping_id'])
-            shipping=Shipping.objects.get(id=shipping_id)
-            total_amount = 0
-            items = []
-            if user.is_anonymous is False:
-                profile_id = int(data['profile_id'])
-                profile_address = UserProfile.objects.get(id=profile_id)
-                email=user.email
-                first_name = user.first_name
-                last_name = user.last_name
-                address_line_1 = profile_address.address_line_1
-                city=profile_address.city
-                state_province_region =profile_address.country_region
-                postal_zip_code =profile_address.zipcode
-                telephone_number =profile_address.phone
-                cart = Carrito.objects.get(user=user)
-                if not CarritoItem.objects.filter(carrito=cart).exists():
-                    return Response(
-                        {'error': 'No tienes productos en tu carrito'},
-                        status=status.HTTP_404_NOT_FOUND
-                    )
-                products = CarritoItem.objects.filter(carrito=cart)
-                for product in products:
-                    producto= Product.objects.get(id=product.product.id)
-                    print(producto)
-                    productos = {}
-                    productos['id'] = producto.id
-                    productos['title'] = producto.name
-                    productos['currency_id'] = 'CLP'
-                    productos['description'] = producto.description
-                    productos['category_id'] = producto.category.id
-                    productos['quantity'] = 1
-                    productos['unit_price'] = int(producto.price)
-                    total_amount += int(producto.price)
-                    items.append(productos)
-            else:
+                order, error = _create_guest_order(request)
+                if error:
+                    return error
+        except (KeyError, TypeError, ValueError):
+            return Response({'error': 'Datos de pago inválidos'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
-                    email=data['email']
-                    first_name = data['first_name']
-                    last_name = data['last_name']
-                    address_line_1 = data['address_line_1']
-                    city = data['city']
-                    state_province_region = data['state_province_region']
-                    postal_zip_code = data['postal_zip_code']
-                    telephone_number = data['telephone_number']
-                    products = data['items']
-                    if products is None:
-                        return Response(
-                            {'error': 'No tienes productos en tu carrito'},
-                            status=status.HTTP_404_NOT_FOUND
-                        )
-
-                    for num in range(0,len(products)):
-                        productos = { }
-                        
-                        products_dict=products[num]
-                        product=products_dict['product']
-                        productos['id'] = product['id']
-                        productos['title'] = str(product['name'])
-                        productos['currency_id'] = 'CLP'
-                        productos['description'] = str(product['description'])
-                        productos['category_id'] = str(product['category'])
-                        productos['quantity'] = 1
-                        productos['unit_price'] = int(product['price'])
-                        total_amount += int(product['price'])
-                        items.append(productos)
-
-            
-                    
-                
-            print("crea la orden")
-            order = Order.objects.create()
-        preference_data = { 
-            "items": items,
-            "notification_url": "rayaditoecomerce-production.up.railway.app/api/payment/webhook",
-            "back_urls": {
-                "success": "http://127.0.0.1:5173/",
-                "failure": "http://127.0.0.1:5173/",
-                "pending": "http://127.0.0.1:5173/"
-            },
-            
-            "auto_return": "approved",
-            "installments": 3,
-            "external_Reference": order.id,
-            "expires": True,
-
-            "payer": {
-                "identification": {
-                    "number": "123456789",
-                    "type": "other"
-                    },
-                "name": first_name,
-                "surname": last_name,
-                "email": email,
-                "phone": {
-                    "area_code": "+56" ,
-                    "number": telephone_number,
-                },
-                 "address": {
-                "street_name": address_line_1,
-                "street_number": "",
-                "zip_code": postal_zip_code,
-                }
-                 
-            },
-           
-            
-        }
-        print("-------------------------------inicio envio de preferencia ---------------------------")
-        sdk = mercadopago.SDK(os.environ.get('TOKENMERCADOPAGOTEST'))
-        print(os.environ.get('TOKENMERCADOPAGOTEST'))
-        preference_response = sdk.preference().create(preference_data)
-        preference = preference_response["response"]
-        #merchant_id = sdk.merchant_order().get()
-        print(preference)
-        #crear orden
-        #try:
-        print('------------------------------begin-order-----------------------------')
-        if orderKey in data:
-            print('----repaymentorder-------')
-            return Response({'response': preference}, status=status.HTTP_200_OK)
-        else:
-            if user.is_anonymous is False:
-                
-                print('------------------------------user-session-order-----------------------------')
-                order.user = user
-            else:
-                order.email = email
-    
-
-            
-            order.amount=total_amount
-            order.full_name=first_name + ' ' + last_name
-            order.address_line_1=address_line_1
-            order.city=city
-            order.region=state_province_region
-            order.postal_zip_code=postal_zip_code
-            order.telephone_number=telephone_number
-            print(shipping)
-            order.shipping_id=shipping   
-            order.save()       
-            print('-------------------------end-order-----------------------------')
-            
-            if user.is_anonymous is False:
-                cart = Carrito.objects.get(user=user)
-                carrito_items = CarritoItem.objects.filter(carrito=cart)
-                for cart_item in carrito_items:
-                    try:
-                        # agarrar el producto
-                        product = Product.objects.get(id=cart_item.product.id)
-
-                        OrderItem.objects.create(
-                            product=product,
-                            order=order,
-                            name=product.name,
-                            price=cart_item.product.price,
-                            )
-                    except:
-                        return Response(
-                            {'error': 'Transaction succeeded and order created, but failed to create an order item'},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                            )
-            else:
-                print("---------agregar productos a la orden ----------")
-                try:
-                    for num in range(0,len(products)):
-                        products_dict_a=products[num]
-                        producto=products_dict_a['product']
-                        product = Product.objects.get(id=producto['id'])
-                        OrderItem.objects.create(
-                            product=product,
-                            order=order,
-                            name=product.name,
-                            price=product.price,
-                            )
-                except Exception:
-                    print('el error es:' + str(Exception))
-                    return Response(
-                        {'error': 'Transaction succeeded and order created, but failed to create an order item'},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                    )
-            return Response({'response': preference}, status=status.HTTP_200_OK)
-            
-class PaymentsBricks(APIView):
-    permission_classes = (permissions.AllowAny,)
-    def post(self, request, format=None):
-        sdk = mercadopago.SDK("ACCESS_TOKEN")
-        data=self.request.data
-        user=self.request.user
-        orderKey='orderId'
-        print(data)
-        print("---payment----")
-        shipping_id = str(data['shipping_id'])
-        shipping=Shipping.objects.get(id=shipping_id)
-        total_amount = 0
-        items = []
-        if user.is_anonymous is False:
-            profile_id = int(data['profile_id'])
-            print(profile_id)
-            profile_address = UserProfile.objects.get(id=profile_id)
-            email=user.email
-            first_name = user.first_name
-            last_name = user.last_name
-            address_line_1 = profile_address.address_line_1
-            city=profile_address.city
-            state_province_region =profile_address.country_region
-            postal_zip_code =profile_address.zipcode
-            telephone_number =profile_address.phone
-            cart = Carrito.objects.get(user=user)
-            if not CarritoItem.objects.filter(carrito=cart).exists():
-                return Response(
-                    {'error': 'No tienes productos en tu carrito'},
-                        status=status.HTTP_404_NOT_FOUND
-                    )
-            products = CarritoItem.objects.filter(carrito=cart)
-            for product in products:
-                producto= Product.objects.get(id=product.product.id)
-                print(producto)
-                productos = {}
-                productos['id'] = producto.id
-                productos['title'] = producto.name
-                productos['currency_id'] = 'CLP'
-                productos['description'] = producto.description
-                productos['category_id'] = producto.category.id
-                productos['quantity'] = 1
-                productos['unit_price'] = int(producto.price)
-                total_amount += int(producto.price)
-                items.append(productos)
-        else:
-
-            email=data['email']
-            first_name = data['first_name']
-            last_name = data['last_name']
-            address_line_1 = data['address_line_1']
-            city = data['city']
-            state_province_region = data['state_province_region']
-            postal_zip_code = data['postal_zip_code']
-            telephone_number = data['telephone_number']
-            products = data['items']
-            if products is None:
-                return Response(
-                    {'error': 'No tienes productos en tu carrito'},                            status=status.HTTP_404_NOT_FOUND
-                    )
-
-                for num in range(0,len(products)):
-                    productos = { }
-                        
-                    products_dict=products[num]
-                    product=products_dict['product']
-                    productos['id'] = product['id']
-                    productos['title'] = str(product['name'])
-                    productos['currency_id'] = 'CLP'
-                    productos['description'] = str(product['description'])
-                    productos['category_id'] = str(product['category'])
-                    productos['quantity'] = 1
-                    productos['unit_price'] = int(product['price'])
-                    total_amount += int(product['price'])
-                    items.append(productos)
-
-            
-                    
-                
-        print("crea la orden")
-        order = Order.objects.create()
-         
-            
-
-        request_options = mercadopago.config.RequestOptions()
-        request_options.custom_headers = {
-            'x-idempotency-key': '<SOME_UNIQUE_VALUE>'
-            }
-        
-        payment_data = {
-            "transaction_amount": int(request.POST.get("transaction_amount")),
-            "token": request.POST.get("token"),
-            "description": request.POST.get("description"),
-            "installments": int(request.POST.get("installments")),
-            "payment_method_id": request.POST.get("payment_method_id"),
-            "payer": {
-                "email": request.POST.get("cardholderEmail"),
-                "identification": {
-                    "type": request.POST.get("identificationType"), 
-                    "number": request.POST.get("identificationNumber")
-                },
-                "first_name": request.POST.get("cardholderName")
-            }
-        }
-
-        payment_response = sdk.payment().create(payment_data, request_options)
-        payment = payment_response["response"]
-
-        print(payment)
+        preference = _create_preference(request, order)
+        return Response({'response': preference, 'order_id': order.id},
+                        status=status.HTTP_200_OK)
 
 
 class MercadoPagoResponse(APIView):
     permission_classes = (permissions.AllowAny,)
+
     def post(self, request, format=None):
-        sdk = mercadopago.SDK(os.environ.get('TOKENMERCADOPAGOTEST'))
-        data = self.request.data
-        print(data)
-        try:
-            id=data['data']['id']
-            print(id)
-            paymentRef = sdk.payment().get(id)
-            print("paymentsdkget")
-            print(paymentRef)
-         
-         
-            externalRef = paymentRef['response']['external_reference']
-            print(externalRef)
-               
-            if(Order.objects.filter(id=externalRef).exists()):
-                order = Order.objects.get(id=externalRef)
-                print(order)
-            else:
-                print('orden no encontrada')
-                return Response({'error':'No se encontro la orden'}, status=status.HTTP_404_NOT_FOUND)
-                    
-                
-            Status = paymentRef['response']['status']
-            if(Status=='approved'):
-                order.status = Order.OrderStatus.processed
-                order.save()
-                print('---------payments exist check---------------------------------------------')
-                if Payments.objects.filter(payment_id=id).exists():
-                    print("pago existente error" + str(Payments.objects.get(payment_id=id)))
-                    return Response({'error': "pago existente error"},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                else:
-                    print("crear pago:")
-                    print(id)
-                    payment = Payments.objects.create(payment_id=id, order = order)
-                    print("pago creado")
-                    if order.user is not None:
-                        print('dentro de algoritmo de sincronicacion de carrito y productos con usuario')
-                        carrito = Carrito.objects.get(user=order.user)
-                        orderitems = OrderItem.objects.filter(order=order)
-                        carritoitems = CarritoItem.objects.filter(carrito=carrito)
-                        print("inicio ciclo for con usuario")
-                        for items in orderitems:
-                            items.delete()
-                            if not Product.objects.filter(id=items.product.id).exists():
-                                return Response({'error':"error al encontrar el producto"},status=status.HTTP_404_NOT_FOUND)
-                            product = Product.objects.get(id=items.product.id)
-                            product.sold=True
-                            product.save()
-                            print("inicio ciclo carrito con usuario")
-                            for itemscar in carritoitems:
-                                if items.product.id == itemscar.product.id:
-                                    itemscar.delete()
-                                    carrito.total_items += -1
+        payment_id = _extract_payment_id(request)
+        if not payment_id:
+            return Response({'error': 'payment id requerido'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if not _valid_webhook_signature(request, payment_id):
+            return Response({'error': 'firma inválida'},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        if not _mercadopago_token():
+            return Response({'error': 'MercadoPago no está configurado'},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                        
-                        
-                        carrito.save()
-                    else:
-                        print("pago sin usuario")
-                        order_items = OrderItem.objects.filter(order=order)
-                        print(order_items)
-                        for items in order_items:
-                            product = Product.objects.get(id=items.product.id)
-                            print(product)
-                            product.sold=True
-                            product.save()
-                    
-                print(order)
-                print('----------------------------')
-                    
-            elif(Status=='rejected'):
-                order.save()
-            else:
-                order.save()
-            
-        except Exception as e:
-            print(str(e))
-            print('exception^')
-        try:
-            topic = data['topic']
-            if topic == 'payment':
-                print(topic + data['data']['id'])
-            elif topic == 'merchant_order':
-                print(data['resource'])
-        except:
-            print('no topic')
-        return Response({'status':"finish"},status=status.HTTP_200_OK)
-           # externalReference = reponse_dict['external reference']
-            #order = Order.objects.get(id=externalReference)
-            #order.transaction_id = request.GET.get('id')
-            #order.save()
-            #paymentRef = sdk.payment().get(request.GET.get('data.id'))
-            #print('---------impresion pago id-----------------')
-            #payresponse = paymentRef['response']
-            #print(paymentRef['response'])
-            #orderInfo=payresponse['order'] 
-            #order = Order.objects.get(transaction_id=orderInfo['id'],)
-            #if payresponse['status'] == 'approved':
-            #   order.status = Order.OrderStatus.processed
-             #   order.save()
-              #  print("-------------payments exist check---------------------------------------------")
-             #   if Payments.objects.filter(payment_id=request.GET.get('data.id')).exists():
-             #       print("pago existente error" + str(Payments.objects.get(payment_id=request.GET.get('data.id'))))
-             #   else:
-             #       print("no in")
-             #       payment = Payments.objects.create(payment_id=request.GET.get('data.id'), order = order)
-             #   print(order.user)
-             #   if order.user is not Null:
-             #       print('user in')
-             #       carrito = Carrito.objects.get(user=order.user)
-             #       orderitems = OrderItem.objects.filter(order=order)
-             #       carritoitems = CarritoItem.objects.filter(carrito=carrito)
-             #       for items in orderitems:
-             #           items.delete()
-             #           product = Product.objects.get(id=items.product.id)
-             #           product.sold=True
-             #           product.save()
-             #           for itemscar in carritoitems:
-             #               if item.product.id == itemscar.product.id:
-             #                   itemscar.delete()
-             #                   carrito.total_items += -1
+        payment_response = _sdk().payment().get(payment_id)
+        payment_data = payment_response.get('response', {})
+        if not payment_data:
+            return Response({'error': 'respuesta de pago inválida'},
+                            status=status.HTTP_502_BAD_GATEWAY)
 
-                    
-                    
-                #    carrito.save()
-                #else:
-                #    print("in")
-                #    order_items = OrderItem.objects.filter(order=order)
-                #    print(order_items)
-                #    for items in order_items:
-                #        product = Product.objects.get(id=items.product.id)
-                #        print(product)
-                #        product.sold=True
-                #        product.save()
-                    
-                #print(order)
-                #print('----------------------------')
-            #elif payresponse['status']=='failure':
-             #   print("fallo server1")
-            #elif payresponse['status']=='rejected':
-            #    order.status = Order.OrderStatus.refused
-            #    order.save()
-            #    print("pago rechazado")
-                
-            #elif payresponse['status']=='no funds':
-                #print("fallo server3")
-            #return Response({'success': True}, status=status.HTTP_200_OK)
-    
+        _record_payment(payment_data)
+        return Response({'status': 'finish'}, status=status.HTTP_200_OK)
+
 
 class StatusPaymentView(APIView):
     permission_classes = (permissions.AllowAny,)
-    def get(self,request, format=None):
-        return Response ({"status": order.status}, status=status.HTTP_200_OK)
+
+    def get(self, request, format=None):
+        order_id = request.query_params.get('order_id')
+        payment_id = request.query_params.get('payment_id')
+        if order_id:
+            order = get_object_or_404(Order, id=int(order_id))
+            payment = Payments.objects.filter(order=order).first()
+        elif payment_id:
+            payment = get_object_or_404(Payments, payment_id=int(payment_id))
+            order = payment.order
+        else:
+            return Response({'error': 'order_id o payment_id requerido'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'order_id': order.id,
+            'order_status': order.status,
+            'payment_status': payment.status if payment else None,
+            'transaction_id': order.transaction_id,
+        }, status=status.HTTP_200_OK)
