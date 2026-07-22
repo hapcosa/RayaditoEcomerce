@@ -13,7 +13,6 @@ import {
     REMOVE_PAYMENT_LOADING,
     STATUS_PAYMENT_SUCCESS,
     STATUS_PAYMENT_REJECTED,
-    REMOVE_ITEM,
     EMPTY_CART,
 
 } from './types';
@@ -116,23 +115,6 @@ export const process_payment = (
     try {
         const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/payment/make-payment`, body, config);
         if (res.status === 200) {
-            let cart = [];
-            let new_cart = [];
-            if (localStorage.getItem('cart')) {
-                cart = JSON.parse(localStorage.getItem('cart'));
-                console.log(cart);
-                cart.map(cart_item => {
-                    new_cart.push(cart_item);
-                    });
-            }
-            dispatch({
-                type: REMOVE_ITEM,
-                payload: new_cart
-            });
-            dispatch({
-                type: EMPTY_CART,
-            });
-
             dispatch({
                 type: PAYMENT_SUCCESS,
                 payload: res.data
@@ -267,7 +249,7 @@ export const process_repayment_auth =(orderId) => async dispatch => {
 }
 
 
-export const statuspayment = (merchantId, paymentId, externalReference) =>  async dispatch => {
+export const statuspayment = (paymentId, orderId) =>  async dispatch => {
     const config = {
         headers: {
             'Accept': 'application/json',
@@ -276,20 +258,37 @@ export const statuspayment = (merchantId, paymentId, externalReference) =>  asyn
     }
     //config['headers']['Authorization'] = `JWT ${localStorage.getItem('access')}`
     try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/payment/status-payment/?status=approved&payment_id=${paymentId}&merchant_id=${merchantId}&external_reference=${externalReference}`,  config);
+        const params = new URLSearchParams();
+        if (paymentId) {
+            params.append('payment_id', paymentId);
+        } else if (orderId) {
+            params.append('order_id', orderId);
+        }
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/payment/status-payment/?${params.toString()}`,  config);
         if (res.status === 200) {
             dispatch({
                 type: STATUS_PAYMENT_SUCCESS,
                 payload: res.data
             })
+            if (res.data.payment_status === 'approved' || res.data.order_status === 'procesado') {
+                localStorage.removeItem('cart');
+                dispatch({
+                    type: EMPTY_CART,
+                });
+            }
         }else{
             dispatch({
-                type: STATUS_PAYMENT_REJECTED
+                type: STATUS_PAYMENT_REJECTED,
+                payload: res.data
             })
             
         }
     }
     catch(err){
+        dispatch({
+            type: STATUS_PAYMENT_REJECTED,
+            payload: { payment_status: 'unknown', order_status: null }
+        });
         dispatch(setAlert('Error de servidor:' + err, 'red'));
     }
 };

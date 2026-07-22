@@ -114,6 +114,14 @@ class MercadoPagoFlowTests(APITestCase):
         self.assertEqual(fake_sdk.preference_client.created_payload['external_reference'], str(order.id))
         self.assertEqual(fake_sdk.preference_client.created_payload['items'][0]['quantity'], 2)
         self.assertEqual(fake_sdk.preference_client.created_payload['items'][0]['unit_price'], 25000)
+        self.assertEqual(
+            fake_sdk.preference_client.created_payload['back_urls'],
+            {
+                'success': 'http://127.0.0.1:5173/success',
+                'failure': 'http://127.0.0.1:5173/success',
+                'pending': 'http://127.0.0.1:5173/success',
+            },
+        )
 
     @mock.patch.dict(os.environ, {'MERCADOPAGO_ACCESS_TOKEN': 'test-token'}, clear=False)
     def test_approved_webhook_is_idempotent_and_deducts_stock_once(self):

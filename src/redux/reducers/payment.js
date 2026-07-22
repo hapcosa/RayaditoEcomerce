@@ -21,7 +21,10 @@ const initialState = {
     loading: false,
     error: null,
     url: null,
-    status: null
+    status: null,
+    order_status: null,
+    order_id: null,
+    transaction_id: null
 };
 
 export default function Payment(state = initialState, action) {
@@ -45,12 +48,14 @@ export default function Payment(state = initialState, action) {
                 ...state,
                 made_payment: true,
                 url: payload.response.init_point,
+                order_id: payload.order_id,
             }
         case PAYMENT_FAIL:
             return {
                 ...state,
                 made_payment: false,
-                url: null
+                url: null,
+                order_id: null,
 
             }
         case SET_PAYMENT_LOADING:
@@ -66,12 +71,18 @@ export default function Payment(state = initialState, action) {
         case STATUS_PAYMENT_SUCCESS:
             return {
                 ...state,
-                status: payload.status
+                status: payload.payment_status || payload.order_status,
+                order_status: payload.order_status,
+                order_id: payload.order_id,
+                transaction_id: payload.transaction_id,
             }
         case STATUS_PAYMENT_REJECTED:
              return {
                 ...state,
-                 status: payload.status
+                 status: payload.payment_status || payload.order_status || 'unknown',
+                 order_status: payload.order_status || null,
+                 order_id: payload.order_id || null,
+                 transaction_id: payload.transaction_id || null,
             }
 
         case RESET_PAYMENT_INFO:
@@ -83,7 +94,10 @@ export default function Payment(state = initialState, action) {
                 loading: false,
                 error: null,
                 url: null,
-                status: null
+                status: null,
+                order_status: null,
+                order_id: null,
+                transaction_id: null,
             }
         default:
             return state;

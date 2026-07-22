@@ -69,8 +69,8 @@ def _preference_data(request, order):
         'notification_url': _notification_url(request),
         'back_urls': {
             'success': f'{base_url}/success',
-            'failure': f'{base_url}/checkout',
-            'pending': f'{base_url}/checkout',
+            'failure': f'{base_url}/success',
+            'pending': f'{base_url}/success',
         },
         'auto_return': 'approved',
         'external_reference': str(order.id),
