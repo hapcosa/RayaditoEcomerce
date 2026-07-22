@@ -33,3 +33,4 @@ class OrderMoneyTests(TestCase):
         item.refresh_from_db()
         self.assertIsInstance(item.price, int)
         self.assertEqual(item.price, 25000)
+        self.assertEqual(item.count, 1)
