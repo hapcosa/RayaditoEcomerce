@@ -29,6 +29,16 @@ def _sync_total_items(cart):
     return total
 
 
+def _has_available_stock(product, count):
+    if product.sold:
+        return False
+    variant_stock = product.variants.filter(is_active=True).aggregate(
+        total=Sum('stock'))['total']
+    if variant_stock is None:
+        return True
+    return variant_stock >= count
+
+
 class GetItemsView(APIView):
     def get(self, request, format=None):
         try:
@@ -60,7 +70,7 @@ class AddItemView(APIView):
                 {'error': 'Este producto ya se ha agregado al carro de compras'},
                 status=status.HTTP_409_CONFLICT)
 
-        if product.sold:
+        if not _has_available_stock(product, 1):
             return Response({'error': 'este producto ya no esta disponible'},
                             status=status.HTTP_200_OK)
 
@@ -125,6 +135,10 @@ class UpdateItemView(APIView):
         if item is None:
             return Response({'error': 'This product is not in your cart'},
                             status=status.HTTP_404_NOT_FOUND)
+
+        if not _has_available_stock(item.product, count):
+            return Response({'error': 'Not enough of this item in stock'},
+                            status=status.HTTP_200_OK)
 
         item.count = count
         item.save(update_fields=['count'])

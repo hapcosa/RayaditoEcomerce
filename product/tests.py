@@ -6,7 +6,14 @@ from rest_framework.test import APITestCase
 
 from category.models import Category
 from metaproduct.models import Material
-from product.models import Joyas
+from product.models import (
+    Attribute,
+    AttributeValue,
+    Joyas,
+    Product,
+    ProductAttributeValue,
+    ProductVariant,
+)
 
 User = get_user_model()
 
@@ -95,3 +102,53 @@ class OpenAPISchemaTests(APITestCase):
     def test_redoc_ok(self):
         res = self.client.get('/api/redoc')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+
+class GenericProductApiTests(APITestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Poleras', ProductType='Textil')
+        self.product = Product.objects.create(
+            name='Polera teñida',
+            product_type='textil',
+            description='Algodón teñido a mano',
+            price=18000,
+            compare_price=0,
+            category=self.category,
+            photo='',
+        )
+        self.size = Attribute.objects.create(
+            name='Talla', slug='talla', kind='select', is_variant_option=True,
+        )
+        self.size_m = AttributeValue.objects.create(attribute=self.size, value='M')
+        ProductAttributeValue.objects.create(
+            product=self.product, attribute_value=self.size_m,
+        )
+        self.variant = ProductVariant.objects.create(
+            product=self.product, sku='POL-M', stock=4,
+        )
+        self.variant.attributes.add(self.size_m)
+
+    def test_category_product_type_is_configurable(self):
+        self.category.full_clean()
+        self.assertEqual(self.category.ProductType, 'Textil')
+
+    def test_list_products_by_generic_type(self):
+        res = self.client.get('/api/products/', {'product_type': 'textil'})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data['products']), 1)
+        product = res.data['products'][0]
+        self.assertEqual(product['product_type'], 'textil')
+        self.assertEqual(product['available_stock'], 4)
+        self.assertEqual(product['attributes'][0]['attribute_slug'], 'talla')
+        self.assertEqual(product['variants'][0]['sku'], 'POL-M')
+
+    def test_detail_accepts_slug(self):
+        res = self.client.get(f'/api/products/{self.product.slug}')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['product']['id'], self.product.id)
+
+    def test_attribute_endpoint_lists_values(self):
+        res = self.client.get('/api/attributes/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['attributes'][0]['slug'], 'talla')
+        self.assertEqual(res.data['attributes'][0]['values'][0]['value'], 'M')

@@ -7,7 +7,7 @@ from rest_framework.test import APITestCase
 from carrito.models import Carrito, CarritoItem
 from category.models import Category
 from metaproduct.models import Material
-from product.models import Joyas
+from product.models import Joyas, ProductVariant
 
 User = get_user_model()
 
@@ -147,3 +147,17 @@ class CartQuantityTests(APITestCase):
         res = self.client.put('/api/cart/update-item',
                               {'product_id': self.p1.id, 'count': 2}, format='json')
         self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_update_item_count_respects_variant_stock(self):
+        ProductVariant.objects.create(product=self.p1, sku='ANI-1', stock=2)
+        self.client.put('/api/cart/add-item', {'product_id': self.p1.id}, format='json')
+
+        too_many = self.client.put('/api/cart/update-item',
+                                   {'product_id': self.p1.id, 'count': 3}, format='json')
+        self.assertEqual(too_many.status_code, status.HTTP_200_OK)
+        self.assertEqual(too_many.data['error'], 'Not enough of this item in stock')
+
+        ok = self.client.put('/api/cart/update-item',
+                             {'product_id': self.p1.id, 'count': 2}, format='json')
+        self.assertEqual(ok.status_code, status.HTTP_200_OK)
+        self.assertEqual(ok.data['cart'][0]['count'], 2)
