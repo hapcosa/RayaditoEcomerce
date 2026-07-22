@@ -20,6 +20,8 @@ urlpatterns = [
     path('', include('social_django.urls')),
     path('api/category/', include('category.urls')),
     path('api/product/', include('product.urls')),
+    path('api/products/', include('product.generic_urls')),
+    path('api/attributes/', include('product.attribute_urls')),
     path('api/reviews/', include('product.review_urls')),
     path('api/cart/', include('carrito.urls')),
     path('api/shipp/', include('shipping.urls')),
