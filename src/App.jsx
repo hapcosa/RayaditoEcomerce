@@ -27,7 +27,6 @@ import Success from "./containers/pages/successpayment";
 import JoyasTestDetail from "./containers/pages/joyasdetail2";
 import JoyasDetailDos from "./containers/pages/joyasdetail1";
 import Perfile from "./containers/pages/Perfil";
-import PaymentBrick from "./containers/pages/brickspayment";
 function App() {
 
   return (
@@ -41,7 +40,6 @@ function App() {
             <Route exact path="/cart" element={<Cart />}/>
             <Route exact path="/checkout" element={<Checkout />}/>
             <Route exact path="/success" element={<Success />}/>
-            <Route exact path="/bricks" element={<PaymentBrick/>}/>
             {/*joyas*/ }
 
             <Route exact path="/joyas" element={<Joyas />}/>
