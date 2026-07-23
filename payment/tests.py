@@ -1,8 +1,10 @@
 import os
 import hmac
 import hashlib
+from io import StringIO
 from unittest import mock
 
+from django.core.management import call_command
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -99,7 +101,7 @@ class MercadoPagoFlowTests(APITestCase):
         )
         self.client.force_authenticate(self.user)
 
-        with mock.patch('payment.views._sdk', return_value=fake_sdk):
+        with mock.patch('payment.services.mercadopago_sdk', return_value=fake_sdk):
             res = self.client.post('/api/payment/make-payment', {
                 'shipping_id': self.shipping.id,
                 'profile_id': self.profile.id,
@@ -151,7 +153,7 @@ class MercadoPagoFlowTests(APITestCase):
         }
         fake_sdk = FakeMercadoPagoSDK(payment_response=payment_response)
 
-        with mock.patch('payment.views._sdk', return_value=fake_sdk):
+        with mock.patch('payment.services.mercadopago_sdk', return_value=fake_sdk):
             first = self.client.post('/api/payment/webhook', {
                 'type': 'payment',
                 'data': {'id': '123456'},
@@ -194,7 +196,7 @@ class MercadoPagoFlowTests(APITestCase):
         }
         fake_sdk = FakeMercadoPagoSDK(payment_response=payment_response)
 
-        with mock.patch('payment.views._sdk', return_value=fake_sdk):
+        with mock.patch('payment.services.mercadopago_sdk', return_value=fake_sdk):
             res = self.client.post('/api/payment/webhook', {
                 'type': 'payment',
                 'data': {'id': '222'},
@@ -221,7 +223,7 @@ class MercadoPagoFlowTests(APITestCase):
             digestmod=hashlib.sha256,
         ).hexdigest()
 
-        with mock.patch('payment.views._sdk', return_value=fake_sdk):
+        with mock.patch('payment.services.mercadopago_sdk', return_value=fake_sdk):
             res = self.client.post(
                 '/api/payment/webhook',
                 {'type': 'payment', 'data': {'id': '123'}},
@@ -232,3 +234,87 @@ class MercadoPagoFlowTests(APITestCase):
 
         self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertIsNone(fake_sdk.payment_client.requested_payment_id)
+
+    @mock.patch.dict(os.environ, {'MERCADOPAGO_ACCESS_TOKEN': 'test-token'}, clear=False)
+    def test_reconcile_command_syncs_payment_by_id(self):
+        order = Order.objects.create(
+            user=self.user,
+            amount=50000,
+            shipping_id=self.shipping,
+        )
+        OrderItem.objects.create(
+            order=order,
+            product=self.product,
+            name=self.product.name,
+            price=25000,
+            count=2,
+        )
+        CarritoItem.objects.create(carrito=self.cart, product=self.product, count=2)
+        self.cart.total_items = 2
+        self.cart.save(update_fields=['total_items'])
+        Payments.objects.create(
+            order=order,
+            payment_id=333,
+            status=Payments.PaymentStatus.PENDING,
+            external_reference=str(order.id),
+        )
+        payment_response = {
+            'id': 333,
+            'external_reference': str(order.id),
+            'status': 'approved',
+            'status_detail': 'accredited',
+            'payment_method_id': 'visa',
+            'payment_type_id': 'credit_card',
+            'installments': 1,
+        }
+        fake_sdk = FakeMercadoPagoSDK(payment_response=payment_response)
+        output = StringIO()
+
+        with mock.patch('payment.services.mercadopago_sdk', return_value=fake_sdk):
+            call_command('reconcile_mercadopago_payments', '--payment-id', '333', stdout=output)
+
+        order.refresh_from_db()
+        self.variant.refresh_from_db()
+        payment = Payments.objects.get(order=order)
+        self.assertEqual(fake_sdk.payment_client.requested_payment_id, '333')
+        self.assertEqual(order.status, Order.OrderStatus.processed)
+        self.assertEqual(payment.status, Payments.PaymentStatus.APPROVED)
+        self.assertTrue(payment.stock_deducted)
+        self.assertEqual(self.variant.stock, 3)
+        self.assertFalse(CarritoItem.objects.filter(carrito=self.cart).exists())
+        self.assertIn('Reconciled 1 MercadoPago payment(s).', output.getvalue())
+
+    @mock.patch.dict(os.environ, {'MERCADOPAGO_ACCESS_TOKEN': 'test-token'}, clear=False)
+    def test_reconcile_command_without_ids_syncs_pending_payments(self):
+        order = Order.objects.create(amount=25000, shipping_id=self.shipping)
+        OrderItem.objects.create(
+            order=order,
+            product=self.product,
+            name=self.product.name,
+            price=25000,
+            count=1,
+        )
+        Payments.objects.create(
+            order=order,
+            payment_id=444,
+            status=Payments.PaymentStatus.PENDING,
+            external_reference=str(order.id),
+        )
+        payment_response = {
+            'id': 444,
+            'external_reference': str(order.id),
+            'status': 'rejected',
+            'status_detail': 'cc_rejected_other_reason',
+            'installments': 1,
+        }
+        fake_sdk = FakeMercadoPagoSDK(payment_response=payment_response)
+
+        with mock.patch('payment.services.mercadopago_sdk', return_value=fake_sdk):
+            call_command('reconcile_mercadopago_payments')
+
+        order.refresh_from_db()
+        payment = Payments.objects.get(order=order)
+        self.assertEqual(fake_sdk.payment_client.requested_payment_id, '444')
+        self.assertEqual(order.status, Order.OrderStatus.refused)
+        self.assertEqual(payment.status, Payments.PaymentStatus.REJECTED)
+        self.assertFalse(payment.stock_deducted)

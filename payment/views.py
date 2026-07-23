@@ -2,11 +2,7 @@ import hashlib
 import hmac
 import os
 
-import mercadopago
-from django.db import transaction
-from django.db.models import Sum
 from django.shortcuts import get_object_or_404
-from django.utils.text import slugify
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -17,23 +13,7 @@ from product.models import Product
 from shipping.models import Shipping
 from user_profile.models import UserProfile
 from .models import Payments
-
-
-PAYMENT_TO_ORDER_STATUS = {
-    Payments.PaymentStatus.APPROVED.value: Order.OrderStatus.processed,
-    Payments.PaymentStatus.REJECTED.value: Order.OrderStatus.refused,
-    Payments.PaymentStatus.CANCELLED.value: Order.OrderStatus.cancelled,
-    Payments.PaymentStatus.REFUNDED.value: Order.OrderStatus.cancelled,
-    Payments.PaymentStatus.CHARGED_BACK.value: Order.OrderStatus.cancelled,
-}
-
-
-def _mercadopago_token():
-    return os.environ.get('MERCADOPAGO_ACCESS_TOKEN') or os.environ.get('TOKENMERCADOPAGOTEST')
-
-
-def _sdk():
-    return mercadopago.SDK(_mercadopago_token())
+from . import services
 
 
 def _frontend_url():
@@ -89,45 +69,6 @@ def _preference_data(request, order):
     }
 
 
-def _sync_cart_total(cart):
-    total = CarritoItem.objects.filter(carrito=cart).aggregate(total=Sum('count'))['total'] or 0
-    Carrito.objects.filter(id=cart.id).update(total_items=total)
-
-
-def _has_stock(product, count):
-    variant_stock = product.variants.filter(is_active=True).aggregate(total=Sum('stock'))['total']
-    if variant_stock is None:
-        return not product.sold
-    return variant_stock >= count
-
-
-def _deduct_product_stock(product, count):
-    variants = product.variants.filter(is_active=True).order_by('id')
-    if not variants.exists():
-        product.sold = True
-        product.save(update_fields=['sold'])
-        return
-
-    remaining = count
-    for variant in variants:
-        if remaining <= 0:
-            break
-        quantity = min(variant.stock, remaining)
-        variant.stock -= quantity
-        variant.save(update_fields=['stock'])
-        remaining -= quantity
-
-
-def _create_order_item(order, product, count):
-    OrderItem.objects.create(
-        product=product,
-        order=order,
-        name=product.name,
-        price=int(product.price),
-        count=count,
-    )
-
-
 def _create_authenticated_order(request):
     profile = get_object_or_404(UserProfile, id=int(request.data['profile_id']), user=request.user)
     shipping = get_object_or_404(Shipping, id=int(request.data['shipping_id']))
@@ -138,7 +79,7 @@ def _create_authenticated_order(request):
                               status=status.HTTP_404_NOT_FOUND)
 
     for item in cart_items:
-        if not _has_stock(item.product, item.count):
+        if not services.has_stock(item.product, item.count):
             return None, Response({'error': f'Stock insuficiente para {item.product.name}'},
                                   status=status.HTTP_409_CONFLICT)
 
@@ -156,7 +97,7 @@ def _create_authenticated_order(request):
         shipping_id=shipping,
     )
     for item in cart_items:
-        _create_order_item(order, item.product, item.count)
+        services.create_order_item(order, item.product, item.count)
     return order, None
 
 
@@ -172,7 +113,7 @@ def _create_guest_order(request):
         product_data = entry.get('product', entry)
         product = get_object_or_404(Product, id=int(product_data['id']))
         count = max(int(entry.get('count', product_data.get('count', 1))), 1)
-        if not _has_stock(product, count):
+        if not services.has_stock(product, count):
             return None, Response({'error': f'Stock insuficiente para {product.name}'},
                                   status=status.HTTP_409_CONFLICT)
         normalized_items.append((product, count))
@@ -190,12 +131,12 @@ def _create_guest_order(request):
         shipping_id=shipping,
     )
     for product, count in normalized_items:
-        _create_order_item(order, product, count)
+        services.create_order_item(order, product, count)
     return order, None
 
 
 def _create_preference(request, order):
-    preference_response = _sdk().preference().create(_preference_data(request, order))
+    preference_response = services.mercadopago_sdk().preference().create(_preference_data(request, order))
     return preference_response.get('response', preference_response)
 
 
@@ -239,67 +180,11 @@ def _valid_webhook_signature(request, data_id):
     return hmac.compare_digest(expected_signature, received_signature)
 
 
-def _payment_status(raw_status):
-    value = slugify(raw_status or '').replace('-', '_')
-    valid_statuses = {choice.value for choice in Payments.PaymentStatus}
-    if value in valid_statuses:
-        return value
-    return Payments.PaymentStatus.UNKNOWN
-
-
-def _apply_approved_payment(payment):
-    if payment.stock_deducted:
-        return
-
-    for item in OrderItem.objects.select_related('product').filter(order=payment.order):
-        _deduct_product_stock(item.product, item.count)
-
-    if payment.order.user_id:
-        cart = Carrito.objects.filter(user=payment.order.user).first()
-        if cart:
-            product_ids = OrderItem.objects.filter(order=payment.order).values_list('product_id', flat=True)
-            CarritoItem.objects.filter(carrito=cart, product_id__in=product_ids).delete()
-            _sync_cart_total(cart)
-
-    payment.stock_deducted = True
-    payment.save(update_fields=['stock_deducted', 'updated_at'])
-
-
-def _record_payment(payment_data):
-    external_reference = str(payment_data.get('external_reference') or '')
-    order = get_object_or_404(Order, id=int(external_reference))
-    payment_status = _payment_status(payment_data.get('status'))
-    order_status = PAYMENT_TO_ORDER_STATUS.get(payment_status, Order.OrderStatus.not_processed)
-
-    with transaction.atomic():
-        order.status = order_status
-        order.transaction_id = str(payment_data['id'])
-        order.save(update_fields=['status', 'transaction_id'])
-
-        installments = int(payment_data.get('installments') or 1)
-        payment, _created = Payments.objects.update_or_create(
-            order=order,
-            defaults={
-                'payment_id': int(payment_data['id']),
-                'status': payment_status,
-                'status_detail': payment_data.get('status_detail') or '',
-                'external_reference': external_reference,
-                'payment_method_id': payment_data.get('payment_method_id') or '',
-                'typepayment': payment_data.get('payment_type_id') or '',
-                'cuotas': installments > 1,
-                'raw_response': payment_data,
-            },
-        )
-        if payment_status == Payments.PaymentStatus.APPROVED:
-            _apply_approved_payment(payment)
-    return order
-
-
 class ProcessPaymentView(APIView):
     permission_classes = (permissions.AllowAny,)
 
     def post(self, request, format=None):
-        if not _mercadopago_token():
+        if not services.mercadopago_token():
             return Response({'error': 'MercadoPago no está configurado'},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -337,17 +222,16 @@ class MercadoPagoResponse(APIView):
         if not _valid_webhook_signature(request, payment_id):
             return Response({'error': 'firma inválida'},
                             status=status.HTTP_401_UNAUTHORIZED)
-        if not _mercadopago_token():
+        if not services.mercadopago_token():
             return Response({'error': 'MercadoPago no está configurado'},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        payment_response = _sdk().payment().get(payment_id)
-        payment_data = payment_response.get('response', {})
+        payment_data = services.fetch_payment(payment_id)
         if not payment_data:
             return Response({'error': 'respuesta de pago inválida'},
                             status=status.HTTP_502_BAD_GATEWAY)
 
-        _record_payment(payment_data)
+        services.record_payment(payment_data)
         return Response({'status': 'finish'}, status=status.HTTP_200_OK)
 
 
