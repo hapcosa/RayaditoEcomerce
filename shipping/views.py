@@ -1,11 +1,8 @@
-from django.shortcuts import render
-
-# Create your views here.
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from .models import Shipping
-from .serializers import ShippingSerializer
+from .serializers import ShippingQuoteRequestSerializer, ShippingSerializer
 
 
 class GetShippingView(APIView):
@@ -25,6 +22,36 @@ class GetShippingView(APIView):
                 {'error': 'No shipping options available'},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+class QuoteShippingView(APIView):
+    permission_classes = (permissions.AllowAny, )
+
+    def post(self, request, format=None):
+        serializer = ShippingQuoteRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        shipping_options = Shipping.objects.order_by('price', 'id')
+        if not shipping_options.exists():
+            return Response(
+                {'error': 'No shipping options available'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        destination = {
+            key: value
+            for key, value in serializer.validated_data.items()
+            if value
+        }
+
+        return Response(
+            {
+                'source': 'manual',
+                'destination': destination,
+                'shipping_options': ShippingSerializer(shipping_options, many=True).data,
+            },
+            status=status.HTTP_200_OK
+        )
 
 class GetShippingOptionId(APIView):
      permission_classes = (permissions.AllowAny, )
