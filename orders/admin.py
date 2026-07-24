@@ -5,7 +5,7 @@ from .models import Order, OrderItem
 
 class OrderAdmin(admin.ModelAdmin):
     
-    list_display = ('id', 'transaction_id', 'amount', 'status', )
+    list_display = ('id', 'transaction_id', 'amount', 'shipping_price', 'status', )
     list_display_links = ('id', 'transaction_id', )
     list_filter = ('status', )
     list_editable = ('status', )

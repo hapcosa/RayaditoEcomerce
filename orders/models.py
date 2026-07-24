@@ -21,6 +21,7 @@ class Order(models.Model):
     email=models.EmailField(blank=True, null=True)
     transaction_id = models.CharField(max_length=255, null=True)
     amount = models.PositiveIntegerField(null=True)  # total en entero CLP
+    shipping_price = models.PositiveIntegerField(default=0)  # costo de envio en entero CLP
     full_name = models.CharField(max_length=255, blank=True, null=True)
     address_line_1 = models.CharField(max_length=255, blank=True, null=True)
     city = models.CharField(max_length=255, blank=True, null=True)

@@ -79,6 +79,7 @@ class MercadoPagoFlowTests(APITestCase):
             name='Retiro',
             time_to_delivery='1 día',
             description='Retiro en taller',
+            price=4500,
             photo='',
         )
         self.profile = UserProfile.objects.create(
@@ -110,12 +111,17 @@ class MercadoPagoFlowTests(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         order = Order.objects.get(id=res.data['order_id'])
         item = OrderItem.objects.get(order=order)
-        self.assertEqual(order.amount, 50000)
+        self.assertEqual(order.amount, 54500)
+        self.assertEqual(order.shipping_price, 4500)
         self.assertEqual(item.price, 25000)
         self.assertEqual(item.count, 2)
         self.assertEqual(fake_sdk.preference_client.created_payload['external_reference'], str(order.id))
-        self.assertEqual(fake_sdk.preference_client.created_payload['items'][0]['quantity'], 2)
-        self.assertEqual(fake_sdk.preference_client.created_payload['items'][0]['unit_price'], 25000)
+        preference_items = fake_sdk.preference_client.created_payload['items']
+        self.assertEqual(preference_items[0]['quantity'], 2)
+        self.assertEqual(preference_items[0]['unit_price'], 25000)
+        self.assertEqual(preference_items[1]['category_id'], 'shipping')
+        self.assertEqual(preference_items[1]['quantity'], 1)
+        self.assertEqual(preference_items[1]['unit_price'], 4500)
         self.assertEqual(
             fake_sdk.preference_client.created_payload['back_urls'],
             {
@@ -124,6 +130,35 @@ class MercadoPagoFlowTests(APITestCase):
                 'pending': 'http://127.0.0.1:5173/success',
             },
         )
+
+    @mock.patch.dict(os.environ, {'MERCADOPAGO_ACCESS_TOKEN': 'test-token'}, clear=False)
+    def test_guest_payment_includes_shipping_price_in_total(self):
+        fake_sdk = FakeMercadoPagoSDK(
+            preference_response={'id': 'pref_guest', 'init_point': 'https://mp.test/pref_guest'},
+        )
+
+        with mock.patch('payment.services.mercadopago_sdk', return_value=fake_sdk):
+            res = self.client.post('/api/payment/make-payment', {
+                'shipping_id': self.shipping.id,
+                'email': 'invitada@rayadito.cl',
+                'first_name': 'Ines',
+                'last_name': 'Perez',
+                'address_line_1': 'Calle 2',
+                'city': 'Castro',
+                'state_province_region': 'Los Lagos',
+                'postal_zip_code': '5700000',
+                'telephone_number': '912345678',
+                'items': [
+                    {'product': {'id': self.product.id}, 'count': 1},
+                ],
+            }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        order = Order.objects.get(id=res.data['order_id'])
+        self.assertEqual(order.amount, 29500)
+        self.assertEqual(order.shipping_price, 4500)
+        preference_items = fake_sdk.preference_client.created_payload['items']
+        self.assertEqual([item['unit_price'] for item in preference_items], [25000, 4500])
 
     @mock.patch.dict(os.environ, {'MERCADOPAGO_ACCESS_TOKEN': 'test-token'}, clear=False)
     def test_approved_webhook_is_idempotent_and_deducts_stock_once(self):
