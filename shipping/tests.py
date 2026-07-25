@@ -4,6 +4,41 @@ from rest_framework.test import APITestCase
 from shipping.models import Shipping
 
 
+class ShippingLocationsTests(APITestCase):
+    def test_locations_returns_chile_regions_and_communes(self):
+        response = self.client.get('/api/shipp/locations')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 16)
+        self.assertEqual(response.data['total_communes'], 346)
+        self.assertEqual(response.data['regions'][0]['name'], 'Arica y Parinacota')
+
+    def test_locations_filters_region_by_name(self):
+        response = self.client.get('/api/shipp/locations?region=Los%20Lagos')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        region = response.data['region']
+        self.assertEqual(region['number'], 10)
+        self.assertEqual(region['communes_count'], 30)
+        self.assertIn('Ancud', region['communes'])
+        self.assertIn('Castro', region['communes'])
+        self.assertIn('Quellón', region['communes'])
+
+    def test_locations_filters_region_without_accents_or_by_number(self):
+        response = self.client.get('/api/shipp/locations?region=Tarapaca')
+        by_number = self.client.get('/api/shipp/locations?region=10')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['region']['name'], 'Tarapacá')
+        self.assertEqual(by_number.status_code, status.HTTP_200_OK)
+        self.assertEqual(by_number.data['region']['name'], 'Los Lagos')
+
+    def test_locations_unknown_region_returns_404(self):
+        response = self.client.get('/api/shipp/locations?region=Atlantida')
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
 class ShippingQuoteTests(APITestCase):
     def setUp(self):
         self.pickup = Shipping.objects.create(
