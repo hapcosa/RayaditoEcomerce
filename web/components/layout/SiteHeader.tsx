@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { CartBadge } from './CartBadge';
+import { AuthNav } from './AuthNav';
 
 const NAV = [
   { href: '/joyas', label: 'Joyas' },
@@ -41,6 +42,7 @@ export function SiteHeader() {
             );
           })}
           <CartBadge />
+          <AuthNav />
         </nav>
       </div>
     </header>
