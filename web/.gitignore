@@ -3,6 +3,10 @@
 /.pnp
 .pnp.js
 
+# Override de la regla `lib/` del .gitignore raíz (Python/venv) para que
+# web/lib/ sea rastreado por git normalmente.
+!lib/
+
 # next.js
 /.next/
 /out/

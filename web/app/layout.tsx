@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Cormorant_Garamond, Inter, Caveat } from 'next/font/google';
+import { SiteHeader } from '@/components/layout/SiteHeader';
 import './globals.css';
 
 // Serif editorial para títulos, sans legible para texto, manuscrita para acentos.
@@ -45,7 +46,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es-CL" className={`${serif.variable} ${sans.variable} ${manuscrita.variable}`}>
-      <body>{children}</body>
+      <body>
+        <SiteHeader />
+        <main>{children}</main>
+      </body>
     </html>
   );
 }
