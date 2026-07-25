@@ -244,16 +244,14 @@ export default function CarritoPage() {
             </div>
           </dl>
 
-          {/* Checkout — se conecta en el PR de checkout/pagos */}
-          <button
-            disabled
-            title="Disponible próximamente"
-            className="mt-6 w-full cursor-not-allowed rounded-full bg-piedra-200 px-6 py-3 text-sm font-medium uppercase tracking-wide text-piedra-400"
+          <Link
+            href="/checkout"
+            className="mt-6 block w-full rounded-full bg-tierra-500 px-6 py-3 text-center text-sm font-medium uppercase tracking-wide text-white hover:bg-tierra-600"
           >
             Ir al checkout
-          </button>
+          </Link>
           <p className="mt-2 text-center text-xs text-piedra-400">
-            Pago seguro con MercadoPago — próximamente
+            Pago seguro con MercadoPago
           </p>
         </aside>
       </div>
