@@ -5,10 +5,11 @@ from .models import Order, OrderItem
 
 class OrderAdmin(admin.ModelAdmin):
     
-    list_display = ('id', 'transaction_id', 'amount', 'shipping_price', 'status', )
+    list_display = ('id', 'transaction_id', 'amount', 'shipping_price', 'status', 'deliveryNumber', )
     list_display_links = ('id', 'transaction_id', )
     list_filter = ('status', )
     list_editable = ('status', )
+    search_fields = ('id', 'transaction_id', 'deliveryNumber', 'email', )
     list_per_page = 25
 
 admin.site.register(Order, OrderAdmin)

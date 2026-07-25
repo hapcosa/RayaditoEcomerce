@@ -1,11 +1,45 @@
+from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import permissions, status
 from .models import Order, OrderItem
 from product.models import Product
 from shipping.models import Shipping
 from shipping.serializers import ShippingSerializer
 from product.serializers import ProductSerializer
+
+
+class DispatchOrderView(APIView):
+    permission_classes = (permissions.IsAdminUser,)
+
+    def post(self, request, order_id, format=None):
+        delivery_number = str(
+            request.data.get('deliveryNumber')
+            or request.data.get('delivery_number')
+            or ''
+        ).strip()
+        if not delivery_number:
+            return Response(
+                {'error': 'deliveryNumber requerido'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        order = get_object_or_404(Order, id=order_id)
+        order.deliveryNumber = delivery_number
+        order.status = Order.OrderStatus.shipping
+        order.save(update_fields=['deliveryNumber', 'status'])
+
+        return Response(
+            {
+                'order': {
+                    'id': order.id,
+                    'status': order.status,
+                    'deliveryNumber': order.deliveryNumber,
+                }
+            },
+            status=status.HTTP_200_OK,
+        )
+
 
 class ListOrdersView(APIView):
     def get(self, request, format=None):
