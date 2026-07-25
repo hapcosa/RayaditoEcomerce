@@ -28,7 +28,7 @@ def _notification_url(request):
 
 
 def _order_items_payload(order):
-    return [
+    items = [
         {
             'id': str(item.product_id),
             'title': item.name,
@@ -40,6 +40,22 @@ def _order_items_payload(order):
         }
         for item in OrderItem.objects.select_related('product').filter(order=order)
     ]
+    if order.shipping_price:
+        shipping_name = order.shipping_id.name if order.shipping_id else 'Envio'
+        items.append({
+            'id': f'shipping-{order.shipping_id_id or order.id}',
+            'title': f'Envio - {shipping_name}',
+            'currency_id': 'CLP',
+            'description': 'Costo de envio',
+            'category_id': 'shipping',
+            'quantity': 1,
+            'unit_price': int(order.shipping_price),
+        })
+    return items
+
+
+def _shipping_price(shipping):
+    return int(shipping.price or 0)
 
 
 def _preference_data(request, order):
@@ -83,11 +99,13 @@ def _create_authenticated_order(request):
             return None, Response({'error': f'Stock insuficiente para {item.product.name}'},
                                   status=status.HTTP_409_CONFLICT)
 
-    amount = sum(int(item.product.price) * item.count for item in cart_items)
+    shipping_price = _shipping_price(shipping)
+    amount = sum(int(item.product.price) * item.count for item in cart_items) + shipping_price
     order = Order.objects.create(
         user=request.user,
         profile=profile,
         amount=amount,
+        shipping_price=shipping_price,
         full_name=f'{profile.first_name} {profile.last_name}'.strip(),
         address_line_1=profile.address_line_1,
         city=profile.city,
@@ -118,10 +136,12 @@ def _create_guest_order(request):
                                   status=status.HTTP_409_CONFLICT)
         normalized_items.append((product, count))
 
-    amount = sum(int(product.price) * count for product, count in normalized_items)
+    shipping_price = _shipping_price(shipping)
+    amount = sum(int(product.price) * count for product, count in normalized_items) + shipping_price
     order = Order.objects.create(
         email=request.data.get('email', ''),
         amount=amount,
+        shipping_price=shipping_price,
         full_name=f"{request.data.get('first_name', '')} {request.data.get('last_name', '')}".strip(),
         address_line_1=request.data.get('address_line_1', ''),
         city=request.data.get('city', ''),

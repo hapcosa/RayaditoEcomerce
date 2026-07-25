@@ -20,10 +20,12 @@ class OrderMoneyTests(TestCase):
         )
 
     def test_order_amount_is_integer(self):
-        order = Order.objects.create(amount=37000)
+        order = Order.objects.create(amount=37000, shipping_price=4500)
         order.refresh_from_db()
         self.assertIsInstance(order.amount, int)
+        self.assertIsInstance(order.shipping_price, int)
         self.assertEqual(order.amount, 37000)
+        self.assertEqual(order.shipping_price, 4500)
 
     def test_order_item_price_is_integer(self):
         order = Order.objects.create(amount=25000)
