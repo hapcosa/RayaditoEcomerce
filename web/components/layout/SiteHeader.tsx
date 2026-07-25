@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { CartBadge } from './CartBadge';
 
 const NAV = [
   { href: '/joyas', label: 'Joyas' },
@@ -39,6 +40,7 @@ export function SiteHeader() {
               </Link>
             );
           })}
+          <CartBadge />
         </nav>
       </div>
     </header>

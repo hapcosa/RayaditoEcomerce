@@ -5,6 +5,7 @@ import { fetchProduct, fetchRelatedProducts, fetchReviews } from '@/lib/api';
 import { ProductGallery } from '@/components/ui/ProductGallery';
 import { ProductCard } from '@/components/ui/ProductCard';
 import { StarRating } from '@/components/ui/StarRating';
+import { AddToCartButton } from '@/components/ui/AddToCartButton';
 import { formatCLP } from '@/lib/format';
 
 interface PageProps {
@@ -150,13 +151,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
             </dl>
           )}
 
-          {/* Botón añadir al carrito (funcionalidad en PR de checkout) */}
-          <button
-            disabled={outOfStock}
-            className="mt-2 rounded-full bg-tierra-500 px-8 py-3 text-sm font-medium uppercase tracking-wide text-white transition-colors hover:bg-tierra-600 disabled:cursor-not-allowed disabled:bg-piedra-200 disabled:text-piedra-400"
-          >
-            {outOfStock ? 'Sin stock' : 'Añadir al carrito'}
-          </button>
+          <AddToCartButton productId={product.id} outOfStock={outOfStock} />
 
           {/* Descripción */}
           <div className="border-t border-piedra-200 pt-5">

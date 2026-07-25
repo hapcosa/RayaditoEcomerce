@@ -1,4 +1,5 @@
 import type { Category, Product, Review } from '@/types/product';
+import type { HydratedCartItem, ShippingOption } from '@/types/cart';
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000/api';
@@ -76,4 +77,37 @@ export async function fetchReviews(productId: number): Promise<Review[]> {
     `/reviews/get-reviews/${productId}`,
   );
   return data.reviews;
+}
+
+// ---------- Carrito (guest, sin auth) ----------------------------------------
+
+/**
+ * Sincroniza items locales con el backend para obtener datos frescos
+ * (precio actual, stock, foto). Endpoint AllowAny — no requiere auth.
+ */
+export async function syncCart(
+  items: { product_id: number; count: number }[],
+): Promise<HydratedCartItem[]> {
+  const res = await fetch(`${API_BASE_URL}/cart/synch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cart_items: items }),
+    cache: 'no-store',
+  });
+  if (!res.ok) return [];
+  const data = (await res.json()) as { cart: HydratedCartItem[] };
+  return data.cart;
+}
+
+// ---------- Envíos (opciones manuales, sin auth) ----------------------------
+
+export async function fetchShippingOptions(): Promise<ShippingOption[]> {
+  try {
+    const data = await apiFetch<{ shipping_options: ShippingOption[] }>(
+      '/shipp/get-shipping-options',
+    );
+    return data.shipping_options;
+  } catch {
+    return [];
+  }
 }
