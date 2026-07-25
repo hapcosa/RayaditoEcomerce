@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Tokens de color como triples RGB (para soportar `<alpha-value>` de Tailwind).
+ * Re-tematizar un fork = sobrescribir estas variables. Ver tailwind.config.ts.
+ */
+:root {
+  /* Piedra — neutros cálidos */
+  --color-piedra-50: 250 249 246;
+  --color-piedra-100: 244 241 236;
+  --color-piedra-200: 231 226 217;
+  --color-piedra-300: 213 205 192;
+  --color-piedra-400: 181 171 155;
+  --color-piedra-500: 148 138 122;
+  --color-piedra-600: 118 109 96;
+  --color-piedra-700: 92 85 75;
+  --color-piedra-800: 63 58 51;
+  --color-piedra-900: 38 35 31;
+
+  /* Tierra — terracota / arcilla (primario) */
+  --color-tierra-50: 250 243 238;
+  --color-tierra-100: 244 227 216;
+  --color-tierra-200: 232 198 176;
+  --color-tierra-300: 216 162 132;
+  --color-tierra-400: 196 122 88;
+  --color-tierra-500: 173 92 58;
+  --color-tierra-600: 148 74 45;
+  --color-tierra-700: 120 59 37;
+  --color-tierra-800: 96 48 32;
+  --color-tierra-900: 74 39 27;
+
+  /* Ágata — ámbar / miel (acento) */
+  --color-agata-50: 253 248 237;
+  --color-agata-100: 250 238 210;
+  --color-agata-200: 244 219 160;
+  --color-agata-300: 236 194 110;
+  --color-agata-400: 224 165 72;
+  --color-agata-500: 203 135 47;
+  --color-agata-600: 173 108 35;
+  --color-agata-700: 138 83 30;
+  --color-agata-800: 112 67 28;
+  --color-agata-900: 92 55 26;
+
+  /* Superficies semánticas */
+  --surface: var(--color-piedra-50);
+  --ink: var(--color-piedra-900);
+}
+
+@layer base {
+  body {
+    @apply bg-piedra-50 text-piedra-900 antialiased;
+    font-family: var(--font-sans), system-ui, sans-serif;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-serif;
+    text-wrap: balance;
+  }
+}
