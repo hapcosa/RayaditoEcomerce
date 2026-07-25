@@ -1,8 +1,64 @@
+import unicodedata
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
+from .locations import CHILE_REGIONS, TOTAL_COMMUNES
 from .models import Shipping
 from .serializers import ShippingQuoteRequestSerializer, ShippingSerializer
+
+
+def _normalize_location(value):
+    normalized = unicodedata.normalize('NFKD', str(value or ''))
+    without_accents = ''.join(char for char in normalized if not unicodedata.combining(char))
+    return without_accents.casefold().strip()
+
+
+def _region_payload(region):
+    return {
+        **region,
+        'communes_count': len(region['communes']),
+    }
+
+
+def _find_region(value):
+    query = _normalize_location(value)
+    for region in CHILE_REGIONS:
+        aliases = (
+            region['number'],
+            region['roman'],
+            region['name'],
+        )
+        if query in {_normalize_location(alias) for alias in aliases}:
+            return region
+    return None
+
+
+class ChileShippingLocationsView(APIView):
+    permission_classes = (permissions.AllowAny, )
+
+    def get(self, request, format=None):
+        region_query = request.query_params.get('region')
+        if region_query:
+            region = _find_region(region_query)
+            if not region:
+                return Response(
+                    {'error': 'Region no encontrada'},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            return Response(
+                {'region': _region_payload(region)},
+                status=status.HTTP_200_OK,
+            )
+
+        return Response(
+            {
+                'regions': [_region_payload(region) for region in CHILE_REGIONS],
+                'count': len(CHILE_REGIONS),
+                'total_communes': TOTAL_COMMUNES,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class GetShippingView(APIView):
