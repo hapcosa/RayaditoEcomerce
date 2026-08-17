@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Cormorant_Garamond, Inter, Caveat } from 'next/font/google';
 import { SiteHeader } from '@/components/layout/SiteHeader';
+import { SiteFooter } from '@/components/layout/SiteFooter';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { SITE_URL } from '@/lib/site';
@@ -63,6 +64,7 @@ export default function RootLayout({
         <AuthProvider>
           <SiteHeader />
           <main>{children}</main>
+          <SiteFooter />
         </AuthProvider>
       </body>
     </html>
