@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Cormorant_Garamond, Inter, Caveat } from 'next/font/google';
 import { SiteHeader } from '@/components/layout/SiteHeader';
 import { AuthProvider } from '@/components/providers/AuthProvider';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { SITE_URL } from '@/lib/site';
 import './globals.css';
 
 // Serif editorial para títulos, sans legible para texto, manuscrita para acentos.
@@ -45,9 +47,19 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const organizationJsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Piedras Rayadito',
+    url: SITE_URL,
+    description:
+      'Joyería artesanal y lapidación de piedras de Chiloé. Piezas únicas hechas a mano en el sur de Chile.',
+  };
+
   return (
     <html lang="es-CL" className={`${serif.variable} ${sans.variable} ${manuscrita.variable}`}>
       <body>
+        <JsonLd data={organizationJsonLd} />
         <AuthProvider>
           <SiteHeader />
           <main>{children}</main>
