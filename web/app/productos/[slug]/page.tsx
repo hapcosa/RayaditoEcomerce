@@ -6,7 +6,9 @@ import { ProductGallery } from '@/components/ui/ProductGallery';
 import { ProductCard } from '@/components/ui/ProductCard';
 import { StarRating } from '@/components/ui/StarRating';
 import { AddToCartButton } from '@/components/ui/AddToCartButton';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { formatCLP } from '@/lib/format';
+import { absoluteUrl } from '@/lib/site';
 
 interface PageProps {
   params: { slug: string };
@@ -15,10 +17,14 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   try {
     const product = await fetchProduct(params.slug);
+    const canonical = absoluteUrl(`/productos/${product.slug ?? params.slug}`);
     return {
       title: product.name,
       description: product.description.slice(0, 160),
+      alternates: { canonical },
       openGraph: {
+        type: 'website',
+        url: canonical,
         title: product.name,
         description: product.description.slice(0, 160),
         images: product.photo ? [{ url: product.photo }] : [],
@@ -54,8 +60,38 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const catalogLabel =
     product.product_type === 'piedra' ? 'Piedras' : 'Joyas';
 
+  const productUrl = absoluteUrl(`/productos/${product.slug ?? product.id}`);
+  const productJsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: product.description,
+    url: productUrl,
+    ...(product.photo ? { image: product.photo } : {}),
+    offers: {
+      '@type': 'Offer',
+      url: productUrl,
+      // Moneda siempre en entero CLP (ver AGENTS.md).
+      priceCurrency: 'CLP',
+      price: product.price,
+      availability: outOfStock
+        ? 'https://schema.org/OutOfStock'
+        : 'https://schema.org/InStock',
+    },
+    ...(reviews.length > 0
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: Number(avgRating.toFixed(1)),
+            reviewCount: reviews.length,
+          },
+        }
+      : {}),
+  };
+
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
+      <JsonLd data={productJsonLd} />
       {/* Breadcrumb */}
       <nav className="mb-8 flex items-center gap-2 text-sm text-piedra-500" aria-label="Breadcrumb">
         <Link href="/" className="hover:text-tierra-600">Inicio</Link>
