@@ -28,7 +28,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         url: canonical,
         title: product.name,
         description: product.description.slice(0, 160),
-        images: product.photo ? [{ url: product.photo }] : [],
+        // La imagen OG la provee opengraph-image.tsx (banner de marca dinámico).
+        // No definir `images` aquí: un valor explícito anularía esa convención.
       },
     };
   } catch {
