@@ -9,6 +9,10 @@ import {
   inputCls,
   submitCls,
 } from '@/components/ui/AuthFormWrapper';
+import {
+  SocialLoginButtons,
+  SocialDivider,
+} from '@/components/ui/SocialLoginButtons';
 
 export default function RegistroPage() {
   const [form, setForm] = useState({
@@ -152,6 +156,9 @@ export default function RegistroPage() {
           {loading ? 'Creando cuenta…' : 'Crear cuenta'}
         </button>
       </form>
+
+      <SocialDivider />
+      <SocialLoginButtons next="/dashboard" />
     </AuthFormWrapper>
   );
 }

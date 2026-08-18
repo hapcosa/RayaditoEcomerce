@@ -13,6 +13,10 @@ import {
   inputCls,
   submitCls,
 } from '@/components/ui/AuthFormWrapper';
+import {
+  SocialLoginButtons,
+  SocialDivider,
+} from '@/components/ui/SocialLoginButtons';
 
 // Next.js 14: useSearchParams necesita Suspense cuando la página no es dinámica.
 function LoginForm() {
@@ -102,6 +106,9 @@ function LoginForm() {
           {loading ? 'Ingresando…' : 'Ingresar'}
         </button>
       </form>
+
+      <SocialDivider />
+      <SocialLoginButtons next={next} />
     </AuthFormWrapper>
   );
 }
