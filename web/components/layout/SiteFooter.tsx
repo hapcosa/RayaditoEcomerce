@@ -11,7 +11,9 @@ const WHATSAPP_URL = process.env.NEXT_PUBLIC_WHATSAPP_URL ?? '';
 const NAV_LINKS = [
   { href: '/joyas', label: 'Joyas' },
   { href: '/piedras', label: 'Piedras' },
-  { href: '/carrito', label: 'Carrito' },
+  { href: '/nosotros', label: 'Nosotros' },
+  { href: '/faq', label: 'Preguntas frecuentes' },
+  { href: '/contacto', label: 'Contacto' },
   { href: '/dashboard', label: 'Mi cuenta' },
 ];
 
