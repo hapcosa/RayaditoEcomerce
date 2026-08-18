@@ -48,6 +48,62 @@ export async function apiRefresh(
   return res.json();
 }
 
+// ---------- Login social (djoser + social-auth) -----------------------------
+// Flujo djoser:
+//  1. GET  /auth/o/{provider}/?redirect_uri=... → { authorization_url }
+//  2. El navegador va a authorization_url; el proveedor redirige a redirect_uri
+//     con ?state=&code=.
+//  3. POST /auth/o/{provider}/?state=&code= (form-urlencoded) → { access, refresh }
+
+export type SocialProvider = 'google-oauth2' | 'facebook';
+
+/** URI de callback del front; debe coincidir en el paso 1 y estar en
+ *  SOCIAL_AUTH_ALLOWED_REDIRECT_URIS del backend y en la consola del proveedor. */
+export function socialRedirectUri(): string {
+  const site =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+  return `${site}/auth/social/callback`;
+}
+
+/** Paso 1: pide al backend la URL de autorización del proveedor. */
+export async function apiSocialAuthUrl(
+  provider: SocialProvider,
+): Promise<string> {
+  const redirect = encodeURIComponent(socialRedirectUri());
+  const res = await fetch(
+    `${AUTH}/o/${provider}/?redirect_uri=${redirect}`,
+    { cache: 'no-store' },
+  );
+  if (!res.ok) throw new Error('No se pudo iniciar el login social');
+  const data = (await res.json()) as { authorization_url: string };
+  return data.authorization_url;
+}
+
+/** Paso 3: intercambia state+code por tokens JWT. */
+export async function apiSocialLogin(
+  provider: SocialProvider,
+  state: string,
+  code: string,
+): Promise<{ access: string; refresh: string }> {
+  const res = await fetch(`${AUTH}/o/${provider}/`, {
+    method: 'POST',
+    // djoser exige form-urlencoded y los datos como query params.
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ state, code }).toString(),
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    const msg =
+      (err.detail as string) ||
+      (Object.values(err).flat() as string[]).join(' ') ||
+      'No se pudo completar el login social';
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
 // ---------- Registro / activación -------------------------------------------
 
 export interface RegisterData {

@@ -242,6 +242,15 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
 ]
 SOCIAL_AUTH_GOOGLE_OAUTH2_EXTRA_DATA = ["first_name", "last_name"]
 
+# Facebook Login (Meta). Requiere una app de Meta con Facebook Login habilitado;
+# sin credenciales el proveedor queda inactivo (el botón fallará al iniciar).
+SOCIAL_AUTH_FACEBOOK_KEY = env('FACEBOOK_CLIENT_KEY', default='')
+SOCIAL_AUTH_FACEBOOK_SECRET = env('FACEBOOK_CLIENT_SECRET', default='')
+SOCIAL_AUTH_FACEBOOK_SCOPE = ['email']
+SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
+    'fields': 'id, email, first_name, last_name',
+}
+
 SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('JWT', ),
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=10080),
@@ -269,7 +278,13 @@ DJOSER = {
     'SOCIAL_AUTH_TOKEN_STRATEGY': 'djoser.social.token.jwt.TokenStrategy',
     'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': env.list(
         'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS',
-        default=['http://127.0.0.1:5173/', 'http://localhost:8000/facebook'],
+        default=[
+            'http://127.0.0.1:5173/',
+            'http://localhost:8000/facebook',
+            # Callback del front Next.js (login social → intercambio de code).
+            'http://localhost:3000/auth/social/callback',
+            'http://127.0.0.1:3000/auth/social/callback',
+        ],
     ),
     'SERIALIZERS': {
         'user_create': 'user.serializer.UserCreateSerializer',
