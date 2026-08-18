@@ -4,10 +4,12 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth';
+import { useWishlistStore } from '@/lib/store/wishlist';
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, logout, access } = useAuthStore();
+  const resetWishlist = useWishlistStore((s) => s.reset);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -48,6 +50,11 @@ export default function DashboardPage() {
           comingSoon
         />
         <DashCard
+          title="Lista de deseos"
+          description="Las piezas que guardaste como favoritas."
+          href="/wishlist"
+        />
+        <DashCard
           title="Carrito"
           description="Ver y editar los productos guardados."
           href="/carrito"
@@ -65,7 +72,7 @@ export default function DashboardPage() {
       </div>
 
       <button
-        onClick={() => { logout(); router.replace('/'); }}
+        onClick={() => { logout(); resetWishlist(); router.replace('/'); }}
         className="mt-10 text-sm text-piedra-400 hover:text-red-500"
       >
         Cerrar sesión

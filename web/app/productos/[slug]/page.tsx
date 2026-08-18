@@ -6,6 +6,7 @@ import { ProductGallery } from '@/components/ui/ProductGallery';
 import { ProductCard } from '@/components/ui/ProductCard';
 import { StarRating } from '@/components/ui/StarRating';
 import { AddToCartButton } from '@/components/ui/AddToCartButton';
+import { WishlistButton } from '@/components/ui/WishlistButton';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { formatCLP } from '@/lib/format';
 import { absoluteUrl } from '@/lib/site';
@@ -187,7 +188,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
             </dl>
           )}
 
-          <AddToCartButton productId={product.id} outOfStock={outOfStock} />
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="flex-1">
+              <AddToCartButton productId={product.id} outOfStock={outOfStock} />
+            </div>
+            <WishlistButton productId={product.id} />
+          </div>
 
           {/* Descripción */}
           <div className="border-t border-piedra-200 pt-5">
