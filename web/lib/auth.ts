@@ -73,7 +73,10 @@ export async function apiSocialAuthUrl(
   const redirect = encodeURIComponent(socialRedirectUri());
   const res = await fetch(
     `${AUTH}/o/${provider}/?redirect_uri=${redirect}`,
-    { cache: 'no-store' },
+    // `credentials: include` es imprescindible: social-auth guarda el `state`
+    // en la sesión de Django vía cookie. Sin esto el navegador ignora el
+    // Set-Cookie (cross-origin) y el paso 3 falla con "state missing".
+    { cache: 'no-store', credentials: 'include' },
   );
   if (!res.ok) throw new Error('No se pudo iniciar el login social');
   const data = (await res.json()) as { authorization_url: string };
@@ -92,6 +95,8 @@ export async function apiSocialLogin(
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ state, code }).toString(),
     cache: 'no-store',
+    // Envía la cookie de sesión del paso 1 para validar el `state`.
+    credentials: 'include',
   });
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as Record<string, unknown>;
