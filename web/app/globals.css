@@ -60,4 +60,35 @@
     @apply font-serif;
     text-wrap: balance;
   }
+
+  /* Foco visible y consistente para navegación por teclado (a11y). */
+  :focus-visible {
+    outline: 2px solid rgb(var(--color-tierra-500));
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Enlace "saltar al contenido": oculto hasta recibir foco con Tab. */
+  .skip-link {
+    @apply sr-only;
+  }
+  .skip-link:focus {
+    @apply not-sr-only fixed left-4 top-4 z-50 rounded-md bg-tierra-600 px-4 py-2 text-sm font-medium text-white shadow-lg;
+  }
+}
+
+/**
+ * Respeta la preferencia del sistema de reducir movimiento: neutraliza
+ * animaciones, transiciones y scroll suave para quienes marean o distraen
+ * los efectos (WCAG 2.3.3 / prefers-reduced-motion).
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

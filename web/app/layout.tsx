@@ -61,9 +61,12 @@ export default function RootLayout({
     <html lang="es-CL" className={`${serif.variable} ${sans.variable} ${manuscrita.variable}`}>
       <body>
         <JsonLd data={organizationJsonLd} />
+        <a href="#contenido" className="skip-link">
+          Saltar al contenido
+        </a>
         <AuthProvider>
           <SiteHeader />
-          <main>{children}</main>
+          <main id="contenido">{children}</main>
           <SiteFooter />
         </AuthProvider>
       </body>
