@@ -118,7 +118,7 @@ export default function ProductsListScreen() {
       )}
 
       <Link href="/(app)/products/new" asChild>
-        <Pressable style={[styles.fab, { backgroundColor: theme.text }]} hitSlop={8}>
+        <Pressable style={StyleSheet.flatten([styles.fab, { backgroundColor: theme.text }])} hitSlop={8}>
           <ThemedText type="smallBold" style={{ color: theme.background }}>
             + Nuevo
           </ThemedText>

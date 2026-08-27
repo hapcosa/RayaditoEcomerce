@@ -4,7 +4,7 @@
  *
  * Dinero en entero CLP (ver AGENTS.md): `price`/`compare_price` son number enteros.
  */
-import { apiJson } from './client';
+import { apiJson, apiUpload } from './client';
 
 export type ProductStatus = 'draft' | 'published' | 'archived';
 
@@ -74,35 +74,40 @@ export async function getCategories(): Promise<Category[]> {
   return apiJson<Category[]>('/api/admin/categories/');
 }
 
-function imagePart(img: LocalImage) {
-  // RN FormData acepta este shape para archivos; el cast evita el tipado web-only.
-  return { uri: img.uri, name: img.name, type: img.mimeType } as unknown as Blob;
-}
-
 export async function createProduct(input: NewProduct): Promise<Product> {
-  const form = new FormData();
-  form.append('name', input.name);
-  form.append('description', input.description);
-  form.append('price', String(input.price));
-  form.append('compare_price', String(input.compare_price));
-  form.append('category', String(input.category));
-  form.append('product_type', input.product_type);
-  form.append('status', input.status);
-  form.append('is_featured', input.is_featured ? 'true' : 'false');
-  form.append('photo', imagePart(input.photo));
-
-  return apiJson<Product>('/api/admin/products/', { method: 'POST', body: form });
+  // Foto a calidad completa vía uploader multipart nativo (ver apiUpload).
+  return apiUpload<Product>('/api/admin/products/', input.photo.uri, {
+    fieldName: 'photo',
+    mimeType: input.photo.mimeType,
+    parameters: {
+      name: input.name,
+      description: input.description,
+      price: String(input.price),
+      compare_price: String(input.compare_price),
+      category: String(input.category),
+      product_type: input.product_type,
+      status: input.status,
+      is_featured: input.is_featured ? 'true' : 'false',
+    },
+  });
 }
 
-/** Sube imágenes adicionales a la galería del producto (campo `images`). */
+/**
+ * Sube imágenes adicionales a la galería del producto (campo `images`).
+ * El uploader nativo envía un archivo por request; subimos secuencialmente y
+ * devolvemos la galería resultante de la última respuesta.
+ */
 export async function addGalleryImages(
   productId: number,
   images: LocalImage[],
 ): Promise<{ gallery: GalleryImage[] }> {
-  const form = new FormData();
-  for (const img of images) form.append('images', imagePart(img));
-  return apiJson<{ gallery: GalleryImage[] }>(
-    `/api/admin/products/${productId}/images/`,
-    { method: 'POST', body: form },
-  );
+  let last: { gallery: GalleryImage[] } = { gallery: [] };
+  for (const img of images) {
+    last = await apiUpload<{ gallery: GalleryImage[] }>(
+      `/api/admin/products/${productId}/images/`,
+      img.uri,
+      { fieldName: 'images', mimeType: img.mimeType, parameters: {} },
+    );
+  }
+  return last;
 }

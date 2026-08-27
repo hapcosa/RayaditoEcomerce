@@ -26,7 +26,7 @@ export default function DashboardScreen() {
 
       <View style={styles.cards}>
         <Link href="/(app)/products" asChild>
-          <Pressable style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+          <Pressable style={StyleSheet.flatten([styles.card, { backgroundColor: theme.backgroundElement }])}>
             <ThemedText type="default">Productos</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               Cargar joyas con fotos y ver el catálogo
