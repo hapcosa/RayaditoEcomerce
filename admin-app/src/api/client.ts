@@ -8,6 +8,8 @@
  * con el refresh token antes de reintentar. No fuerza Content-Type para poder
  * enviar FormData (multipart) en subida de imágenes.
  */
+import { File, UploadType } from 'expo-file-system';
+
 import { API_URL } from './config';
 import { clearTokens, getAccess, getRefresh, saveAccess } from './tokens';
 
@@ -90,6 +92,64 @@ export async function apiJson<T>(path: string, options?: RequestInit): Promise<T
   const res = await apiFetch(path, options);
   const body = await readBody(res);
   if (!res.ok) {
+    throw new ApiError(res.status, body, messageFromBody(res.status, body));
+  }
+  return body as T;
+}
+
+function parseBody(text: string): unknown {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+/** Metadatos del archivo local a subir en un multipart. */
+export type MultipartUpload = {
+  /** Nombre del campo del archivo (p. ej. `photo` o `images`). */
+  fieldName: string;
+  mimeType: string;
+  /** Campos de texto adicionales del form (todo como string). */
+  parameters: Record<string, string>;
+};
+
+/**
+ * Sube un archivo local con `multipart/form-data` usando el uploader NATIVO de
+ * expo-file-system. Streamea el archivo tal cual (sin recomprimir → máxima
+ * calidad) y evita el `fetch`/FormData WinterCG de Expo, que no soporta el shape
+ * `{uri,name,type}` de RN ("Unsupported FormDataPart implementation").
+ * Agrega el header `JWT` y reintenta una vez ante 401 (igual que apiFetch).
+ */
+export async function apiUpload<T>(
+  path: string,
+  fileUri: string,
+  upload: MultipartUpload,
+  method: 'POST' | 'PUT' | 'PATCH' = 'POST',
+  retry = true,
+): Promise<T> {
+  const access = await getAccess();
+  const headers: Record<string, string> = {};
+  if (access) headers.Authorization = `JWT ${access}`;
+
+  const res = await new File(fileUri).upload(`${API_URL}${path}`, {
+    httpMethod: method,
+    uploadType: UploadType.MULTIPART,
+    fieldName: upload.fieldName,
+    mimeType: upload.mimeType,
+    parameters: upload.parameters,
+    headers,
+  });
+
+  if (res.status === 401 && retry) {
+    const newAccess = await refreshAccess();
+    if (newAccess) return apiUpload(path, fileUri, upload, method, false);
+    await clearTokens();
+  }
+
+  const body = parseBody(res.body);
+  if (res.status < 200 || res.status >= 300) {
     throw new ApiError(res.status, body, messageFromBody(res.status, body));
   }
   return body as T;
