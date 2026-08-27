@@ -1,3 +1,4 @@
+import { Link } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -24,12 +25,14 @@ export default function DashboardScreen() {
       </View>
 
       <View style={styles.cards}>
-        <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
-          <ThemedText type="default">Productos</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            Cargar joyas con fotos (próximamente)
-          </ThemedText>
-        </View>
+        <Link href="/(app)/products" asChild>
+          <Pressable style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+            <ThemedText type="default">Productos</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Cargar joyas con fotos y ver el catálogo
+            </ThemedText>
+          </Pressable>
+        </Link>
         <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
           <ThemedText type="default">Pedidos</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">

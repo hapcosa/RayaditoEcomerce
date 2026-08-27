@@ -33,7 +33,14 @@
           "imageWidth": 76
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "La app usa tus fotos para subir imágenes de productos.",
+          "cameraPermission": "La app usa la cámara para fotografiar productos."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
