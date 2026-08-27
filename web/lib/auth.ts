@@ -89,11 +89,12 @@ export async function apiSocialLogin(
   state: string,
   code: string,
 ): Promise<{ access: string; refresh: string }> {
-  const res = await fetch(`${AUTH}/o/${provider}/`, {
+  // djoser lee `state` desde request.GET (query string), no del body; social-auth
+  // toma `code` de GET+POST. Mandamos ambos como query params (forma canónica).
+  const qs = new URLSearchParams({ state, code }).toString();
+  const res = await fetch(`${AUTH}/o/${provider}/?${qs}`, {
     method: 'POST',
-    // djoser exige form-urlencoded y los datos como query params.
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ state, code }).toString(),
     cache: 'no-store',
     // Envía la cookie de sesión del paso 1 para validar el `state`.
     credentials: 'include',

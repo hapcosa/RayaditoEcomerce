@@ -9,13 +9,19 @@ import { useSyncGuestCart } from '@/components/providers/AuthProvider';
 import { SOCIAL_PENDING_KEY } from '@/components/ui/SocialLoginButtons';
 import { AuthFormWrapper } from '@/components/ui/AuthFormWrapper';
 
+// El code de OAuth es de un solo uso. React StrictMode (dev) desmonta y
+// remonta el componente, y un `useRef` se reinicia en cada montaje, así que
+// NO evita el doble intercambio: Google recibe el mismo code dos veces y
+// responde "Malformed auth code". Este guard a nivel de módulo sí sobrevive
+// los remounts y garantiza un único intercambio por code.
+const processedCodes = new Set<string>();
+
 function SocialCallback() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const login = useAuthStore((s) => s.login);
   const syncGuestCart = useSyncGuestCart();
   const [error, setError] = useState('');
-  // StrictMode monta dos veces en dev; el code de OAuth es de un solo uso.
   const ran = useRef(false);
 
   useEffect(() => {
@@ -35,6 +41,9 @@ function SocialCallback() {
         setError('Faltan parámetros de autenticación.');
         return;
       }
+      // Un solo intercambio por code, aun con el doble montaje de StrictMode.
+      if (processedCodes.has(code)) return;
+      processedCodes.add(code);
 
       let pending: { provider: SocialProvider; next: string } | null = null;
       try {
