@@ -45,10 +45,52 @@ export async function apiFetch(
   return res;
 }
 
+/** Error de la API que conserva el status y el cuerpo (para errores de validación DRF). */
+export class ApiError extends Error {
+  status: number;
+  body: unknown;
+  constructor(status: number, body: unknown, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.body = body;
+  }
+}
+
+/**
+ * Aplana los errores de validación de DRF a un mensaje legible.
+ * DRF devuelve `{campo: ["msg", ...], ...}` o `{detail: "..."}`.
+ */
+function messageFromBody(status: number, body: unknown): string {
+  if (body && typeof body === 'object') {
+    const obj = body as Record<string, unknown>;
+    if (typeof obj.detail === 'string') return obj.detail;
+    const parts: string[] = [];
+    for (const [field, val] of Object.entries(obj)) {
+      const text = Array.isArray(val) ? val.join(' ') : String(val);
+      parts.push(field === 'non_field_errors' ? text : `${field}: ${text}`);
+    }
+    if (parts.length) return parts.join('\n');
+  }
+  if (typeof body === 'string' && body.trim()) return body;
+  return `Error ${status}`;
+}
+
+async function readBody(res: Response): Promise<unknown> {
+  const text = await res.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
 export async function apiJson<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await apiFetch(path, options);
+  const body = await readBody(res);
   if (!res.ok) {
-    throw new Error(`API ${res.status} en ${path}`);
+    throw new ApiError(res.status, body, messageFromBody(res.status, body));
   }
-  return (await res.json()) as T;
+  return body as T;
 }

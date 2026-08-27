@@ -148,3 +148,19 @@ class AdminProductApiTests(APITestCase):
             {'images': [_image_file()]}, format='multipart',
         )
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+    # --- categorías (picker de la app) ---
+    def test_staff_lists_all_categories_flat(self):
+        Category.objects.create(name='Colgantes', ProductType='Joya')
+        Category.objects.create(name='Ágatas', ProductType='Piedra')
+        self.client.force_authenticate(self.staff)
+        res = self.client.get('/api/admin/categories/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        # Sin filtrar por ProductType: las tres categorías (setUp + 2) vienen.
+        names = {c['name'] for c in res.data}
+        self.assertEqual(names, {'Anillos', 'Colgantes', 'Ágatas'})
+
+    def test_categories_list_requires_staff(self):
+        self.client.force_authenticate(self.customer)
+        res = self.client.get('/api/admin/categories/')
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)

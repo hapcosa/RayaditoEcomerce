@@ -10,7 +10,28 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
+from category.models import Category
+
 from .models import GalleryProduct, Product
+
+
+class AdminCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'parent', 'ProductType']
+
+
+class AdminCategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    """Listado plano de categorías para el picker de la app admin.
+
+    Read-only a propósito: crear/editar categorías no es parte del DoD de la
+    Fase 5. Devuelve todas las categorías (sin filtrar por Joya/Piedra) para que
+    el formulario de alta de producto pueda elegir cualquiera.
+    """
+    queryset = Category.objects.order_by('ProductType', 'name')
+    serializer_class = AdminCategorySerializer
+    permission_classes = (IsAdminUser,)
+    pagination_class = None
 
 
 class AdminGalleryImageSerializer(serializers.ModelSerializer):
