@@ -148,20 +148,22 @@ export async function deleteGalleryImage(
 
 /**
  * Sube imágenes adicionales a la galería del producto (campo `images`).
- * El uploader nativo envía un archivo por request; subimos secuencialmente y
- * devolvemos la galería resultante de la última respuesta.
+ * El uploader nativo envía un archivo por request, y el backend responde solo
+ * con las imágenes creadas en ESA request; subimos secuencialmente y acumulamos
+ * todas para devolver el set completo de imágenes recién agregadas.
  */
 export async function addGalleryImages(
   productId: number,
   images: LocalImage[],
 ): Promise<{ gallery: GalleryImage[] }> {
-  let last: { gallery: GalleryImage[] } = { gallery: [] };
+  const created: GalleryImage[] = [];
   for (const img of images) {
-    last = await apiUpload<{ gallery: GalleryImage[] }>(
+    const res = await apiUpload<{ gallery: GalleryImage[] }>(
       `/api/admin/products/${productId}/images/`,
       img.uri,
       { fieldName: 'images', mimeType: img.mimeType, parameters: {} },
     );
+    created.push(...res.gallery);
   }
-  return last;
+  return { gallery: created };
 }
