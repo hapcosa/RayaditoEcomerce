@@ -7,6 +7,7 @@ from rest_framework.test import APITestCase
 from category.models import Category
 from metaproduct.models import Material
 from product.models import (
+    GalleryProduct,
     Attribute,
     AttributeValue,
     Joyas,
@@ -141,6 +142,20 @@ class GenericProductApiTests(APITestCase):
         self.assertEqual(product['available_stock'], 4)
         self.assertEqual(product['attributes'][0]['attribute_slug'], 'talla')
         self.assertEqual(product['variants'][0]['sku'], 'POL-M')
+
+    def test_gallery_exposes_photo_alias_for_the_next_front(self):
+        # Regresion: la galeria publica solo traia `photos` (nombre del campo
+        # del modelo) y el front Next.js lee `photo`, asi que llegaba en null y
+        # no se renderizaba ninguna imagen de galeria.
+        GalleryProduct.objects.create(product=self.product, photos='photos/26/08/x.jpg')
+
+        res = self.client.get(f'/api/products/{self.product.slug}')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        image = res.data['product']['gallery'][0]
+        self.assertTrue(image['photo'], 'la galeria publica debe exponer `photo`')
+        # `photos` se mantiene: lo consume el SPA legacy (src/components/product/galery.jsx).
+        self.assertEqual(image['photo'], image['photos'])
 
     def test_detail_accepts_slug(self):
         res = self.client.get(f'/api/products/{self.product.slug}')

@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { mediaUrl } from '@/lib/media';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -294,7 +295,7 @@ export default function CheckoutPage() {
                     <li key={item.product.id} className="flex items-center gap-3">
                       <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-piedra-100">
                         {item.product.photo && (
-                          <Image src={item.product.photo} alt={item.product.name}
+                          <Image src={mediaUrl(item.product.photo)} alt={item.product.name}
                             fill sizes="48px" className="object-cover" />
                         )}
                       </div>

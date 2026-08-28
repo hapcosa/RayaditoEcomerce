@@ -186,16 +186,24 @@ Cada fase lista **objetivo → tareas → entregable → criterio de aceptación
 
 ### Fase 4 — Migración a Next.js + rediseño artesanal/elegante
 **Objetivo:** tienda pública nueva, SEO y estética artesanal de Chiloé.
-- [ ] Scaffold Next.js (App Router, TS, Tailwind, design system con tokens).
-- [ ] **Lenguaje visual artesanal:** paleta de tierra/piedra/ágata, tipografía serif + acento manuscrito, texturas sutiles, mucho aire, fotografía grande. Referencias de joyería fina.
-- [ ] Portar páginas y **unificar** las 4 de detalle en 1: home (portada nueva), catálogo joyas/piedras, detalle, carrito, checkout, auth, dashboard, about, FAQ, contacto.
-- [ ] **SEO:** metadata, `sitemap.xml`, `robots`, datos estructurados `schema.org/Product`, OG images, `next/image`, i18n `es-CL`.
-- [ ] **Footer completo:** contacto, mail del dominio, redes, links legales, buzón de sugerencias.
-- [ ] Data fetching con RTK Query / React Query (fin del Redux legacy).
-- [ ] UI de **estrellas**, **buzón**, **wishlist**.
-- [ ] Accesibilidad (a11y) + performance (Core Web Vitals).
+- [x] Scaffold Next.js (App Router, TS, Tailwind, design system con tokens). → `web/`, Next 14.
+- [x] **Lenguaje visual artesanal:** paleta de tierra/piedra/ágata, tipografía serif + acento manuscrito, texturas sutiles, mucho aire, fotografía grande. Referencias de joyería fina.
+- [x] Portar páginas y **unificar** las 4 de detalle en 1: home (portada nueva), catálogo joyas/piedras, detalle, carrito, checkout, auth, dashboard, about, FAQ, contacto. → 25 rutas en `web/app/`.
+- [x] **SEO:** metadata, `sitemap.xml`, `robots`, datos estructurados `schema.org/Product`, OG images, `next/image`, i18n `es-CL`.
+- [x] **Footer completo:** contacto, mail del dominio, redes, links legales, buzón de sugerencias.
+- [x] Data fetching **sin** Redux legacy. *Desvío:* se resolvió con `lib/api.ts` (fetch de Server Components) + zustand para estado de cliente, en vez de RTK Query / React Query. El objetivo —terminar con el Redux legacy en el front nuevo— se cumple.
+- [x] UI de **estrellas**, **buzón**, **wishlist**.
+- [x] Accesibilidad (a11y) — PR #35 (reduced-motion, focus-visible, skip link).
+- [ ] **Performance / Core Web Vitals:** sin medir todavía.
+- [ ] **Corte del SPA:** `core/urls.py` sigue sirviendo el `dist/` de Vite con un catch-all. Next.js existe pero todavía no es la tienda pública. Va junto con la Fase 7 (servidor local + túnel de Cloudflare): dos procesos (Django + `next start`) detrás de un proxy que mande `/api/`, `/admin/` y `/media/` a Django y el resto a Next.
 
 **DoD:** Lighthouse SEO/Perf/A11y altos; catálogo, detalle y checkout funcionando; footer y buzón activos.
+
+**Estado (2026-08-28):** el flujo de compra está verificado end-to-end contra el
+backend local (catálogo → detalle → carrito → checkout con envíos y total → submit).
+Falta medir Lighthouse y hacer el corte del SPA. El paso final del pago (crear la
+preferencia en MercadoPago) **no** está verificado contra el servicio real: no hay
+`MERCADOPAGO_ACCESS_TOKEN` configurado y solo lo cubren tests con un SDK falso.
 
 ### Fase 5 — App admin nativa (Expo)
 **Objetivo:** subir productos y gestionar pedidos desde el celular.

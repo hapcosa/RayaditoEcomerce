@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { mediaUrl } from '@/lib/media';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -66,7 +67,7 @@ export default function WishlistPage() {
                 <Link href={href} className="group relative aspect-square overflow-hidden bg-piedra-100">
                   {p.photo ? (
                     <Image
-                      src={p.photo}
+                      src={mediaUrl(p.photo)}
                       alt={p.name}
                       fill
                       sizes="(max-width: 640px) 100vw, 33vw"
