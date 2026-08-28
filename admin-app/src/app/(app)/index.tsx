@@ -33,12 +33,14 @@ export default function DashboardScreen() {
             </ThemedText>
           </Pressable>
         </Link>
-        <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
-          <ThemedText type="default">Pedidos</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            Ver y cambiar estados (próximamente)
-          </ThemedText>
-        </View>
+        <Link href="/(app)/orders" asChild>
+          <Pressable style={StyleSheet.flatten([styles.card, { backgroundColor: theme.backgroundElement }])}>
+            <ThemedText type="default">Pedidos</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Ver pedidos y cambiar sus estados
+            </ThemedText>
+          </Pressable>
+        </Link>
       </View>
     </SafeAreaView>
   );
