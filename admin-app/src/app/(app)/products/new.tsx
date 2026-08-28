@@ -32,7 +32,7 @@ const EMPTY_FORM: ProductFormValue = {
   description: '',
   price: '',
   comparePrice: '',
-  productType: 'general',
+  productType: null,
   status: 'published',
   isFeatured: false,
   categoryId: null,
@@ -79,6 +79,7 @@ export default function NewProductScreen() {
     if (!form.description.trim()) return 'La descripción es obligatoria.';
     if (!form.price) return 'El precio es obligatorio.';
     if (form.categoryId == null) return 'Elegí una categoría.';
+    if (form.productType == null) return 'Elegí el tipo: joya o piedra.';
     if (!photo) return 'Agregá una foto del producto.';
     return null;
   }
@@ -97,7 +98,7 @@ export default function NewProductScreen() {
         price: Number(form.price),
         compare_price: form.comparePrice ? Number(form.comparePrice) : 0,
         category: form.categoryId!,
-        product_type: form.productType.trim() || 'general',
+        product_type: form.productType!,
         status: form.status,
         is_featured: form.isFeatured,
         photo: photo!,

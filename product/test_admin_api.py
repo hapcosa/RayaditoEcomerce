@@ -88,6 +88,45 @@ class AdminProductApiTests(APITestCase):
         self.assertIsInstance(res.data['price'], int)
         self.assertTrue(product.slug)  # slug autogenerado
 
+    def test_create_requires_product_type(self):
+        # Sin product_type el producto quedaria 'general' e invisible en ambos
+        # catalogos publicos: la API lo rechaza antes de crearlo.
+        self.client.force_authenticate(self.staff)
+        payload = self._create_payload()
+        del payload['product_type']
+        res = self.client.post('/api/admin/products/', payload,
+                               format='multipart')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('product_type', res.data)
+        self.assertEqual(Product.objects.count(), 0)
+
+    def test_rejects_unclassified_product_type(self):
+        self.client.force_authenticate(self.staff)
+        res = self.client.post('/api/admin/products/',
+                               self._create_payload(product_type='general'),
+                               format='multipart')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('product_type', res.data)
+        self.assertEqual(Product.objects.count(), 0)
+
+    def test_created_product_is_listed_in_its_public_catalog(self):
+        # Regresion: los productos creados por la app admin no aparecian en
+        # ningun catalogo publico porque quedaban con product_type 'general'.
+        self.client.force_authenticate(self.staff)
+        res = self.client.post('/api/admin/products/',
+                               self._create_payload(product_type='piedra'),
+                               format='multipart')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data)
+
+        self.client.force_authenticate(None)
+        listed = self.client.get('/api/products/', {'product_type': 'piedra'})
+        self.assertEqual(listed.status_code, status.HTTP_200_OK)
+        self.assertEqual([p['id'] for p in listed.data['products']],
+                         [res.data['id']])
+
+        otro = self.client.get('/api/products/', {'product_type': 'joya'})
+        self.assertEqual(otro.data['products'], [])
+
     def test_rejects_decimal_price(self):
         self.client.force_authenticate(self.staff)
         res = self.client.post('/api/admin/products/',

@@ -82,7 +82,9 @@ export default function EditProductScreen() {
           description: product.description,
           price: String(product.price),
           comparePrice: product.compare_price ? String(product.compare_price) : '',
-          productType: product.product_type,
+          // 'general' es el estado heredado: no es elegible, asi que el form
+          // arranca vacio y obliga a clasificar el producto antes de guardar.
+          productType: product.product_type === 'general' ? null : product.product_type,
           status: product.status,
           isFeatured: product.is_featured,
           categoryId: product.category,
@@ -184,6 +186,7 @@ export default function EditProductScreen() {
     if (!f.description.trim()) return 'La descripción es obligatoria.';
     if (!f.price) return 'El precio es obligatorio.';
     if (f.categoryId == null) return 'Elegí una categoría.';
+    if (f.productType == null) return 'Elegí el tipo: joya o piedra.';
     return null;
   }
 
@@ -204,7 +207,7 @@ export default function EditProductScreen() {
           price: Number(form.price),
           compare_price: form.comparePrice ? Number(form.comparePrice) : 0,
           category: form.categoryId!,
-          product_type: form.productType.trim() || 'general',
+          product_type: form.productType!,
           status: form.status,
           is_featured: form.isFeatured,
         },

@@ -3,6 +3,11 @@
 Todo requiere `IsAdminUser` (== `is_staff`). El modelo de producto se maneja a
 nivel de `Product` base (no las subclases Joyas/Piedras); las variantes quedan
 fuera de scope. Dinero en entero CLP (ver AGENTS.md).
+
+Como esta API no crea las subclases, `product_type` es lo unico que decide en
+que catalogo publico aparece el producto: por eso aca es obligatorio y solo
+acepta 'joya' o 'piedra'. Sin el, el producto queda 'general' e invisible en la
+tienda.
 """
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
@@ -43,6 +48,14 @@ class AdminGalleryImageSerializer(serializers.ModelSerializer):
 
 class AdminProductSerializer(serializers.ModelSerializer):
     slug = serializers.SlugField(read_only=True)
+    # Obligatorio y sin 'general': un producto creado desde la app tiene que
+    # caer en un catalogo publico.
+    product_type = serializers.ChoiceField(
+        choices=[
+            (Product.ProductType.JOYA, Product.ProductType.JOYA.label),
+            (Product.ProductType.PIEDRA, Product.ProductType.PIEDRA.label),
+        ],
+    )
     available_stock = serializers.IntegerField(read_only=True)
     gallery = AdminGalleryImageSerializer(
         source='galleryproduct_set', many=True, read_only=True,
