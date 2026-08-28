@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { mediaUrl } from '@/lib/media';
 import Link from 'next/link';
 import type { Product } from '@/types/product';
 import { formatCLP } from '@/lib/format';
@@ -23,7 +24,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="relative aspect-square overflow-hidden bg-piedra-100">
           {product.photo ? (
             <Image
-              src={product.photo}
+              src={mediaUrl(product.photo)}
               alt={product.name}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"

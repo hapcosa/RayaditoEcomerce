@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { mediaUrl } from '@/lib/media';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useCartStore } from '@/lib/store/cart';
@@ -107,7 +108,7 @@ export default function CarritoPage() {
                   >
                     {item.product.photo ? (
                       <Image
-                        src={item.product.photo}
+                        src={mediaUrl(item.product.photo)}
                         alt={item.product.name}
                         fill
                         sizes="96px"

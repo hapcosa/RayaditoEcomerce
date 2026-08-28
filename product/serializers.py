@@ -38,9 +38,18 @@ class AttributeSerializer(serializers.ModelSerializer):
 
 
 class GalleryProductSerializer(serializers.ModelSerializer):
+    """Imagen de galeria para la API publica.
+
+    Expone la URL dos veces a proposito: `photos` es el nombre del campo del
+    modelo y lo consume el SPA legacy, mientras que `photo` alinea la galeria
+    con `Product.photo`, que es lo que espera el front Next.js. Sin el alias la
+    galeria llegaba con `photo: null` y no se renderizaba ninguna imagen.
+    """
+    photo = serializers.ImageField(source='photos', read_only=True)
+
     class Meta:
-        model=GalleryProduct
-        fields = '__all__'
+        model = GalleryProduct
+        fields = ['id', 'product', 'photos', 'photo']
 
 
 class ProductAttributeValueSerializer(serializers.ModelSerializer):

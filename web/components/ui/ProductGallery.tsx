@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { mediaUrl } from '@/lib/media';
 import { useState } from 'react';
 import type { GalleryImage } from '@/types/product';
 
@@ -15,10 +16,9 @@ export function ProductGallery({
   productName,
   gallery,
 }: ProductGalleryProps) {
-  const images = [
-    ...(mainPhoto ? [mainPhoto] : []),
-    ...gallery.map((g) => g.photo),
-  ];
+  // Filtra vacios en ambas fuentes: `next/image` lanza si `src` es undefined,
+  // asi que una imagen sin URL tiraba abajo toda la pagina de detalle.
+  const images = [mainPhoto, ...gallery.map((g) => g.photo)].filter(Boolean);
   const [active, setActive] = useState(0);
 
   if (images.length === 0) {
@@ -33,7 +33,7 @@ export function ProductGallery({
     <div className="flex flex-col gap-3">
       <div className="relative aspect-square overflow-hidden rounded-2xl bg-piedra-100">
         <Image
-          src={images[active]}
+          src={mediaUrl(images[active])}
           alt={`${productName} — imagen ${active + 1}`}
           fill
           sizes="(max-width: 768px) 100vw, 50vw"
@@ -46,7 +46,7 @@ export function ProductGallery({
         <div className="flex gap-2 overflow-x-auto pb-1">
           {images.map((src, i) => (
             <button
-              key={src}
+              key={`${src}-${i}`}
               onClick={() => setActive(i)}
               className={[
                 'relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-colors',
@@ -56,7 +56,7 @@ export function ProductGallery({
               ].join(' ')}
               aria-label={`Ver imagen ${i + 1}`}
             >
-              <Image src={src} alt="" fill sizes="64px" className="object-cover" />
+              <Image src={mediaUrl(src)} alt="" fill sizes="64px" className="object-cover" />
             </button>
           ))}
         </div>
