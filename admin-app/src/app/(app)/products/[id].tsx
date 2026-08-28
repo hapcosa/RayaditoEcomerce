@@ -29,10 +29,11 @@ import {
   type GalleryImage,
   type LocalImage,
 } from '@/api/products';
-import { ImageZoomViewer } from '@/components/image-zoom-viewer';
+import { ImageZoomViewer, type CropDest } from '@/components/image-zoom-viewer';
 import { ProductFormFields, type ProductFormValue } from '@/components/product-form';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
+import { cropFromViewer, type ViewerTransform } from '@/utils/crop-image';
 import { pickFromLibrary, takePhoto } from '@/utils/pick-image';
 
 /** Óxido de la paleta tierra (mismo tono que el estado "rechazado"). */
@@ -63,6 +64,7 @@ export default function EditProductScreen() {
   const [deleting, setDeleting] = useState(false);
   const [addingImages, setAddingImages] = useState(false);
   const [zoomUri, setZoomUri] = useState<string | null>(null);
+  const [cropping, setCropping] = useState(false);
 
   const patch = (p: Partial<ProductFormValue>) =>
     setForm((f) => (f ? { ...f, ...p } : f));
@@ -135,6 +137,46 @@ export default function EditProductScreen() {
         },
       },
     ]);
+  }
+
+  function openZoom(uri: string) {
+    setZoomUri(uri);
+  }
+
+  function closeZoom() {
+    setZoomUri(null);
+  }
+
+  /**
+   * Guarda el recorte encuadrado en el visor. Según el destino elegido:
+   * - `gallery`: lo sube como foto NUEVA de la galería, sin tocar la original.
+   * - `main`: lo deja como foto principal (queda pendiente y se sube al tocar
+   *   "Guardar cambios", igual que el reemplazo por cámara/galería).
+   */
+  async function onCrop(t: ViewerTransform, dest: CropDest) {
+    if (!zoomUri) return;
+    setCropping(true);
+    try {
+      const cropped = await cropFromViewer(zoomUri, t);
+      if (!cropped) {
+        Alert.alert('Recorte muy chico', 'Ajustá el encuadre y probá de nuevo.');
+        return;
+      }
+      if (dest === 'main') {
+        setNewPhoto(cropped);
+        closeZoom();
+        Alert.alert('Listo', 'El recorte quedó como foto principal. Tocá "Guardar cambios" para aplicarlo.');
+      } else {
+        const { gallery: created } = await addGalleryImages(productId, [cropped]);
+        setGallery((prev) => [...prev, ...created]);
+        closeZoom();
+        Alert.alert('Recorte guardado', 'Se agregó a la galería; la foto original quedó intacta.');
+      }
+    } catch (e) {
+      Alert.alert('No se pudo recortar', e instanceof Error ? e.message : 'Error desconocido.');
+    } finally {
+      setCropping(false);
+    }
   }
 
   function validate(f: ProductFormValue): string | null {
@@ -225,7 +267,7 @@ export default function EditProductScreen() {
         {/* Foto principal */}
         <View style={styles.photoBox}>
           {photoPreview ? (
-            <Pressable style={styles.photo} onPress={() => setZoomUri(photoPreview)}>
+            <Pressable style={styles.photo} onPress={() => openZoom(photoPreview)}>
               <Image source={{ uri: photoPreview }} style={styles.photoImg} contentFit="cover" />
             </Pressable>
           ) : (
@@ -263,7 +305,7 @@ export default function EditProductScreen() {
               return (
                 <View key={img.id} style={styles.galleryItem}>
                   <Pressable
-                    onPress={() => uri && setZoomUri(uri)}
+                    onPress={() => uri && openZoom(uri)}
                     style={styles.galleryImg}
                   >
                     {uri ? (
@@ -299,7 +341,7 @@ export default function EditProductScreen() {
             </Pressable>
           </View>
           <ThemedText type="small" themeColor="textSecondary">
-            Tocá una imagen para verla; usá ✕ para quitarla.
+            Tocá una imagen para verla o recortarla; usá ✕ para quitarla.
           </ThemedText>
         </View>
 
@@ -335,7 +377,9 @@ export default function EditProductScreen() {
       <ImageZoomViewer
         visible={zoomUri != null}
         uri={zoomUri}
-        onClose={() => setZoomUri(null)}
+        onClose={closeZoom}
+        onCrop={onCrop}
+        busy={cropping}
       />
     </KeyboardAvoidingView>
   );
