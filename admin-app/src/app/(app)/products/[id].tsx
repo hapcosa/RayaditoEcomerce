@@ -29,6 +29,7 @@ import {
   type GalleryImage,
   type LocalImage,
 } from '@/api/products';
+import { ImageZoomViewer } from '@/components/image-zoom-viewer';
 import { ProductFormFields, type ProductFormValue } from '@/components/product-form';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
@@ -61,6 +62,7 @@ export default function EditProductScreen() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [addingImages, setAddingImages] = useState(false);
+  const [zoomUri, setZoomUri] = useState<string | null>(null);
 
   const patch = (p: Partial<ProductFormValue>) =>
     setForm((f) => (f ? { ...f, ...p } : f));
@@ -223,7 +225,9 @@ export default function EditProductScreen() {
         {/* Foto principal */}
         <View style={styles.photoBox}>
           {photoPreview ? (
-            <Image source={{ uri: photoPreview }} style={styles.photo} contentFit="cover" />
+            <Pressable style={styles.photo} onPress={() => setZoomUri(photoPreview)}>
+              <Image source={{ uri: photoPreview }} style={styles.photoImg} contentFit="cover" />
+            </Pressable>
           ) : (
             <View style={[styles.photo, styles.photoEmpty, { backgroundColor: theme.backgroundElement }]}>
               <ThemedText type="small" themeColor="textSecondary">
@@ -257,22 +261,27 @@ export default function EditProductScreen() {
             {gallery.map((img) => {
               const uri = photoUrl(img.photos);
               return (
-                <Pressable
-                  key={img.id}
-                  onPress={() => onRemoveGalleryImage(img.id)}
-                  style={styles.galleryItem}
-                >
-                  {uri ? (
-                    <Image source={{ uri }} style={styles.galleryImg} contentFit="cover" />
-                  ) : (
-                    <View style={[styles.galleryImg, { backgroundColor: theme.backgroundElement }]} />
-                  )}
-                  <View style={styles.removeBadge}>
+                <View key={img.id} style={styles.galleryItem}>
+                  <Pressable
+                    onPress={() => uri && setZoomUri(uri)}
+                    style={styles.galleryImg}
+                  >
+                    {uri ? (
+                      <Image source={{ uri }} style={styles.galleryImg} contentFit="cover" />
+                    ) : (
+                      <View style={[styles.galleryImg, { backgroundColor: theme.backgroundElement }]} />
+                    )}
+                  </Pressable>
+                  <Pressable
+                    style={styles.removeBadge}
+                    onPress={() => onRemoveGalleryImage(img.id)}
+                    hitSlop={8}
+                  >
                     <ThemedText type="smallBold" style={styles.removeBadgeText}>
                       ✕
                     </ThemedText>
-                  </View>
-                </Pressable>
+                  </Pressable>
+                </View>
               );
             })}
             <Pressable
@@ -290,7 +299,7 @@ export default function EditProductScreen() {
             </Pressable>
           </View>
           <ThemedText type="small" themeColor="textSecondary">
-            Tocá una imagen para quitarla.
+            Tocá una imagen para verla; usá ✕ para quitarla.
           </ThemedText>
         </View>
 
@@ -322,6 +331,12 @@ export default function EditProductScreen() {
           )}
         </Pressable>
       </ScrollView>
+
+      <ImageZoomViewer
+        visible={zoomUri != null}
+        uri={zoomUri}
+        onClose={() => setZoomUri(null)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -331,6 +346,7 @@ const styles = StyleSheet.create({
   content: { padding: 20, gap: 16, paddingBottom: 48 },
   photoBox: { gap: 12, alignItems: 'center' },
   photo: { width: '100%', height: 220, borderRadius: 12 },
+  photoImg: { width: '100%', height: '100%', borderRadius: 12 },
   photoEmpty: { alignItems: 'center', justifyContent: 'center' },
   photoBtns: { flexDirection: 'row', gap: 12 },
   btn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
