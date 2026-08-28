@@ -76,7 +76,8 @@ SOCIAL_AUTH_JSONFIELD_ENABLED = True
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'dist')],
+        # Sin el `dist/` del SPA de Vite: la tienda la sirve Next.js.
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -128,13 +129,9 @@ STATIC_URL = '/assets/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'public')
 MEDIA_URL = '/public/'
 
-# Solo incluir el build del front si existe (en dev puede no estar construido).
-STATICFILES_DIRS = (
-    [os.path.join(BASE_DIR, 'dist/assets')]
-    if os.path.isdir(os.path.join(BASE_DIR, 'dist/assets'))
-    else []
-)
-REACT_APP_BUILD_PATH = "/dist/"
+# Los estaticos que quedan son los del admin de Django y los de DRF: el build
+# del front vivia en `dist/assets` y se retiro junto con el SPA de Vite.
+STATICFILES_DIRS = []
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -327,8 +324,16 @@ DEFAULT_FROM_EMAIL = env(
 )
 
 
+# Detrás del túnel de Cloudflare, `cloudflared` habla HTTP plano contra este
+# proceso y el TLS lo termina Cloudflare. Confiar en el Host reenviado hace que
+# Django construya URLs absolutas con el dominio público y no con `localhost`:
+# de ahí sale, entre otras, la `notification_url` del webhook de MercadoPago.
+USE_X_FORWARDED_HOST = env.bool('USE_X_FORWARDED_HOST', default=False)
+
 # Hardening de producción (solo cuando DEBUG=False).
 if not DEBUG:
+    # El redirect a HTTPS lo resuelve Cloudflare antes de llegar acá; junto con
+    # SECURE_PROXY_SSL_HEADER esto evita el loop de redirecciones.
     SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=True)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True

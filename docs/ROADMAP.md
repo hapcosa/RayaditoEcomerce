@@ -219,7 +219,9 @@ Cada fase lista **objetivo → tareas → entregable → criterio de aceptación
 **Objetivo:** producción seria.
 - [ ] Comprar dominio → **email del dominio** (Zoho/Google Workspace) → SMTP real (hoy es `console.EmailBackend`).
 - [ ] Media en **object storage** (S3 / Cloudflare R2 / Cloudinary — `cloudinary` ya está) vía django-storages.
-- [ ] Deploy definitivo (Railway/Fly/Render) + Postgres administrado + backups.
+- [x] **Corte del SPA:** Django dejó de servir la tienda (se retiró el catch-all y el SPA de Vite). Dos procesos: Django `:8000` y Next `:3000`.
+- [ ] Deploy definitivo. **Decidido:** servidor local (PC propio) + **túnel de Cloudflare** con dominio propio, ruteo por path en `cloudflared` (sin nginx). Procedimiento completo en [`DEPLOY.md`](DEPLOY.md). Falta ejecutarlo: dominio y `cloudflared` todavía no existen.
+- [ ] Postgres + backups (hoy Postgres corre en docker local, sin backups).
 - [ ] **Sentry**, rate limiting, security headers, HTTPS/HSTS.
 - [ ] Legal Chile: términos, privacidad, Ley del Consumidor (botón de arrepentimiento), boleta/factura.
 

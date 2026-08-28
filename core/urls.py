@@ -1,14 +1,12 @@
 from django.contrib import admin
 from django.urls import path, re_path, include
-from django.conf.urls.static import static
-from django.views.generic import TemplateView
+from django.views.static import serve
 from django.conf import settings
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
-from .views import Error404View
 urlpatterns = [
     # OpenAPI: esquema crudo + Swagger UI + ReDoc.
     path('api/schema', SpectacularAPIView.as_view(), name='schema'),
@@ -37,6 +35,20 @@ urlpatterns = [
     path("ckeditor5/", include('django_ckeditor_5.urls')),
     path("api/meta/", include('metaproduct.urls')),
     
-] + static( settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
 
-urlpatterns += [re_path(r'^.*', TemplateView.as_view(template_name='index.html'))]
+# Media (fotos de producto). `static()` solo funciona con DEBUG=True, asi que
+# tras el cutover las fotos desaparecian en produccion: el SPA ya no esta y no
+# hay nginx delante, solo el tunel, que no sabe servir archivos. Hasta que la
+# media viva en object storage (Fase 7) la sirve este proceso. Cloudflare cachea
+# por delante, asi que el costo real es bajo.
+urlpatterns += [
+    re_path(r'^%s(?P<path>.*)$' % settings.MEDIA_URL.lstrip('/'), serve,
+            {'document_root': settings.MEDIA_ROOT}),
+]
+
+# La tienda publica la sirve Next.js (`web/`), no Django. El proxy que termina
+# el tunel manda `/api/`, `/auth/`, `/admin/`, `/ckeditor5/` y `MEDIA_URL` aca y
+# todo lo demas a Next, asi que una ruta desconocida en este proceso es un error
+# de backend y responde JSON, no el HTML del SPA que Django servia antes.
+handler404 = 'core.views.page_not_found'
