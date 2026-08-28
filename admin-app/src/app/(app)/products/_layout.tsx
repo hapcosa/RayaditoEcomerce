@@ -6,6 +6,7 @@ export default function ProductsLayout() {
     <Stack>
       <Stack.Screen name="index" options={{ title: 'Productos' }} />
       <Stack.Screen name="new" options={{ title: 'Nuevo producto', presentation: 'modal' }} />
+      <Stack.Screen name="[id]" options={{ title: 'Editar producto' }} />
     </Stack>
   );
 }

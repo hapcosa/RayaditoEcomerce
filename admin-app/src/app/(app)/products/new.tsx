@@ -13,8 +13,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
-  TextInput,
   View,
 } from 'react-native';
 
@@ -23,47 +21,42 @@ import {
   getCategories,
   type Category,
   type LocalImage,
-  type ProductStatus,
 } from '@/api/products';
+import { ProductFormFields, type ProductFormValue } from '@/components/product-form';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { pickFromLibrary, takePhoto } from '@/utils/pick-image';
 
-const STATUS_OPTIONS: { value: ProductStatus; label: string }[] = [
-  { value: 'published', label: 'Publicado' },
-  { value: 'draft', label: 'Borrador' },
-  { value: 'archived', label: 'Archivado' },
-];
-
-/** Solo dígitos: el precio es entero CLP. */
-function digitsOnly(text: string): string {
-  return text.replace(/[^0-9]/g, '');
-}
+const EMPTY_FORM: ProductFormValue = {
+  name: '',
+  description: '',
+  price: '',
+  comparePrice: '',
+  productType: 'general',
+  status: 'published',
+  isFeatured: false,
+  categoryId: null,
+};
 
 export default function NewProductScreen() {
   const theme = useTheme();
   const router = useRouter();
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
-  const [comparePrice, setComparePrice] = useState('');
-  const [productType, setProductType] = useState('general');
-  const [status, setStatus] = useState<ProductStatus>('published');
-  const [isFeatured, setIsFeatured] = useState(false);
+  const [form, setForm] = useState<ProductFormValue>(EMPTY_FORM);
   const [photo, setPhoto] = useState<LocalImage | null>(null);
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [categoryId, setCategoryId] = useState<number | null>(null);
   const [loadingCats, setLoadingCats] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
+  const patch = (p: Partial<ProductFormValue>) => setForm((f) => ({ ...f, ...p }));
 
   useEffect(() => {
     (async () => {
       try {
         const cats = await getCategories();
         setCategories(cats);
-        if (cats[0]) setCategoryId(cats[0].id);
+        if (cats[0]) patch({ categoryId: cats[0].id });
       } catch (e) {
         Alert.alert('Error', e instanceof Error ? e.message : 'No se cargaron las categorías.');
       } finally {
@@ -82,10 +75,10 @@ export default function NewProductScreen() {
   }
 
   function validate(): string | null {
-    if (!name.trim()) return 'El nombre es obligatorio.';
-    if (!description.trim()) return 'La descripción es obligatoria.';
-    if (!price) return 'El precio es obligatorio.';
-    if (categoryId == null) return 'Elegí una categoría.';
+    if (!form.name.trim()) return 'El nombre es obligatorio.';
+    if (!form.description.trim()) return 'La descripción es obligatoria.';
+    if (!form.price) return 'El precio es obligatorio.';
+    if (form.categoryId == null) return 'Elegí una categoría.';
     if (!photo) return 'Agregá una foto del producto.';
     return null;
   }
@@ -99,14 +92,14 @@ export default function NewProductScreen() {
     setSubmitting(true);
     try {
       await createProduct({
-        name: name.trim(),
-        description: description.trim(),
-        price: Number(price),
-        compare_price: comparePrice ? Number(comparePrice) : 0,
-        category: categoryId!,
-        product_type: productType.trim() || 'general',
-        status,
-        is_featured: isFeatured,
+        name: form.name.trim(),
+        description: form.description.trim(),
+        price: Number(form.price),
+        compare_price: form.comparePrice ? Number(form.comparePrice) : 0,
+        category: form.categoryId!,
+        product_type: form.productType.trim() || 'general',
+        status: form.status,
+        is_featured: form.isFeatured,
         photo: photo!,
       });
       router.back();
@@ -116,11 +109,6 @@ export default function NewProductScreen() {
       setSubmitting(false);
     }
   }
-
-  const inputStyle = [
-    styles.input,
-    { backgroundColor: theme.backgroundElement, color: theme.text },
-  ];
 
   return (
     <KeyboardAvoidingView
@@ -149,88 +137,12 @@ export default function NewProductScreen() {
           </View>
         </View>
 
-        <Field label="Nombre">
-          <TextInput style={inputStyle} value={name} onChangeText={setName} placeholder="Anillo ágata" placeholderTextColor={theme.textSecondary} />
-        </Field>
-
-        <Field label="Descripción">
-          <TextInput
-            style={[inputStyle, styles.multiline]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Plata y ágata de Chiloé"
-            placeholderTextColor={theme.textSecondary}
-            multiline
-          />
-        </Field>
-
-        <Field label="Precio (CLP)">
-          <TextInput style={inputStyle} value={price} onChangeText={(t) => setPrice(digitsOnly(t))} keyboardType="number-pad" placeholder="25000" placeholderTextColor={theme.textSecondary} />
-        </Field>
-
-        <Field label="Precio comparación (opcional)">
-          <TextInput style={inputStyle} value={comparePrice} onChangeText={(t) => setComparePrice(digitsOnly(t))} keyboardType="number-pad" placeholder="0" placeholderTextColor={theme.textSecondary} />
-        </Field>
-
-        <Field label="Tipo de producto">
-          <TextInput style={inputStyle} value={productType} onChangeText={setProductType} placeholder="general" placeholderTextColor={theme.textSecondary} autoCapitalize="none" />
-        </Field>
-
-        {/* Categoría */}
-        <Field label="Categoría">
-          {loadingCats ? (
-            <ActivityIndicator />
-          ) : categories.length === 0 ? (
-            <ThemedText type="small" themeColor="textSecondary">
-              No hay categorías cargadas en el backend.
-            </ThemedText>
-          ) : (
-            <View style={styles.chips}>
-              {categories.map((c) => {
-                const selected = c.id === categoryId;
-                return (
-                  <Pressable
-                    key={c.id}
-                    onPress={() => setCategoryId(c.id)}
-                    style={[
-                      styles.chip,
-                      { backgroundColor: selected ? theme.text : theme.backgroundElement },
-                    ]}
-                  >
-                    <ThemedText type="small" style={{ color: selected ? theme.background : theme.text }}>
-                      {c.name}
-                    </ThemedText>
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
-        </Field>
-
-        {/* Estado */}
-        <Field label="Estado">
-          <View style={styles.chips}>
-            {STATUS_OPTIONS.map((o) => {
-              const selected = o.value === status;
-              return (
-                <Pressable
-                  key={o.value}
-                  onPress={() => setStatus(o.value)}
-                  style={[styles.chip, { backgroundColor: selected ? theme.text : theme.backgroundElement }]}
-                >
-                  <ThemedText type="small" style={{ color: selected ? theme.background : theme.text }}>
-                    {o.label}
-                  </ThemedText>
-                </Pressable>
-              );
-            })}
-          </View>
-        </Field>
-
-        <View style={styles.switchRow}>
-          <ThemedText type="smallBold">Destacado</ThemedText>
-          <Switch value={isFeatured} onValueChange={setIsFeatured} />
-        </View>
+        <ProductFormFields
+          value={form}
+          onChange={patch}
+          categories={categories}
+          loadingCats={loadingCats}
+        />
 
         <Pressable
           style={[styles.submit, { backgroundColor: theme.text, opacity: submitting ? 0.6 : 1 }]}
@@ -250,17 +162,6 @@ export default function NewProductScreen() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.field}>
-      <ThemedText type="smallBold" style={styles.label}>
-        {label}
-      </ThemedText>
-      {children}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   content: { padding: 20, gap: 16, paddingBottom: 48 },
   photoBox: { gap: 12, alignItems: 'center' },
@@ -268,12 +169,5 @@ const styles = StyleSheet.create({
   photoEmpty: { alignItems: 'center', justifyContent: 'center' },
   photoBtns: { flexDirection: 'row', gap: 12 },
   btn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
-  field: { gap: 6 },
-  label: { marginLeft: 2 },
-  input: { borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
-  multiline: { minHeight: 90, textAlignVertical: 'top' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
   submit: { paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 8 },
 });

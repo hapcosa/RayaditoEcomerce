@@ -34,23 +34,25 @@ function ProductRow({ product }: { product: Product }) {
   const theme = useTheme();
   const uri = photoUrl(product.photo);
   return (
-    <View style={[styles.row, { backgroundColor: theme.backgroundElement }]}>
-      {uri ? (
-        <Image source={{ uri }} style={styles.thumb} contentFit="cover" />
-      ) : (
-        <View style={[styles.thumb, { backgroundColor: theme.backgroundSelected }]} />
-      )}
-      <View style={styles.rowText}>
-        <ThemedText type="smallBold" numberOfLines={1}>
-          {product.name}
-        </ThemedText>
-        <ThemedText type="small">{formatCLP(product.price)}</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          {STATUS_LABEL[product.status]}
-          {product.is_featured ? ' · Destacado' : ''}
-        </ThemedText>
-      </View>
-    </View>
+    <Link href={`/(app)/products/${product.id}`} asChild>
+      <Pressable style={StyleSheet.flatten([styles.row, { backgroundColor: theme.backgroundElement }])}>
+        {uri ? (
+          <Image source={{ uri }} style={styles.thumb} contentFit="cover" />
+        ) : (
+          <View style={[styles.thumb, { backgroundColor: theme.backgroundSelected }]} />
+        )}
+        <View style={styles.rowText}>
+          <ThemedText type="smallBold" numberOfLines={1}>
+            {product.name}
+          </ThemedText>
+          <ThemedText type="small">{formatCLP(product.price)}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {STATUS_LABEL[product.status]}
+            {product.is_featured ? ' · Destacado' : ''}
+          </ThemedText>
+        </View>
+      </Pressable>
+    </Link>
   );
 }
 
