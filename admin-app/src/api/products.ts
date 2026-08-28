@@ -14,11 +14,18 @@ export type GalleryImage = {
   photos: string | null;
 };
 
+/**
+ * Catalogo publico en el que cae el producto. La API admin solo acepta estos
+ * dos; 'general' existe en el backend como estado heredado (sin clasificar) y
+ * no se puede elegir desde la app.
+ */
+export type ProductType = 'joya' | 'piedra';
+
 export type Product = {
   id: number;
   name: string;
   slug: string;
-  product_type: string;
+  product_type: ProductType | 'general';
   photo: string | null;
   description: string;
   price: number;
@@ -53,7 +60,7 @@ export type ProductFields = {
   price: number;
   compare_price: number;
   category: number;
-  product_type: string;
+  product_type: ProductType;
   status: ProductStatus;
   is_featured: boolean;
 };

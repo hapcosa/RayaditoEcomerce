@@ -23,9 +23,20 @@ class Product(models.Model):
         PUBLISHED = 'published', 'Publicado'
         ARCHIVED = 'archived', 'Archivado'
 
+    class ProductType(models.TextChoices):
+        # Define en que catalogo publico aparece el producto. `GENERAL` es el
+        # estado heredado: productos sin clasificar, que no se listan en /joyas
+        # ni en /piedras hasta que el staff les asigne un tipo.
+        JOYA = 'joya', 'Joya'
+        PIEDRA = 'piedra', 'Piedra'
+        GENERAL = 'general', 'Sin clasificar'
+
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True)
-    product_type = models.SlugField(max_length=55, default='general', db_index=True)
+    product_type = models.SlugField(
+        max_length=55, choices=ProductType.choices,
+        default=ProductType.GENERAL, db_index=True,
+    )
     photo = models.ImageField(upload_to='photos/%y/%m')
     description = models.TextField()
     # Dinero en entero CLP (peso chileno, sin decimales). Ver AGENTS.md.

@@ -15,7 +15,7 @@ import {
   View,
 } from 'react-native';
 
-import type { Category, ProductStatus } from '@/api/products';
+import type { Category, ProductStatus, ProductType } from '@/api/products';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -23,6 +23,16 @@ export const STATUS_OPTIONS: { value: ProductStatus; label: string }[] = [
   { value: 'published', label: 'Publicado' },
   { value: 'draft', label: 'Borrador' },
   { value: 'archived', label: 'Archivado' },
+];
+
+/**
+ * El tipo decide en que catalogo publico aparece el producto (/joyas o
+ * /piedras). Antes era texto libre y quedaba en 'general', con lo que el
+ * producto no se listaba en ninguno; ahora la API solo acepta estos dos.
+ */
+export const PRODUCT_TYPE_OPTIONS: { value: ProductType; label: string }[] = [
+  { value: 'joya', label: 'Joya' },
+  { value: 'piedra', label: 'Piedra' },
 ];
 
 /** Solo dígitos: el precio es entero CLP. */
@@ -36,7 +46,7 @@ export type ProductFormValue = {
   description: string;
   price: string;
   comparePrice: string;
-  productType: string;
+  productType: ProductType | null;
   status: ProductStatus;
   isFeatured: boolean;
   categoryId: number | null;
@@ -113,14 +123,22 @@ export function ProductFormFields({ value, onChange, categories, loadingCats }: 
       </Field>
 
       <Field label="Tipo de producto">
-        <TextInput
-          style={inputStyle}
-          value={value.productType}
-          onChangeText={(t) => onChange({ productType: t })}
-          placeholder="general"
-          placeholderTextColor={theme.textSecondary}
-          autoCapitalize="none"
-        />
+        <View style={styles.chips}>
+          {PRODUCT_TYPE_OPTIONS.map((o) => {
+            const selected = o.value === value.productType;
+            return (
+              <Pressable
+                key={o.value}
+                onPress={() => onChange({ productType: o.value })}
+                style={[styles.chip, { backgroundColor: selected ? theme.text : theme.backgroundElement }]}
+              >
+                <ThemedText type="small" style={{ color: selected ? theme.background : theme.text }}>
+                  {o.label}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
+        </View>
       </Field>
 
       <Field label="Categoría">
