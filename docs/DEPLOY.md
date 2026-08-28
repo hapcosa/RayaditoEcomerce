@@ -145,6 +145,14 @@ curl -s -o /dev/null -w '%{http_code}\n' https://piedrasrayadito.cl/admin/login/
 Que `/api/ruta-inexistente` devuelva **JSON** y no HTML confirma que el catch-all
 del SPA ya no está y que el proxy separa bien los dos procesos.
 
+## Por qué no hay `build.sh` ni `procfile`
+
+Los dos venían del intento de deploy en Railway y quedaron obsoletos con este
+setup: llamaban a `npm run build` del SPA de Vite (que ya no existe), y además
+arrastraban bugs viejos — `collectstatic --no-imput`, `runserver` como comando
+de arranque y `gunicorn core.wsgi` sin `:application`. El despliegue ahora es el
+de este documento: systemd + `cloudflared`.
+
 ## Pendientes de esta fase
 
 - **Media en object storage** (S3 / R2 / Cloudinary) vía `django-storages`. Hoy
