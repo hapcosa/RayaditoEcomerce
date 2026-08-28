@@ -94,7 +94,10 @@ class MercadoPagoFlowTests(APITestCase):
         )
         self.cart = Carrito.objects.get(user=self.user)
 
-    @mock.patch.dict(os.environ, {'MERCADOPAGO_ACCESS_TOKEN': 'test-token'}, clear=False)
+    @mock.patch.dict(os.environ, {
+        'MERCADOPAGO_ACCESS_TOKEN': 'test-token',
+        'FRONTEND_BASE_URL': 'http://127.0.0.1:5173',
+    }, clear=False)
     def test_make_payment_creates_preference_with_cart_counts(self):
         CarritoItem.objects.create(carrito=self.cart, product=self.product, count=2)
         fake_sdk = FakeMercadoPagoSDK(
