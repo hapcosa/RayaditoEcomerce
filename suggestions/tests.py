@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -8,6 +9,11 @@ User = get_user_model()
 
 
 class SuggestionApiTests(APITestCase):
+    def setUp(self):
+        # El buzon esta rate-limited y el contador vive en cache, que no se
+        # aisla entre tests: sin limpiarlo, unos arrastran la cuota de otros.
+        cache.clear()
+
     def test_create_public_anonymous(self):
         res = self.client.post(
             '/api/suggestions/create',

@@ -31,6 +31,7 @@ DJANGO_APPS = [
 ]
 
 PROJECT_APPS = [
+    'core',
     'user',
     'category',
     'product',
@@ -69,7 +70,36 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Almacenamiento (API `STORAGES` de Django 4.2+; `STATICFILES_STORAGE` a secas
+# quedo obsoleto). La media va al disco del servidor salvo que se configure un
+# bucket: hoy las fotos de producto viven en el PC, asi que si se pierde ese
+# disco se pierden. Poner MEDIA_STORAGE=s3 las manda a S3 / Cloudflare R2 sin
+# tocar codigo (django-storages ya esta en requirements).
+MEDIA_STORAGE = env('MEDIA_STORAGE', default='local')
+
+if MEDIA_STORAGE == 's3':
+    _default_storage = {
+        'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+        'OPTIONS': {
+            'bucket_name': env('AWS_STORAGE_BUCKET_NAME'),
+            'access_key': env('AWS_ACCESS_KEY_ID'),
+            'secret_key': env('AWS_SECRET_ACCESS_KEY'),
+            # R2 y compatibles necesitan endpoint propio; en S3 puro se omite.
+            'endpoint_url': env('AWS_S3_ENDPOINT_URL', default=None),
+            'region_name': env('AWS_S3_REGION_NAME', default='auto'),
+            'querystring_auth': False,
+            'file_overwrite': False,
+        },
+    }
+else:
+    _default_storage = {'BACKEND': 'django.core.files.storage.FileSystemStorage'}
+
+STORAGES = {
+    'default': _default_storage,
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
 ROOT_URLCONF = 'core.urls'
 SOCIAL_AUTH_JSONFIELD_ENABLED = True
 
@@ -212,6 +242,34 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'PAGE_SIZE': 12,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # Rate limiting. **Solo por scope, a proposito.** Un throttle global por IP
+    # seria contraproducente: Next.js renderiza en el servidor, asi que todas
+    # las peticiones del catalogo llegan desde la IP del propio servidor y un
+    # limite `anon` las contaria juntas, tumbando el sitio con poco trafico.
+    # Los scopes se aplican en vistas que sí llama el navegador del cliente.
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        # Crear una preferencia de pago golpea a MercadoPago y crea una orden.
+        'payment': env('THROTTLE_PAYMENT', default='10/min'),
+        # Formularios publicos sin auth: el buzon y las reseñas.
+        'suggestions': env('THROTTLE_SUGGESTIONS', default='5/min'),
+        'reviews': env('THROTTLE_REVIEWS', default='20/min'),
+    },
+    # Detras del tunel la IP del cliente llega en X-Forwarded-For. Sin esto DRF
+    # usaria REMOTE_ADDR —el proxy— y todos los visitantes compartirian cuota.
+    # Cantidad de proxies que agregan a esa cabecera: `cloudflared` mas los de
+    # Cloudflare. Verificar el valor real contra el sitio desplegado.
+    'NUM_PROXIES': env.int('NUM_PROXIES', default=None),
+}
+
+# El throttling de DRF necesita cache. Con varios workers de gunicorn cada uno
+# tiene su propia LocMemCache, asi que el limite efectivo se multiplica por la
+# cantidad de workers: suficiente como freno grueso, no como cuota exacta. Si
+# alguna vez hace falta precisión, apuntar CACHE_URL a un Redis.
+CACHES = {
+    'default': env.cache('CACHE_URL', default='locmemcache://'),
 }
 
 # OpenAPI (drf-spectacular). Esquema en /api/schema, docs en /api/docs.
@@ -329,6 +387,23 @@ DEFAULT_FROM_EMAIL = env(
 # Django construya URLs absolutas con el dominio público y no con `localhost`:
 # de ahí sale, entre otras, la `notification_url` del webhook de MercadoPago.
 USE_X_FORWARDED_HOST = env.bool('USE_X_FORWARDED_HOST', default=False)
+
+# Sentry. Opt-in: sin `SENTRY_DSN` no se inicializa nada, asi que en dev y en
+# los tests el modulo ni se importa.
+SENTRY_DSN = env('SENTRY_DSN', default='')
+if SENTRY_DSN:
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=env('SENTRY_ENVIRONMENT', default='production'),
+        # Muestreo de performance: 0 por defecto para no gastar cuota; subirlo
+        # a mano si hace falta perfilar.
+        traces_sample_rate=env.float('SENTRY_TRACES_SAMPLE_RATE', default=0.0),
+        # No mandar datos personales (emails, direcciones) a un tercero.
+        send_default_pii=False,
+    )
+
 
 # Hardening de producción (solo cuando DEBUG=False).
 if not DEBUG:

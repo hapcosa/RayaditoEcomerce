@@ -13,6 +13,8 @@ from .serializers import SuggestionCreateSerializer, SuggestionSerializer
 
 class CreateSuggestionView(APIView):
     permission_classes = (permissions.AllowAny,)
+    # Buzon publico sin auth: sin freno es un formulario de spam.
+    throttle_scope = 'suggestions'
 
     def post(self, request):
         serializer = SuggestionCreateSerializer(data=request.data)

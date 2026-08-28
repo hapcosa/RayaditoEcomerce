@@ -202,6 +202,9 @@ def _valid_webhook_signature(request, data_id):
 
 class ProcessPaymentView(APIView):
     permission_classes = (permissions.AllowAny,)
+    # Cada llamada crea una orden y pega a MercadoPago: es la vista mas cara y
+    # abusable del sitio, y acepta invitados sin autenticar.
+    throttle_scope = 'payment'
 
     def post(self, request, format=None):
         if not services.mercadopago_token():
@@ -233,6 +236,9 @@ class ProcessPaymentView(APIView):
 
 class MercadoPagoResponse(APIView):
     permission_classes = (permissions.AllowAny,)
+    # Sin throttle: lo llama MercadoPago, que reintenta ante fallos. Frenarlo
+    # significaria perder confirmaciones de pago.
+    throttle_classes = ()
 
     def post(self, request, format=None):
         payment_id = _extract_payment_id(request)
