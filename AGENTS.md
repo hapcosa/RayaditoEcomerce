@@ -13,10 +13,10 @@ planificar trabajo grande.
 
 ## Stack
 - **Backend:** Django + Django REST Framework + PostgreSQL. Auth con djoser + JWT (simplejwt) + OAuth Google/Facebook. Pagos MercadoPago. Envíos Starken (`django-starken`).
-- **Frontend actual:** React 18 + Vite 4 + Redux (legacy). **En migración a Next.js** (App Router, TS) — ver ROADMAP Fase 4.
+- **Frontend:** Next.js 14 (App Router, TS, Tailwind) en `web/`. El SPA de React/Vite se retiró en el cutover; su historia sigue en git.
 - **App admin:** (futura) Expo / React Native.
 - **Redes:** (futura) Instagram Graph API + WhatsApp Cloud API — **solo APIs oficiales, nunca scraping**.
-- Django sirve el build del front (`dist/`) hasta completar la migración a Next.js.
+- **Django ya no sirve la tienda.** Son dos procesos detrás del túnel de Cloudflare: Django en `/api/`, `/auth/`, `/admin/` y `/public/`, y Next.js en todo lo demás. Ver [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ## Layout
 ```
@@ -29,7 +29,8 @@ carrito/         # carrito y items
 orders/          # órdenes e items
 payment/         # MercadoPago (make-payment, webhook, status)
 shipping/        # opciones de envío (Starken)
-src/             # frontend React/Vite (se migra a Next.js)
+web/             # tienda pública Next.js (App Router, TS)
+admin-app/       # app admin Expo / React Native (Fase 5)
 docs/ROADMAP.md  # plan de trabajo por fases
 ```
 
@@ -40,11 +41,13 @@ python manage.py migrate
 python manage.py runserver
 python manage.py test            # tests
 
-# Frontend (actual, Vite)
+# Frontend (Next.js, en web/)
+cd web
 npm install
-npm run dev
+npm run dev        # http://localhost:3000
 npm run build
 npm run lint
+npm run typecheck
 ```
 
 ## Convenciones
