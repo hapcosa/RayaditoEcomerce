@@ -56,6 +56,7 @@ class GetReviewView(APIView):
 
 class CreateReviewView(APIView):
     permission_classes = (permissions.IsAuthenticated,)
+    throttle_scope = 'reviews'
 
     def post(self, request, product_id):
         product = get_object_or_404(Product, id=product_id)

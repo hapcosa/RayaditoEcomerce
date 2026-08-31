@@ -229,8 +229,11 @@ preferencia en MercadoPago) **no** está verificado contra el servicio real: no 
 - [ ] Media en **object storage** (S3 / Cloudflare R2 / Cloudinary — `cloudinary` ya está) vía django-storages.
 - [x] **Corte del SPA:** Django dejó de servir la tienda (se retiró el catch-all y el SPA de Vite). Dos procesos: Django `:8000` y Next `:3000`.
 - [ ] Deploy definitivo. **Decidido:** servidor local (PC propio) + **túnel de Cloudflare** con dominio propio, ruteo por path en `cloudflared` (sin nginx). Procedimiento completo en [`DEPLOY.md`](DEPLOY.md). Falta ejecutarlo: dominio y `cloudflared` todavía no existen.
-- [ ] Postgres + backups (hoy Postgres corre en docker local, sin backups).
-- [ ] **Sentry**, rate limiting, security headers, HTTPS/HSTS.
+- [ ] Postgres administrado. El script de backup ya existe; falta ejecutarlo en el servidor y **copiar los backups fuera de ese disco**.
+- [x] **Sentry** (opt-in por `SENTRY_DSN`), **rate limiting** (DRF por scope), security headers y HTTPS/HSTS detrás del túnel.
+- [x] **Chequeos de despliegue propios** (`rayadito.E001/E002/W001`): fallan si el correo imprime en consola, si falta el token de MercadoPago o si la media no está en object storage.
+- [x] **Backups**: `scripts/backup-db.sh` + timer de systemd (ver [`DEPLOY.md`](DEPLOY.md)).
+- [x] **Media en object storage**: configurable por env (`MEDIA_STORAGE=s3`), falta ejecutar la migración de archivos al bucket.
 - [ ] Legal Chile: términos, privacidad, Ley del Consumidor (botón de arrepentimiento), boleta/factura.
 
 **DoD:** dominio con mail propio, media en storage, backups y monitoreo activos.

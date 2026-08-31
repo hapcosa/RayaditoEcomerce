@@ -51,17 +51,12 @@ export default function CarritoPage() {
   const shippingCost = selectedOption?.price ?? 0;
   const total = subtotal + shippingCost;
 
-  if (!storeReady || loading) {
+  // El carrito vacio se resuelve sin pedir nada al backend: se muestra directo,
+  // sin pasar por el estado de carga. Hacerlo al reves producia el salto de
+  // layout mas grande de la pagina (CLS 0.23, casi en zona mala).
+  if (items.length === 0 && storeReady) {
     return (
-      <div className="mx-auto max-w-6xl px-6 py-16 text-center text-piedra-500">
-        Cargando carrito…
-      </div>
-    );
-  }
-
-  if (items.length === 0) {
-    return (
-      <div className="mx-auto flex max-w-md flex-col items-center gap-6 px-6 py-24 text-center">
+      <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-6 px-6 py-24 text-center">
         <span className="font-manuscrita text-6xl text-piedra-300">✦</span>
         <h1 className="font-serif text-3xl text-piedra-900">Tu carrito está vacío</h1>
         <p className="text-piedra-600">
@@ -81,6 +76,27 @@ export default function CarritoPage() {
             Piedras
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  // Con items, el esqueleto reserva la forma del carrito ya cargado para que la
+  // hidratacion no empuje el contenido.
+  if (!storeReady || loading) {
+    return (
+      <div className="mx-auto min-h-[60vh] max-w-6xl px-6 py-10" aria-busy="true">
+        <h1 className="mb-8 font-serif text-3xl font-medium text-piedra-900">
+          Carrito
+        </h1>
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
+          <div className="flex flex-col gap-4 lg:col-span-2">
+            {[0, 1].map((i) => (
+              <div key={i} className="h-28 animate-pulse rounded-2xl bg-piedra-100" />
+            ))}
+          </div>
+          <div className="h-64 animate-pulse rounded-2xl bg-piedra-100" />
+        </div>
+        <span className="sr-only">Cargando carrito…</span>
       </div>
     );
   }

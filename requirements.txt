@@ -28,5 +28,9 @@ requests>=2.32,<3
 # --- Servidor ---
 gunicorn>=23,<24
 
+# --- Observabilidad ---
+# Opt-in: solo se activa si hay SENTRY_DSN en el entorno.
+sentry-sdk[django]>=2.18,<3
+
 # --- Dev / formato ---
 black>=24.10

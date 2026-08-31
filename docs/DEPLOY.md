@@ -153,10 +153,139 @@ arrastraban bugs viejos — `collectstatic --no-imput`, `runserver` como comando
 de arranque y `gunicorn core.wsgi` sin `:application`. El despliegue ahora es el
 de este documento: systemd + `cloudflared`.
 
+## 6. Chequeos de configuración
+
+El proyecto trae chequeos propios que corren con `manage.py check --deploy` y
+fallan si falta algo que **no rompe el arranque pero sí el negocio**:
+
+| ID | Qué detecta |
+|---|---|
+| `rayadito.E001` | `EMAIL_BACKEND` imprime en consola: activación de cuenta y reseteo de contraseña no llegan a nadie |
+| `rayadito.E002` | Falta `MERCADOPAGO_ACCESS_TOKEN`: el checkout devuelve 500 |
+| `rayadito.W001` | La media está en el disco del servidor y no en object storage |
+
+Corrélos como paso previo al deploy:
+
+```bash
+.venv/bin/python manage.py check --deploy --fail-level ERROR
+```
+
+Son inertes con `DEBUG=True`, así que no molestan en desarrollo.
+
+## 7. Media en object storage
+
+Mientras `MEDIA_STORAGE=local` (el default), las fotos viven en `public/` del
+servidor y las sirve Django. Para moverlas a S3 o Cloudflare R2, sin tocar
+código:
+
+```bash
+MEDIA_STORAGE=s3
+AWS_STORAGE_BUCKET_NAME=rayadito-media
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_S3_ENDPOINT_URL=https://<cuenta>.r2.cloudflarestorage.com   # solo R2
+```
+
+Las fotos ya subidas hay que copiarlas al bucket a mano (`rclone`/`aws s3 sync`
+sobre `public/photos/`); las rutas guardadas en la base son relativas y siguen
+resolviendo.
+
+## 8. Backups
+
+`scripts/backup-db.sh` vuelca Postgres comprimido, empaqueta la media y rota lo
+viejo (14 días por defecto, `RETENTION_DAYS` lo cambia).
+
+```bash
+scripts/backup-db.sh /var/backups/rayadito
+```
+
+Automatizado con un timer de systemd:
+
+`/etc/systemd/system/rayadito-backup.service`:
+
+```ini
+[Unit]
+Description=Backup de Piedras Rayadito
+
+[Service]
+Type=oneshot
+User=USUARIO
+ExecStart=/home/USUARIO/rayadito/scripts/backup-db.sh /var/backups/rayadito
+```
+
+`/etc/systemd/system/rayadito-backup.timer`:
+
+```ini
+[Unit]
+Description=Backup diario de Piedras Rayadito
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+```bash
+sudo systemctl enable --now rayadito-backup.timer
+```
+
+> Un backup que nunca se restauró no es un backup. Probá la restauración al
+> menos una vez:
+> `zcat db-XXXX.sql.gz | psql -h 127.0.0.1 -U USUARIO -d rayadito_restore_test`
+
+**El backup vive en el mismo disco que la base.** Copiá `/var/backups/rayadito`
+a otro lado (otro disco, R2, un NAS) o un solo fallo se lleva las dos cosas.
+
+## 9. Rate limiting
+
+Sin nada delante que limite, el freno vive en DRF. Es **solo por scope**, a
+propósito: un límite global por IP contaría juntas todas las peticiones que
+Next hace al renderizar en el servidor y tumbaría el sitio con poco tráfico.
+
+| Scope | Default | Vista |
+|---|---|---|
+| `payment` | 10/min | `ProcessPaymentView` — crea orden y pega a MercadoPago |
+| `suggestions` | 5/min | buzón público sin auth |
+| `reviews` | 20/min | crear reseña |
+
+Ajustables por env (`THROTTLE_PAYMENT`, etc.). El webhook de MercadoPago está
+exento: reintenta ante fallos y frenarlo perdería confirmaciones de pago.
+
+**`NUM_PROXIES` hay que verificarlo contra el sitio desplegado.** Detrás del
+túnel la IP real llega en `X-Forwarded-For`; si el valor no coincide con la
+cantidad de proxies que la agregan, o todos los visitantes comparten cuota, o
+un atacante puede falsear su IP. Comprobalo con:
+
+```bash
+curl -s https://piedrasrayadito.cl/api/products/ -H 'X-Forwarded-For: 1.2.3.4'
+```
+
+y revisando a quién le imputó la petición el throttle.
+
+> Con varios workers de gunicorn cada uno tiene su propia caché en memoria, así
+> que el límite efectivo se multiplica por la cantidad de workers. Sirve como
+> freno grueso; si hace falta precisión, apuntá `CACHE_URL` a un Redis.
+
+## 10. Sentry
+
+Opt-in: sin `SENTRY_DSN` no se inicializa nada.
+
+```bash
+SENTRY_DSN=https://...ingest.sentry.io/...
+SENTRY_ENVIRONMENT=production
+SENTRY_TRACES_SAMPLE_RATE=0.0
+```
+
+`send_default_pii` está en `False`: no se mandan emails ni direcciones de
+clientes a un tercero.
+
 ## Pendientes de esta fase
 
-- **Media en object storage** (S3 / R2 / Cloudinary) vía `django-storages`. Hoy
-  las fotos viven en el disco del PC: si se pierde, se pierden.
-- **Backups** de Postgres.
-- **SMTP real**: el backend de correo sigue siendo `console.EmailBackend`.
-- **Sentry** y rate limiting.
+- **Correo real:** hoy `EMAIL_BACKEND` es `console.EmailBackend` y los mails no
+  se envían. Requiere dominio + casilla (Zoho/Google Workspace).
+- **Legal Chile:** botón de arrepentimiento, boleta/factura, y revisar el
+  contenido de `/terminos` y `/privacidad`.
+- **Rotar la contraseña de la base de datos**: la que se usó hasta la Fase 0
+  quedó en el historial de git de este repo, que es publico. Ver `docs/ROADMAP.md`.
