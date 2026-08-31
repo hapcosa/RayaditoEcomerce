@@ -287,4 +287,5 @@ clientes a un tercero.
   se envían. Requiere dominio + casilla (Zoho/Google Workspace).
 - **Legal Chile:** botón de arrepentimiento, boleta/factura, y revisar el
   contenido de `/terminos` y `/privacidad`.
-- **Rotar la contraseña de base `sio28148`**, que sigue en el historial de git.
+- **Rotar la contraseña de la base de datos**: la que se usó hasta la Fase 0
+  quedó en el historial de git de este repo, que es publico. Ver `docs/ROADMAP.md`.
