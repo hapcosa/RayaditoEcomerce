@@ -4,7 +4,7 @@ import { SuggestionForm } from './SuggestionForm';
 // Contacto y redes son configurables por entorno. Dominio/email definitivos
 // llegan en Fase 7; los defaults son placeholders hasta entonces.
 const CONTACT_EMAIL =
-  process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'contacto@piedrasrayadito.cl';
+  process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'contacto@piedrasdelrayadito.cl';
 const INSTAGRAM_URL = process.env.NEXT_PUBLIC_INSTAGRAM_URL ?? '';
 const WHATSAPP_URL = process.env.NEXT_PUBLIC_WHATSAPP_URL ?? '';
 

@@ -18,7 +18,7 @@ El ruteo por path lo hace `cloudflared`, así que no hace falta nginx.
 ```bash
 cloudflared tunnel login
 cloudflared tunnel create rayadito
-cloudflared tunnel route dns rayadito piedrasrayadito.cl
+cloudflared tunnel route dns rayadito piedrasdelrayadito.cl
 ```
 
 `~/.cloudflared/config.yml` — **el orden importa**: la primera regla que
@@ -30,11 +30,11 @@ credentials-file: /home/USUARIO/.cloudflared/UUID.json
 
 ingress:
   # Backend Django.
-  - hostname: piedrasrayadito.cl
+  - hostname: piedrasdelrayadito.cl
     path: ^/(api|auth|admin|ckeditor5|assets|public)(/.*)?$
     service: http://localhost:8000
   # Tienda pública Next.js.
-  - hostname: piedrasrayadito.cl
+  - hostname: piedrasdelrayadito.cl
     service: http://localhost:3000
   - service: http_status:404
 ```
@@ -43,14 +43,14 @@ Probar la config antes de instalarla como servicio:
 
 ```bash
 cloudflared tunnel ingress validate
-cloudflared tunnel ingress rule https://piedrasrayadito.cl/api/products/
+cloudflared tunnel ingress rule https://piedrasdelrayadito.cl/api/products/
 ```
 
 ## 2. Variables de entorno (`.env`)
 
 ```bash
 DEBUG=false
-ALLOWED_HOSTS=piedrasrayadito.cl,www.piedrasrayadito.cl,127.0.0.1
+ALLOWED_HOSTS=piedrasdelrayadito.cl,www.piedrasdelrayadito.cl,127.0.0.1
 
 # Django está detrás del túnel: confiar en el Host y el proto reenviados para
 # que las URLs absolutas (webhook de MercadoPago incluido) usen el dominio real.
@@ -60,19 +60,27 @@ USE_X_FORWARDED_HOST=true
 SECURE_SSL_REDIRECT=false
 SECURE_HSTS_SECONDS=31536000
 
-CORS_ALLOWED_ORIGINS=https://piedrasrayadito.cl
-CSRF_TRUSTED_ORIGINS=https://piedrasrayadito.cl
+CORS_ALLOWED_ORIGINS=https://piedrasdelrayadito.cl
+CSRF_TRUSTED_ORIGINS=https://piedrasdelrayadito.cl
 
-FRONTEND_BASE_URL=https://piedrasrayadito.cl
-MERCADOPAGO_NOTIFICATION_URL=https://piedrasrayadito.cl/api/payment/webhook
+# Login social: el callback de prod debe estar aqui Y registrado como
+# "URI de redireccionamiento autorizado" en la consola del proveedor.
+SOCIAL_AUTH_ALLOWED_REDIRECT_URIS=https://piedrasdelrayadito.cl/auth/social/callback
+
+FRONTEND_BASE_URL=https://piedrasdelrayadito.cl
+MERCADOPAGO_NOTIFICATION_URL=https://piedrasdelrayadito.cl/api/payment/webhook
 ```
 
 Y en `web/.env.local`:
 
 ```bash
-NEXT_PUBLIC_BACKEND_URL=https://piedrasrayadito.cl
-NEXT_PUBLIC_API_URL=https://piedrasrayadito.cl/api
-NEXT_PUBLIC_SITE_URL=https://piedrasrayadito.cl
+NEXT_PUBLIC_BACKEND_URL=https://piedrasdelrayadito.cl
+NEXT_PUBLIC_API_URL=https://piedrasdelrayadito.cl/api
+NEXT_PUBLIC_SITE_URL=https://piedrasdelrayadito.cl
+
+NEXT_PUBLIC_CONTACT_EMAIL=contacto@piedrasdelrayadito.cl
+NEXT_PUBLIC_INSTAGRAM_URL=https://instagram.com/piedrasdelrayadito
+NEXT_PUBLIC_WHATSAPP_URL=https://wa.me/56950416291
 ```
 
 > Con el mismo dominio para ambos, `mediaUrl()` deja de cruzar orígenes y las
@@ -136,10 +144,10 @@ sudo systemctl restart rayadito-api rayadito-web
 ## 5. Verificación post-deploy
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' https://piedrasrayadito.cl/            # 200, Next
-curl -s -o /dev/null -w '%{http_code}\n' https://piedrasrayadito.cl/api/products/  # 200, Django
-curl -s https://piedrasrayadito.cl/api/ruta-inexistente                          # 404 JSON del backend
-curl -s -o /dev/null -w '%{http_code}\n' https://piedrasrayadito.cl/admin/login/  # 200
+curl -s -o /dev/null -w '%{http_code}\n' https://piedrasdelrayadito.cl/            # 200, Next
+curl -s -o /dev/null -w '%{http_code}\n' https://piedrasdelrayadito.cl/api/products/  # 200, Django
+curl -s https://piedrasdelrayadito.cl/api/ruta-inexistente                          # 404 JSON del backend
+curl -s -o /dev/null -w '%{http_code}\n' https://piedrasdelrayadito.cl/admin/login/  # 200
 ```
 
 Que `/api/ruta-inexistente` devuelva **JSON** y no HTML confirma que el catch-all
@@ -259,7 +267,7 @@ cantidad de proxies que la agregan, o todos los visitantes comparten cuota, o
 un atacante puede falsear su IP. Comprobalo con:
 
 ```bash
-curl -s https://piedrasrayadito.cl/api/products/ -H 'X-Forwarded-For: 1.2.3.4'
+curl -s https://piedrasdelrayadito.cl/api/products/ -H 'X-Forwarded-For: 1.2.3.4'
 ```
 
 y revisando a quién le imputó la petición el throttle.

@@ -378,7 +378,7 @@ EMAIL_PORT = env.int('EMAIL_PORT', default=587)
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
 DEFAULT_FROM_EMAIL = env(
     'DEFAULT_FROM_EMAIL',
-    default='Piedras Rayadito - Taller de joyeria y lapidacion <no-reply@piedrasrayadito.cl>',
+    default='Piedras Rayadito - Taller de joyeria y lapidacion <no-reply@piedrasdelrayadito.cl>',
 )
 
 
