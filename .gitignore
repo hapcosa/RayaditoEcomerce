@@ -413,3 +413,4 @@ node_modules
 psd
 thumb
 sketch
+.env.bak*
