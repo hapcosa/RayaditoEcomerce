@@ -28,6 +28,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # El push de abajo tiene que disparar `deploy-test.yml`. Con el
+          # GITHUB_TOKEN por defecto no lo hace: GitHub ignora los eventos que
+          # genera ese token, para que un workflow no se dispare a si mismo en
+          # bucle. Hace falta un token de usuario.
+          token: ${{ secrets.TEST_DEPLOY_TOKEN }}
 
       - name: Configurar identidad de git
         run: |
@@ -45,5 +50,8 @@ jobs:
             exit 1
           fi
 
+      # Este push es el que dispara el despliegue: `deploy-test.yml` corre en
+      # `push` a `test`. Sigue exigiendo permiso de escritura en el repo, asi
+      # que el runner self-hosted continua fuera del alcance de los forks.
       - name: Publicar `test`
         run: git push --force origin test
