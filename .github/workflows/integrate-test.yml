@@ -1,0 +1,49 @@
+# Integracion automatica a la rama `test`.
+#
+# Cada PR abierto contra master se fusiona en `test` apenas se abre o se
+# actualiza. El PR queda intacto: el merge a master lo hace el usuario.
+#
+# Corre en runner de GitHub (no toca el self-hosted). Los PR desde forks se
+# saltan a proposito: en repos publicos el token de un fork es de solo lectura
+# y ademas no queremos que codigo externo llegue a la maquina de test.
+name: Integrate to test
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [master]
+
+concurrency:
+  group: integrate-test
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar identidad de git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Reconstruir `test` desde master + este PR
+        run: |
+          # `test` se reconstruye desde master en cada corrida. Asi nunca
+          # acumula ramas viejas ni conflictos de PR ya cerrados.
+          git checkout -B test origin/master
+          if ! git merge --no-ff -m "ci: integrate PR #${{ github.event.pull_request.number }} into test" "origin/${{ github.event.pull_request.head.ref }}"; then
+            git merge --abort
+            echo "::error::El PR no fusiona limpio sobre master. Rebasea la rama."
+            exit 1
+          fi
+
+      - name: Publicar `test`
+        run: git push --force origin test

@@ -289,6 +289,36 @@ SENTRY_TRACES_SAMPLE_RATE=0.0
 `send_default_pii` está en `False`: no se mandan emails ni direcciones de
 clientes a un tercero.
 
+## 11. Entorno de pruebas (`test`)
+
+Todo cambio se prueba en la máquina de test **antes** de llegar a `master`.
+
+**Flujo.** Al abrir o actualizar un PR contra `master`, el workflow
+`integrate-test.yml` reconstruye la rama `test` desde `master` y le fusiona la
+rama del PR. Ese push a `test` dispara `deploy-test.yml`, que corre en el
+runner self-hosted y ejecuta `scripts/deploy-test.sh`. El PR **no** se toca: el
+merge a `master` lo sigue haciendo el usuario.
+
+`test` se reconstruye desde `master` en cada corrida, así que refleja un solo
+PR a la vez — el último que se abrió o actualizó. Es a propósito: evita que se
+acumulen ramas viejas y conflictos de PR ya cerrados.
+
+**Seguridad.** Este repo es **público** y el runner es self-hosted. Por eso
+`deploy-test.yml` se dispara solo con `push` a `test` (que exige permiso de
+escritura) y con `workflow_dispatch`, nunca con `pull_request`;
+`integrate-test.yml` corre en runner de GitHub y se salta los PR desde forks.
+Sin eso, cualquiera podría ejecutar código arbitrario en la máquina de test.
+
+**Máquina.** El checkout permanente vive en `/mnt/datos/RayaditoEcomerce` con
+su propio `.env` (`DEBUG=true`, credenciales propias, MercadoPago vacío —
+**nunca** el token de producción). Python 3.12 viene de `uv`, instalado bajo
+`~/.local`, sin tocar paquetes del sistema. PostgreSQL corre con el
+`docker-compose.yml` del repo. Logs en `/mnt/datos/rayadito-logs/`.
+
+El deploy corre migraciones, `collectstatic`, la suite de tests del backend y
+el build de Next; si algo falla, el job queda rojo y los servicios anteriores
+siguen arriba.
+
 ## Pendientes de esta fase
 
 - **Correo real:** hoy `EMAIL_BACKEND` es `console.EmailBackend` y los mails no

@@ -1,0 +1,25 @@
+# Despliegue a la maquina de pruebas.
+#
+# Se dispara SOLO con push a `test` (lo que exige permiso de escritura en el
+# repo) o a mano. Nunca con `pull_request`: el repo es publico y el runner es
+# self-hosted, asi que un PR desde un fork no debe poder ejecutar nada aca.
+name: Deploy to test
+
+on:
+  push:
+    branches: [test]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-test
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, rayadito-test]
+    steps:
+      - name: Desplegar
+        run: /mnt/datos/RayaditoEcomerce/scripts/deploy-test.sh "$GITHUB_SHA"
