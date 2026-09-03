@@ -66,14 +66,29 @@ credentials-file: /home/USUARIO/.cloudflared-rayadito/rayadito.json
 origincert: /home/USUARIO/.cloudflared-rayadito/cert.pem
 
 ingress:
-  # Backend Django.
+  # --- Backend Django ---
   - hostname: piedrasdelrayadito.cl
-    path: ^/(api|auth|admin|ckeditor5|assets|public)(/.*)?$
+    path: ^/(api|admin|ckeditor5|assets|public)(/.*)?$
     service: http://localhost:8010
   - hostname: www.piedrasdelrayadito.cl
-    path: ^/(api|auth|admin|ckeditor5|assets|public)(/.*)?$
+    path: ^/(api|admin|ckeditor5|assets|public)(/.*)?$
     service: http://localhost:8010
-  # Tienda pública Next.js.
+  # djoser: solo estos tres prefijos bajo /auth son del backend.
+  - hostname: piedrasdelrayadito.cl
+    path: ^/auth/(users|jwt|o)(/.*)?$
+    service: http://localhost:8010
+  - hostname: www.piedrasdelrayadito.cl
+    path: ^/auth/(users|jwt|o)(/.*)?$
+    service: http://localhost:8010
+  # social_django cuelga de la raíz (core/urls.py: path('', ...)).
+  - hostname: piedrasdelrayadito.cl
+    path: ^/(login|complete|disconnect)/.*$
+    service: http://localhost:8010
+  - hostname: www.piedrasdelrayadito.cl
+    path: ^/(login|complete|disconnect)/.*$
+    service: http://localhost:8010
+
+  # --- Tienda pública Next.js ---
   - hostname: piedrasdelrayadito.cl
     service: http://localhost:3010
   - hostname: www.piedrasdelrayadito.cl
@@ -81,12 +96,26 @@ ingress:
   - service: http_status:404
 ```
 
-Probar la config antes de instalarla como servicio:
+> **`/auth` está compartido entre los dos procesos.** Django tiene ahí los
+> endpoints de djoser (`/auth/users`, `/auth/jwt`, `/auth/o`) y Next tiene las
+> páginas `/auth/login`, `/auth/registro`, `/auth/reset` y
+> `/auth/social/callback`. Mandar `/auth` entero al backend deja la tienda sin
+> login: la página devuelve el 404 JSON de Django. Por eso las reglas nombran
+> los tres prefijos de djoser en vez de todo el árbol.
+
+Probar la config antes de instalarla como servicio — conviene recorrer las
+rutas que se pisan, no solo una:
 
 ```bash
 CFG=$HOME/.cloudflared-rayadito/config.yml
 cloudflared tunnel --config $CFG ingress validate
-cloudflared tunnel --config $CFG ingress rule https://piedrasdelrayadito.cl/api/products/
+for u in /auth/login /auth/registro /auth/social/callback \
+         /auth/users/ /auth/jwt/create/ /auth/o/google-oauth2/ \
+         /api/products/ /admin/ /carrito /complete/google-oauth2/; do
+  printf '%-28s -> ' "$u"
+  cloudflared tunnel --config $CFG ingress rule "https://piedrasdelrayadito.cl$u" \
+    | grep -i 'service:'
+done
 ```
 
 **Levantá el túnel recién cuando gunicorn y Next ya estén escuchando.** Un
