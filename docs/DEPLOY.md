@@ -8,43 +8,90 @@ Desde el cutover a Next.js, **Django ya no sirve la tienda**. Son dos procesos:
 
 | Proceso | Puerto local | Qué sirve |
 |---|---|---|
-| Django (gunicorn) | `8000` | `/api/`, `/auth/`, `/admin/`, `/ckeditor5/`, `/assets/` (estáticos del admin) y `/public/` (media) |
-| Next.js (`next start`) | `3000` | Todo el resto: la tienda pública |
+| Django (gunicorn) | `8010` | `/api/`, `/auth/`, `/admin/`, `/ckeditor5/`, `/assets/` (estáticos del admin) y `/public/` (media) |
+| Next.js (`next start`) | `3010` | Todo el resto: la tienda pública |
 
 El ruteo por path lo hace `cloudflared`, así que no hace falta nginx.
 
+> **Los puertos no son sagrados: verificalos.** El servidor es una máquina
+> compartida con otros proyectos, y `8000` y `3000` —los defaults obvios— ya
+> están tomados ahí. Antes de escribir el `config.yml`, corré `ss -ltn` y
+> confirmá que los puertos que vas a usar estén libres. Apuntar el túnel a un
+> puerto ajeno **publica el servicio de otro proyecto en
+> `piedrasdelrayadito.cl`**, sin ningún error visible: el túnel levanta
+> perfecto y el dominio devuelve 200.
+
 ## 1. Túnel
 
+### Máquina compartida: instancia propia
+
+En el servidor ya corre `cloudflared` **autenticado contra otra cuenta de
+Cloudflare**, sirviendo túneles de terceros. `cloudflared` maneja una sola
+cuenta por `cert.pem`, así que Rayadito necesita su propio directorio y su
+propia instancia. **No toques `~/.cloudflared/` ni `/etc/cloudflared/`**:
+sobrescribir ese `cert.pem` deja los túneles ajenos sin administración.
+
+`cloudflared tunnel login` escribe siempre en `~/.cloudflared/cert.pem` e
+**ignora** tanto `--origincert` como `$TUNNEL_ORIGIN_CERT`. Hay que apartar el
+existente y devolverlo después:
+
 ```bash
-cloudflared tunnel login
-cloudflared tunnel create rayadito
-cloudflared tunnel route dns rayadito piedrasdelrayadito.cl
+mv ~/.cloudflared/cert.pem ~/.cloudflared/cert.pem.otracuenta
+cloudflared tunnel login          # entrar con la cuenta de Rayadito
+mkdir -p ~/.cloudflared-rayadito
+mv ~/.cloudflared/cert.pem ~/.cloudflared-rayadito/cert.pem
+mv ~/.cloudflared/cert.pem.otracuenta ~/.cloudflared/cert.pem
 ```
 
-`~/.cloudflared/config.yml` — **el orden importa**: la primera regla que
-coincide gana, así que las rutas del backend van antes del catch-all de Next.
+Los túneles en marcha no se caen durante la maniobra: se autentican con sus
+JSON de credenciales, no con `cert.pem`.
+
+### Crear el túnel
+
+```bash
+export TUNNEL_ORIGIN_CERT=$HOME/.cloudflared-rayadito/cert.pem
+cloudflared tunnel create \
+  --credentials-file $HOME/.cloudflared-rayadito/rayadito.json rayadito
+cloudflared tunnel route dns rayadito piedrasdelrayadito.cl
+cloudflared tunnel route dns rayadito www.piedrasdelrayadito.cl
+```
+
+`~/.cloudflared-rayadito/config.yml` — **el orden importa**: la primera regla
+que coincide gana, así que las rutas del backend van antes del catch-all de
+Next.
 
 ```yaml
-tunnel: rayadito
-credentials-file: /home/USUARIO/.cloudflared/UUID.json
+tunnel: UUID
+credentials-file: /home/USUARIO/.cloudflared-rayadito/rayadito.json
+origincert: /home/USUARIO/.cloudflared-rayadito/cert.pem
 
 ingress:
   # Backend Django.
   - hostname: piedrasdelrayadito.cl
     path: ^/(api|auth|admin|ckeditor5|assets|public)(/.*)?$
-    service: http://localhost:8000
+    service: http://localhost:8010
+  - hostname: www.piedrasdelrayadito.cl
+    path: ^/(api|auth|admin|ckeditor5|assets|public)(/.*)?$
+    service: http://localhost:8010
   # Tienda pública Next.js.
   - hostname: piedrasdelrayadito.cl
-    service: http://localhost:3000
+    service: http://localhost:3010
+  - hostname: www.piedrasdelrayadito.cl
+    service: http://localhost:3010
   - service: http_status:404
 ```
 
 Probar la config antes de instalarla como servicio:
 
 ```bash
-cloudflared tunnel ingress validate
-cloudflared tunnel ingress rule https://piedrasdelrayadito.cl/api/products/
+CFG=$HOME/.cloudflared-rayadito/config.yml
+cloudflared tunnel --config $CFG ingress validate
+cloudflared tunnel --config $CFG ingress rule https://piedrasdelrayadito.cl/api/products/
 ```
+
+**Levantá el túnel recién cuando gunicorn y Next ya estén escuchando.** Un
+túnel arriba contra puertos vacíos da 502; contra puertos ocupados por otro
+proyecto, da 200 con el sitio equivocado.
 
 ## 2. Variables de entorno (`.env`)
 
@@ -100,7 +147,7 @@ User=USUARIO
 WorkingDirectory=/home/USUARIO/rayadito
 EnvironmentFile=/home/USUARIO/rayadito/.env
 ExecStart=/home/USUARIO/rayadito/.venv/bin/gunicorn core.wsgi:application \
-    --bind 127.0.0.1:8000 --workers 3
+    --bind 127.0.0.1:8010 --workers 3
 Restart=always
 
 [Install]
@@ -118,16 +165,38 @@ After=network.target
 User=USUARIO
 WorkingDirectory=/home/USUARIO/rayadito/web
 ExecStart=/usr/bin/npm run start
-Environment=NODE_ENV=production PORT=3000
+Environment=NODE_ENV=production PORT=3010
 Restart=always
 
 [Install]
 WantedBy=multi-user.target
 ```
 
+El túnel va en su propia unidad, apuntada al `config.yml` de Rayadito. **No
+uses `cloudflared service install`**: instala la instancia por defecto, que en
+una máquina compartida es la de la otra cuenta.
+
+`/etc/systemd/system/rayadito-tunnel.service`:
+
+```ini
+[Unit]
+Description=Piedras Rayadito - túnel Cloudflare
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=USUARIO
+ExecStart=/usr/bin/cloudflared --no-autoupdate tunnel \
+    --config /home/USUARIO/.cloudflared-rayadito/config.yml run
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
 ```bash
-sudo systemctl enable --now rayadito-api rayadito-web
-sudo cloudflared service install
+sudo systemctl enable --now rayadito-api rayadito-web rayadito-tunnel
 ```
 
 ## 4. Despliegue de una versión
