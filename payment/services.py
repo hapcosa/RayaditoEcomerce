@@ -3,7 +3,6 @@ import os
 import mercadopago
 from django.db import transaction
 from django.db.models import Sum
-from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
 
 from carrito.models import Carrito, CarritoItem
@@ -22,6 +21,14 @@ PAYMENT_TO_ORDER_STATUS = {
 
 class MercadoPagoConfigurationError(Exception):
     pass
+
+
+class UnknownOrderError(Exception):
+    """La notificacion no se puede asociar a ninguna orden local.
+
+    Reintentar no cambia nada: el webhook debe acusar recibo igual, si no
+    MercadoPago reintenta en bucle y termina deshabilitando el endpoint.
+    """
 
 
 def mercadopago_token():
@@ -102,7 +109,15 @@ def apply_approved_payment(payment):
 
 def record_payment(payment_data):
     external_reference = str(payment_data.get('external_reference') or '')
-    order = get_object_or_404(Order, id=int(external_reference))
+    if not external_reference.isdigit():
+        raise UnknownOrderError(
+            f'external_reference no utilizable: {external_reference!r}')
+    if not payment_data.get('id'):
+        raise UnknownOrderError('la notificacion no trae id de pago')
+
+    order = Order.objects.filter(id=int(external_reference)).first()
+    if order is None:
+        raise UnknownOrderError(f'no existe la orden {external_reference}')
     status = payment_status(payment_data.get('status'))
     order_status = PAYMENT_TO_ORDER_STATUS.get(status, Order.OrderStatus.not_processed)
 
@@ -131,8 +146,19 @@ def record_payment(payment_data):
 
 
 def fetch_payment(payment_id):
+    """Devuelve el pago remoto, o None si MercadoPago no lo reconoce.
+
+    El SDK no levanta excepcion ante un 404: entrega el cuerpo del error en
+    'response'. Ese dict es truthy, asi que sin mirar el status HTTP un id
+    inexistente (los que manda el simulador del panel) se colaba hasta
+    record_payment y reventaba.
+    """
     payment_response = mercadopago_sdk().payment().get(payment_id)
-    return payment_response.get('response', {})
+    http_status = payment_response.get('status', 200)
+    if http_status >= 400:
+        return None
+    payload = payment_response.get('response') or {}
+    return payload if payload.get('id') else None
 
 
 def sync_payment(payment_id):
