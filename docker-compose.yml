@@ -1,5 +1,8 @@
-# Servicios locales de desarrollo: PostgreSQL + pgAdmin.
-# Las credenciales se toman de .env (ver .env.example). No usar en producción.
+# PostgreSQL + pgAdmin para desarrollo, pruebas y produccion.
+# Las credenciales se toman de .env (ver .env.example).
+#
+# Los puertos se publican SOLO en 127.0.0.1: en un servidor compartido, un
+# "15432:5432" pelado deja la base escuchando en todas las interfaces.
 
 services:
   db:
@@ -10,7 +13,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-rayadito}
       POSTGRES_DB: ${DB_NAME:-piedrasrayadito}
     ports:
-      - "${DB_PORT:-15432}:5432"
+      - "127.0.0.1:${DB_PORT:-15432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -26,7 +29,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@rayadito.local}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
     ports:
-      - "8888:80"
+      - "127.0.0.1:${PGADMIN_PORT:-8888}:80"
     depends_on:
       db:
         condition: service_healthy

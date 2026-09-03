@@ -8,8 +8,12 @@ Desde el cutover a Next.js, **Django ya no sirve la tienda**. Son dos procesos:
 
 | Proceso | Puerto local | Qué sirve |
 |---|---|---|
-| Django (gunicorn) | `8010` | `/api/`, `/auth/`, `/admin/`, `/ckeditor5/`, `/assets/` (estáticos del admin) y `/public/` (media) |
-| Next.js (`next start`) | `3010` | Todo el resto: la tienda pública |
+| Django (gunicorn) | `8010` | `/api/`, `/admin/`, `/ckeditor5/`, `/assets/` (estáticos del admin), `/public/` (media), y bajo `/auth/` solo `users`, `jwt` y `o` (djoser) |
+| Next.js (`next start`) | `3010` | Todo el resto: la tienda pública, incluidas las páginas `/auth/login`, `/auth/registro`, `/auth/reset` y `/auth/social/callback` |
+
+Ambos procesos escuchan **solo en `127.0.0.1`**: el único camino desde afuera
+es el túnel. `next start` sin `-H 127.0.0.1` se ata a `0.0.0.0` y queda
+expuesto en la LAN, así que el flag no es opcional.
 
 El ruteo por path lo hace `cloudflared`, así que no hace falta nginx.
 
@@ -66,14 +70,29 @@ credentials-file: /home/USUARIO/.cloudflared-rayadito/rayadito.json
 origincert: /home/USUARIO/.cloudflared-rayadito/cert.pem
 
 ingress:
-  # Backend Django.
+  # --- Backend Django ---
   - hostname: piedrasdelrayadito.cl
-    path: ^/(api|auth|admin|ckeditor5|assets|public)(/.*)?$
+    path: ^/(api|admin|ckeditor5|assets|public)(/.*)?$
     service: http://localhost:8010
   - hostname: www.piedrasdelrayadito.cl
-    path: ^/(api|auth|admin|ckeditor5|assets|public)(/.*)?$
+    path: ^/(api|admin|ckeditor5|assets|public)(/.*)?$
     service: http://localhost:8010
-  # Tienda pública Next.js.
+  # djoser: solo estos tres prefijos bajo /auth son del backend.
+  - hostname: piedrasdelrayadito.cl
+    path: ^/auth/(users|jwt|o)(/.*)?$
+    service: http://localhost:8010
+  - hostname: www.piedrasdelrayadito.cl
+    path: ^/auth/(users|jwt|o)(/.*)?$
+    service: http://localhost:8010
+  # social_django cuelga de la raíz (core/urls.py: path('', ...)).
+  - hostname: piedrasdelrayadito.cl
+    path: ^/(login|complete|disconnect)/.*$
+    service: http://localhost:8010
+  - hostname: www.piedrasdelrayadito.cl
+    path: ^/(login|complete|disconnect)/.*$
+    service: http://localhost:8010
+
+  # --- Tienda pública Next.js ---
   - hostname: piedrasdelrayadito.cl
     service: http://localhost:3010
   - hostname: www.piedrasdelrayadito.cl
@@ -81,12 +100,26 @@ ingress:
   - service: http_status:404
 ```
 
-Probar la config antes de instalarla como servicio:
+> **`/auth` está compartido entre los dos procesos.** Django tiene ahí los
+> endpoints de djoser (`/auth/users`, `/auth/jwt`, `/auth/o`) y Next tiene las
+> páginas `/auth/login`, `/auth/registro`, `/auth/reset` y
+> `/auth/social/callback`. Mandar `/auth` entero al backend deja la tienda sin
+> login: la página devuelve el 404 JSON de Django. Por eso las reglas nombran
+> los tres prefijos de djoser en vez de todo el árbol.
+
+Probar la config antes de instalarla como servicio — conviene recorrer las
+rutas que se pisan, no solo una:
 
 ```bash
 CFG=$HOME/.cloudflared-rayadito/config.yml
 cloudflared tunnel --config $CFG ingress validate
-cloudflared tunnel --config $CFG ingress rule https://piedrasdelrayadito.cl/api/products/
+for u in /auth/login /auth/registro /auth/social/callback \
+         /auth/users/ /auth/jwt/create/ /auth/o/google-oauth2/ \
+         /api/products/ /admin/ /carrito /complete/google-oauth2/; do
+  printf '%-28s -> ' "$u"
+  cloudflared tunnel --config $CFG ingress rule "https://piedrasdelrayadito.cl$u" \
+    | grep -i 'service:'
+done
 ```
 
 **Levantá el túnel recién cuando gunicorn y Next ya estén escuchando.** Un
