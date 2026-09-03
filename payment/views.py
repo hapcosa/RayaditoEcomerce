@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import logging
 import os
 
 from django.shortcuts import get_object_or_404
@@ -14,6 +15,8 @@ from shipping.models import Shipping
 from user_profile.models import UserProfile
 from .models import Payments
 from . import services
+
+logger = logging.getLogger(__name__)
 
 
 def _frontend_url():
@@ -160,6 +163,17 @@ def _create_preference(request, order):
     return preference_response.get('response', preference_response)
 
 
+def _notification_topic(request):
+    """MercadoPago manda 'type' en el formato nuevo y 'topic' en el viejo."""
+    return (
+        request.query_params.get('type')
+        or request.query_params.get('topic')
+        or request.data.get('type')
+        or request.data.get('topic')
+        or 'payment'
+    )
+
+
 def _extract_payment_id(request):
     return (
         request.query_params.get('data.id')
@@ -234,6 +248,13 @@ class ProcessPaymentView(APIView):
 class MercadoPagoResponse(APIView):
     permission_classes = (permissions.AllowAny,)
 
+    # MercadoPago reintenta toda notificación que no reciba un 2xx, y termina
+    # deshabilitando el endpoint si sigue fallando. Por eso acá solo devolvemos
+    # error cuando el reintento puede servir de algo: firma inválida (401) o
+    # MercadoPago caído (502). Lo que no se puede resolver nunca —un pago que
+    # no existe, una orden que no es nuestra— se acusa recibo con 200 y se
+    # anota en el log. El simulador del panel manda justamente ids falsos: si
+    # eso devuelve 500 no se puede validar el dominio.
     def post(self, request, format=None):
         payment_id = _extract_payment_id(request)
         if not payment_id:
@@ -242,16 +263,29 @@ class MercadoPagoResponse(APIView):
         if not _valid_webhook_signature(request, payment_id):
             return Response({'error': 'firma inválida'},
                             status=status.HTTP_401_UNAUTHORIZED)
+
+        topic = _notification_topic(request)
+        if topic != 'payment':
+            return Response({'status': 'ignored', 'topic': topic},
+                            status=status.HTTP_200_OK)
+
         if not services.mercadopago_token():
             return Response({'error': 'MercadoPago no está configurado'},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         payment_data = services.fetch_payment(payment_id)
         if not payment_data:
-            return Response({'error': 'respuesta de pago inválida'},
-                            status=status.HTTP_502_BAD_GATEWAY)
+            logger.warning('webhook: MercadoPago no reconoce el pago %s', payment_id)
+            return Response({'status': 'ignored', 'detail': 'pago desconocido'},
+                            status=status.HTTP_200_OK)
 
-        services.record_payment(payment_data)
+        try:
+            services.record_payment(payment_data)
+        except services.UnknownOrderError as exc:
+            logger.warning('webhook: pago %s sin orden local (%s)', payment_id, exc)
+            return Response({'status': 'ignored', 'detail': str(exc)},
+                            status=status.HTTP_200_OK)
+
         return Response({'status': 'finish'}, status=status.HTTP_200_OK)
 
 

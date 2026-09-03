@@ -31,19 +31,22 @@ class FakePreferenceClient:
 
 
 class FakePaymentClient:
-    def __init__(self, response):
+    def __init__(self, response, http_status=200):
         self.response = response
+        self.http_status = http_status
         self.requested_payment_id = None
 
     def get(self, payment_id):
         self.requested_payment_id = str(payment_id)
-        return {'response': self.response}
+        return {'status': self.http_status, 'response': self.response}
 
 
 class FakeMercadoPagoSDK:
-    def __init__(self, preference_response=None, payment_response=None):
+    def __init__(self, preference_response=None, payment_response=None,
+                 payment_http_status=200):
         self.preference_client = FakePreferenceClient(preference_response or {})
-        self.payment_client = FakePaymentClient(payment_response or {})
+        self.payment_client = FakePaymentClient(payment_response or {},
+                                                payment_http_status)
 
     def preference(self):
         return self.preference_client
@@ -268,6 +271,81 @@ class MercadoPagoFlowTests(APITestCase):
             )
 
         self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIsNone(fake_sdk.payment_client.requested_payment_id)
+
+    # --- Notificaciones que no se pueden resolver -------------------------
+    # MercadoPago reintenta todo lo que no sea 2xx y termina deshabilitando el
+    # endpoint. Nada de esto se arregla reintentando, asi que va 200.
+
+    @mock.patch.dict(os.environ, {'MERCADOPAGO_ACCESS_TOKEN': 'test-token'}, clear=False)
+    def test_webhook_acknowledges_unknown_payment(self):
+        """El simulador del panel manda ids falsos: MercadoPago responde 404."""
+        fake_sdk = FakeMercadoPagoSDK(
+            payment_response={'message': 'Payment not found', 'error': 'not_found'},
+            payment_http_status=404,
+        )
+
+        with mock.patch('payment.services.mercadopago_sdk', return_value=fake_sdk):
+            res = self.client.post('/api/payment/webhook', {
+                'type': 'payment',
+                'data': {'id': '123456'},
+            }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['status'], 'ignored')
+        self.assertFalse(Payments.objects.exists())
+
+    @mock.patch.dict(os.environ, {'MERCADOPAGO_ACCESS_TOKEN': 'test-token'}, clear=False)
+    def test_webhook_acknowledges_payment_without_external_reference(self):
+        fake_sdk = FakeMercadoPagoSDK(payment_response={
+            'id': 999,
+            'external_reference': '',
+            'status': 'approved',
+        })
+
+        with mock.patch('payment.services.mercadopago_sdk', return_value=fake_sdk):
+            res = self.client.post('/api/payment/webhook', {
+                'type': 'payment',
+                'data': {'id': '999'},
+            }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['status'], 'ignored')
+        self.assertFalse(Payments.objects.exists())
+
+    @mock.patch.dict(os.environ, {'MERCADOPAGO_ACCESS_TOKEN': 'test-token'}, clear=False)
+    def test_webhook_acknowledges_payment_of_unknown_order(self):
+        fake_sdk = FakeMercadoPagoSDK(payment_response={
+            'id': 999,
+            'external_reference': '999999',
+            'status': 'approved',
+        })
+
+        with mock.patch('payment.services.mercadopago_sdk', return_value=fake_sdk):
+            res = self.client.post('/api/payment/webhook', {
+                'type': 'payment',
+                'data': {'id': '999'},
+            }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['status'], 'ignored')
+        self.assertFalse(Payments.objects.exists())
+        self.variant.refresh_from_db()
+        self.assertEqual(self.variant.stock, 5)
+
+    @mock.patch.dict(os.environ, {'MERCADOPAGO_ACCESS_TOKEN': 'test-token'}, clear=False)
+    def test_webhook_ignores_non_payment_topics(self):
+        """merchant_order y similares no se consultan como pago."""
+        fake_sdk = FakeMercadoPagoSDK(payment_response={'id': 1})
+
+        with mock.patch('payment.services.mercadopago_sdk', return_value=fake_sdk):
+            res = self.client.post(
+                '/api/payment/webhook?topic=merchant_order&id=777',
+                format='json',
+            )
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['status'], 'ignored')
         self.assertIsNone(fake_sdk.payment_client.requested_payment_id)
 
     @mock.patch.dict(os.environ, {'MERCADOPAGO_ACCESS_TOKEN': 'test-token'}, clear=False)

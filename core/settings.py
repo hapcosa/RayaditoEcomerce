@@ -336,3 +336,37 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = env.int('SECURE_HSTS_SECONDS', default=0)
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+
+
+# Logging. El LOGGING por defecto de Django filtra la consola con
+# `require_debug_true`: con DEBUG=False los 500 no dejan rastro en ningun lado
+# y los errores de produccion pasan en silencio. Acá mandamos todo a stderr,
+# que es lo que captura gunicorn (y systemd/journald cuando corresponda).
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'estandar': {
+            'format': '[{asctime}] {levelname} {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'consola': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'estandar',
+        },
+    },
+    'root': {
+        'handlers': ['consola'],
+        'level': env('LOG_LEVEL', default='INFO'),
+    },
+    'loggers': {
+        # Los 500 salen por acá con su traceback.
+        'django.request': {
+            'handlers': ['consola'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}
