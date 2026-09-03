@@ -8,8 +8,12 @@ Desde el cutover a Next.js, **Django ya no sirve la tienda**. Son dos procesos:
 
 | Proceso | Puerto local | Qué sirve |
 |---|---|---|
-| Django (gunicorn) | `8010` | `/api/`, `/auth/`, `/admin/`, `/ckeditor5/`, `/assets/` (estáticos del admin) y `/public/` (media) |
-| Next.js (`next start`) | `3010` | Todo el resto: la tienda pública |
+| Django (gunicorn) | `8010` | `/api/`, `/admin/`, `/ckeditor5/`, `/assets/` (estáticos del admin), `/public/` (media), y bajo `/auth/` solo `users`, `jwt` y `o` (djoser) |
+| Next.js (`next start`) | `3010` | Todo el resto: la tienda pública, incluidas las páginas `/auth/login`, `/auth/registro`, `/auth/reset` y `/auth/social/callback` |
+
+Ambos procesos escuchan **solo en `127.0.0.1`**: el único camino desde afuera
+es el túnel. `next start` sin `-H 127.0.0.1` se ata a `0.0.0.0` y queda
+expuesto en la LAN, así que el flag no es opcional.
 
 El ruteo por path lo hace `cloudflared`, así que no hace falta nginx.
 

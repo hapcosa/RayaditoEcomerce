@@ -50,14 +50,35 @@ npm run build
 cd "$TEST_ROOT"
 
 echo "==> Reiniciando servicios"
-# pkill devuelve 1 si no habia nada que matar; en un arranque en frio es normal.
-pkill -f "gunicorn core.wsgi" || true
-pkill -f "next-server"        || true
+# La maquina es compartida. `pkill -f next-server` mata el proceso de otro
+# proyecto, y peor: el patron tambien coincide con la linea de comando de este
+# script, asi que pkill se suicida y el resto no corre. Matamos solo lo que
+# escucha en NUESTROS puertos y nos pertenece.
+matar_puerto() {
+  local puerto="$1" pid
+  for pid in $(ss -ltnpH "sport = :$puerto" 2>/dev/null |
+               grep -oP 'pid=\K[0-9]+' | sort -u); do
+    # `kill` falla si el proceso es de otro usuario; ahi no es nuestro.
+    if kill "$pid" 2>/dev/null; then
+      echo "    detenido pid $pid (puerto $puerto)"
+    else
+      echo "    ADVERTENCIA: el puerto $puerto lo tiene el pid $pid, que no es nuestro"
+      exit 1
+    fi
+  done
+}
+matar_puerto "$BACKEND_PORT"
+matar_puerto "$FRONTEND_PORT"
 sleep 2
-nohup "$TEST_ROOT/.venv/bin/gunicorn" core.wsgi:application \
+
+# setsid para que los procesos sobrevivan al cierre de la sesion del runner.
+setsid nohup "$TEST_ROOT/.venv/bin/gunicorn" core.wsgi:application \
   -b "127.0.0.1:$BACKEND_PORT" -w "$GUNICORN_WORKERS" \
-  >>"$LOG_DIR/django.log" 2>&1 &
-( cd "$TEST_ROOT/web" && nohup npm run start >>"$LOG_DIR/next.log" 2>&1 & )
+  >>"$LOG_DIR/django.log" 2>&1 </dev/null &
+# -H 127.0.0.1: sin eso Next escucha en 0.0.0.0 y queda expuesto en la LAN.
+( cd "$TEST_ROOT/web" && NODE_ENV=production setsid nohup \
+    npx next start -H 127.0.0.1 -p "$FRONTEND_PORT" \
+    >>"$LOG_DIR/next.log" 2>&1 </dev/null & )
 
 echo "==> Verificando"
 ok=0
