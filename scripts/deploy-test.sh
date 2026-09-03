@@ -71,6 +71,12 @@ matar_puerto "$BACKEND_PORT"
 matar_puerto "$FRONTEND_PORT"
 sleep 2
 
+# Al terminar el job, el runner mata los "orphan processes": recorre los
+# procesos vivos y liquida los que heredaron su RUNNER_TRACKING_ID. setsid no
+# alcanza, porque la busqueda es por entorno y no por arbol de procesos.
+# Vaciando la variable, los servicios quedan fuera de esa barrida.
+export RUNNER_TRACKING_ID=""
+
 # setsid para que los procesos sobrevivan al cierre de la sesion del runner.
 setsid nohup "$TEST_ROOT/.venv/bin/gunicorn" core.wsgi:application \
   -b "127.0.0.1:$BACKEND_PORT" -w "$GUNICORN_WORKERS" \
