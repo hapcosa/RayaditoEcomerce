@@ -28,9 +28,11 @@ urlpatterns = [
     path('api/payment/', include('payment.urls')),
     path('api/suggestions/', include('suggestions.urls')),
     path('api/wishlist/', include('wishlist.urls')),
+    path('api/homepage/', include('homepage.urls')),
     # API de escritura para staff (app admin Expo, Fase 5).
     path('api/admin/', include('product.admin_urls')),
     path('api/admin/', include('orders.admin_urls')),
+    path('api/admin/', include('homepage.admin_urls')),
     path("admin/", admin.site.urls),
     path("ckeditor5/", include('django_ckeditor_5.urls')),
     path("api/meta/", include('metaproduct.urls')),
