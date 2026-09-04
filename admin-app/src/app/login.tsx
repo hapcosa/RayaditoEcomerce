@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   error: { color: Brand.oxido },
   button: {
     marginTop: 8,
-    backgroundColor: Brand.tierra500,
+    backgroundColor: Brand.logoNaranjo,
     borderRadius: 10,
     paddingVertical: 15,
     alignItems: 'center',

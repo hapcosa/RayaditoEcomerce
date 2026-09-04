@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 28,
     borderRadius: 28,
-    backgroundColor: Brand.tierra500,
+    backgroundColor: Brand.logoNaranjo,
     alignItems: 'center',
     justifyContent: 'center',
   },

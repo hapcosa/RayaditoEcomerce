@@ -23,6 +23,13 @@ export const Brand = {
   agata500: '#CB872F',
   /** Oxido: destructivo/rechazado. Ya lo usa `utils/order-status.ts`. */
   oxido: '#A15C4A',
+  /** Negro y naranjo tomados del PNG del logo: son los colores de la marca. */
+  logoNegro: '#1D1D1B',
+  logoNaranjo: '#DA5F15',
+  /** Grises entre el negro del logo y la piedra, para superficies oscuras. */
+  carbon800: '#2A2A28',
+  carbon700: '#3A3A37',
+  carbon400: '#9A9892',
 } as const;
 
 export const Colors = {
@@ -41,11 +48,12 @@ export const Colors = {
   },
   dark: {
     text: Brand.piedra50,
-    background: Brand.piedra900,
-    backgroundElement: Brand.piedra800,
-    backgroundSelected: Brand.piedra700,
-    textSecondary: Brand.piedra400,
-    accent: Brand.tierra500,
+    background: Brand.logoNegro,
+    backgroundElement: Brand.carbon800,
+    backgroundSelected: Brand.carbon700,
+    textSecondary: Brand.carbon400,
+    /** El naranjo del logo: sobre el negro rinde mucho mejor que el tierra. */
+    accent: Brand.logoNaranjo,
     onAccent: Brand.piedra50,
     danger: Brand.oxido,
   },
