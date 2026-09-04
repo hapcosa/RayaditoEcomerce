@@ -1,12 +1,20 @@
+"""Endpoints de pedidos para el cliente autenticado.
+
+`DispatchOrderView` es staff y queda por compatibilidad; el camino nuevo para el
+dueño es `orders/admin_api.py` (`PATCH /api/admin/orders/<id>/status/`).
+
+Reglas: un usuario solo ve sus propios pedidos, en cualquier estado.
+"""
+from django.db.models import Count
+from django.http import Http404
 from django.shortcuts import get_object_or_404
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework import permissions, status
-from .models import Order, OrderItem
-from product.models import Product
-from shipping.models import Shipping
-from shipping.serializers import ShippingSerializer
-from product.serializers import ProductSerializer
+from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from .models import Order
+from .serializers import OrderDetailSerializer, OrderListSerializer
 
 
 class DispatchOrderView(APIView):
@@ -41,123 +49,51 @@ class DispatchOrderView(APIView):
         )
 
 
-class ListOrdersView(APIView):
-    def get(self, request, format=None):
-        user = self.request.user
-        try:
-            orders = Order.objects.order_by('-date_issued').filter(user=user)
-            print("--------------")
-            print(orders)
-            for order in orders:
-                if order.status == 'procesado' or order.status == 'enviado':
-                    item = {}
-                    item['id'] = order.id
-                    item['status'] = order.status
-                    item['transaction_id'] = order.transaction_id
-                    item['amount'] = order.amount
-                    item['date_issued'] = order.date_issued
-                    item['address_line_1'] = order.address_line_1
-                    shipping = Shipping.objects.get(id=order.shipping_id.id)
-                    shipping = ShippingSerializer(shipping)
-                    item['shipping'] = shipping.data
-                    
-                    orderitems = OrderItem.objects.filter(order = order)
-                    item['count'] = orderitems.count()
-                    result.append(item)
-            return Response(
-                {'orders': result},
-                status=status.HTTP_200_OK
-            )
-        except:
-            return Response(
-                {'error': 'Error de servidor, no se puede acceder a sus ordenes'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+class OwnOrdersMixin:
+    """Restringe el queryset a los pedidos del usuario autenticado."""
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_queryset(self):
+        return (
+            Order.objects
+            .filter(user=self.request.user)
+            .select_related('shipping_id', 'user')
+            .order_by('-date_issued')
+        )
 
 
-class ListOrderDetailView(APIView):
-    def get(self, request, transactionId, format=None):
-        user = self.request.user
+class ListOrdersView(OwnOrdersMixin, ListAPIView):
+    """GET /api/orders/get-orders — pedidos del usuario, en cualquier estado."""
+    serializer_class = OrderListSerializer
+    pagination_class = None
 
-        try:
-            if Order.objects.filter(user=user, transaction_id=transactionId).exists():
-                order = Order.objects.get(user=user, transaction_id=transactionId)
-                shipping = Shipping.objects.get(id=order.shipping_id.id)
-                result = {}
-                result['id'] = order.id
-                result['status'] = order.status
-                result['transaction_id'] = order.transaction_id
-                result['amount'] = order.amount
-                result['full_name'] = order.full_name
-                result['address_line_1'] = order.address_line_1
-                result['city'] = order.city
-                result['postal_zip_code'] = order.postal_zip_code
-                result['country_region'] = order.region
-                result['telephone_number'] = order.telephone_number
-                shipping = ShippingSerializer(shipping)
-                result['shipping'] = shipping.data
-                if user.is_anonymous is False:
-                    result['email'] = user.email
-                else:
-                    result['email'] = email
+    def get_queryset(self):
+        return super().get_queryset().annotate(items_count=Count('orderitem'))
 
-                result['date_issued'] = order.date_issued
+    def list(self, request, *args, **kwargs):
+        serializer = self.get_serializer(self.get_queryset(), many=True)
+        return Response({'orders': serializer.data}, status=status.HTTP_200_OK)
 
-                order_items = OrderItem.objects.order_by('-date_added').filter(order=order)
-                result['order_items'] = []
-                print('--------------ciclo-for-producto--------------')
-                for order_item in order_items:
-                    product = Product.objects.get(id=order_item.product.id)
-                    product = ProductSerializer(product)
-                    result['order_items'].append(product.data)
-                print(result)
-                return Response(
-                    {'order': result},
-                    status=status.HTTP_200_OK
-                )
-            elif Order.objects.filter(user=user, id=transactionId).exists():
-                order = Order.objects.get(user=user, id=transactionId)
-                shipping = Shipping.objects.get(id=order.shipping_id.id)
-                result = {}
-                result['id'] = order.id
-                result['status'] = order.status
-                result['transaction_id'] = order.transaction_id
-                result['amount'] = order.amount
-                result['full_name'] = order.full_name
-                result['address_line_1'] = order.address_line_1
-                result['city'] = order.city
-                result['postal_zip_code'] = order.postal_zip_code
-                result['country_region'] = order.region
-                result['telephone_number'] = order.telephone_number
-                shipping = ShippingSerializer(shipping)
-                result['shipping'] = shipping.data
-                if user.is_anonymous is False:
-                    result['email'] = user.email
-                else:
-                    result['email'] = email
 
-                result['date_issued'] = order.date_issued
+class ListOrderDetailView(OwnOrdersMixin, RetrieveAPIView):
+    """GET /api/orders/get-order/<transactionId> — detalle de un pedido propio.
 
-                order_items = OrderItem.objects.order_by('-date_added').filter(order=order)
-                result['order_items'] = []
-                print('--------------ciclo-for-producto--------------')
-                for order_item in order_items:
-                    product = Product.objects.get(id=order_item.product.id)
-                    product = ProductSerializer(product)
-                    result['order_items'].append(product.data)
-                print(result)
-                return Response(
-                    {'order': result},
-                    status=status.HTTP_200_OK
-                )
-            else:
-                return Response(
-                    {'error': 'Order with this transaction ID does not exist'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-        except Exception:
-            print(Exception)
-            return Response(
-                {'error': 'Something went wrong when retrieving order detail'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+    El parámetro acepta el `transaction_id` de MercadoPago o, como fallback, el
+    `id` numérico del pedido (así lo usa el front legacy).
+    """
+    serializer_class = OrderDetailSerializer
+
+    def get_object(self):
+        lookup = self.kwargs['transactionId']
+        qs = self.get_queryset().prefetch_related('orderitem_set__product')
+
+        order = qs.filter(transaction_id=lookup).first()
+        if order is None and str(lookup).isdigit():
+            order = qs.filter(id=int(lookup)).first()
+        if order is None:
+            raise Http404('No existe un pedido con ese identificador.')
+        return order
+
+    def retrieve(self, request, *args, **kwargs):
+        serializer = self.get_serializer(self.get_object())
+        return Response({'order': serializer.data}, status=status.HTTP_200_OK)
