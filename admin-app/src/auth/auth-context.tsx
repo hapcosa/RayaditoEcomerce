@@ -12,7 +12,7 @@ import {
 } from 'react';
 
 import { apiFetch } from '@/api/client';
-import { API_URL } from '@/api/config';
+import { apiUrl, loadApiUrl } from '@/api/config';
 import { clearTokens, getAccess, saveTokens } from '@/api/tokens';
 
 export type StaffUser = {
@@ -45,6 +45,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
+        // Antes que nada: sin saber contra qué servidor hablamos, ni el token
+        // guardado ni el login sirven de nada.
+        await loadApiUrl();
         const access = await getAccess();
         if (access) {
           const me = await fetchMe();
@@ -58,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const res = await fetch(`${API_URL}/auth/jwt/create`, {
+    const res = await fetch(`${apiUrl()}/auth/jwt/create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
