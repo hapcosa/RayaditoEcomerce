@@ -33,6 +33,14 @@ export default function DashboardScreen() {
             </ThemedText>
           </Pressable>
         </Link>
+        <Link href="/(app)/portada" asChild>
+          <Pressable style={StyleSheet.flatten([styles.card, { backgroundColor: theme.backgroundElement }])}>
+            <ThemedText type="default">Portada</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Cambiar las fotos que abren el sitio
+            </ThemedText>
+          </Pressable>
+        </Link>
         <Link href="/(app)/orders" asChild>
           <Pressable style={StyleSheet.flatten([styles.card, { backgroundColor: theme.backgroundElement }])}>
             <ThemedText type="default">Pedidos</ThemedText>

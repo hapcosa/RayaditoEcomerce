@@ -43,6 +43,7 @@ PROJECT_APPS = [
     'payment',
     'suggestions',
     'wishlist',
+    'homepage',
 ]
 
 THIRD_PARTY_APPS = [

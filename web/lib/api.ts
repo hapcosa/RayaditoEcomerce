@@ -1,4 +1,5 @@
 import type { Category, Product, Review } from '@/types/product';
+import type { HeroImage } from '@/types/homepage';
 import type { HydratedCartItem, ShippingOption } from '@/types/cart';
 
 export const API_BASE_URL =
@@ -107,6 +108,23 @@ export async function fetchShippingOptions(): Promise<ShippingOption[]> {
       '/shipp/get-shipping-options',
     );
     return data.shipping_options;
+  } catch {
+    return [];
+  }
+}
+
+// ---------- Portada ---------------------------------------------------------
+
+/**
+ * Fotos de portada que el dueño administra desde la app admin.
+ *
+ * Si el backend no responde devuelve una lista vacía a propósito: la portada
+ * tiene que seguir sirviéndose (con su fondo de respaldo) aunque la API esté
+ * caída, porque es la primera página del sitio.
+ */
+export async function fetchHeroImages(): Promise<HeroImage[]> {
+  try {
+    return await apiFetch<HeroImage[]>('/homepage/hero');
   } catch {
     return [];
   }
