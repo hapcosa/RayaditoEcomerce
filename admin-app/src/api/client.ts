@@ -10,13 +10,13 @@
  */
 import { File, UploadType } from 'expo-file-system';
 
-import { API_URL } from './config';
+import { apiUrl } from './config';
 import { clearTokens, getAccess, getRefresh, saveAccess } from './tokens';
 
 async function refreshAccess(): Promise<string | null> {
   const refresh = await getRefresh();
   if (!refresh) return null;
-  const res = await fetch(`${API_URL}/auth/jwt/refresh`, {
+  const res = await fetch(`${apiUrl()}/auth/jwt/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refresh }),
@@ -37,7 +37,7 @@ export async function apiFetch(
   const headers = new Headers(options.headers);
   if (access) headers.set('Authorization', `JWT ${access}`);
 
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  const res = await fetch(`${apiUrl()}${path}`, { ...options, headers });
 
   if (res.status === 401 && retry) {
     const newAccess = await refreshAccess();
@@ -133,7 +133,7 @@ export async function apiUpload<T>(
   const headers: Record<string, string> = {};
   if (access) headers.Authorization = `JWT ${access}`;
 
-  const res = await new File(fileUri).upload(`${API_URL}${path}`, {
+  const res = await new File(fileUri).upload(`${apiUrl()}${path}`, {
     httpMethod: method,
     uploadType: UploadType.MULTIPART,
     fieldName: upload.fieldName,
