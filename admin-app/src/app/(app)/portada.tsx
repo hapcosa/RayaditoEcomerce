@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { API_URL } from '@/api/config';
+import { apiUrl } from '@/api/config';
 import {
   createHeroImage,
   deleteHeroImage,
@@ -34,7 +34,7 @@ import { pickFromLibrary, takePhoto } from '@/utils/pick-image';
 
 function photoUrl(photo: string | null): string | null {
   if (!photo) return null;
-  return photo.startsWith('http') ? photo : `${API_URL}${photo}`;
+  return photo.startsWith('http') ? photo : `${apiUrl()}${photo}`;
 }
 
 /** Ordena como el sitio: activas primero, y dentro de cada grupo por posición. */

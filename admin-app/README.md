@@ -20,6 +20,15 @@ cp .env.example .env      # y ajustá EXPO_PUBLIC_API_URL a la IP LAN del backen
 npx expo start
 ```
 
+### Servidor configurable
+`EXPO_PUBLIC_API_URL` es solo el **valor por defecto** (si falta, se usa
+`https://piedrasdelrayadito.cl`). La pantalla de login muestra el servidor
+actual y permite cambiarlo; la URL elegida se guarda en el dispositivo
+(`expo-secure-store`) y se carga antes que el token al abrir la app. Cambiar de
+servidor borra los tokens guardados, porque valen solo para quien los emitió.
+Así el APK instalado sirve contra producción sin la PC, y se puede apuntar a un
+Django local cuando haga falta.
+
 ### Probar en un teléfono físico
 El teléfono y la máquina con Django deben estar en la **misma red**. `localhost`
 en el teléfono es el propio teléfono, así que `EXPO_PUBLIC_API_URL` debe apuntar
