@@ -45,9 +45,8 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <DashCard
           title="Mis pedidos"
-          description="Historial y estado de tus órdenes."
-          href="#"
-          comingSoon
+          description="Historial, estado y seguimiento de tus órdenes."
+          href="/pedidos"
         />
         <DashCard
           title="Lista de deseos"

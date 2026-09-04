@@ -111,3 +111,138 @@ class OrderDispatchApiTests(APITestCase):
         self.assertEqual(self.order.status, Order.OrderStatus.shipping)
         self.assertEqual(self.order.deliveryNumber, 'STK-123456')
         self.assertEqual(response.data['order']['deliveryNumber'], 'STK-123456')
+
+
+class CustomerOrderApiTests(APITestCase):
+    """`/api/orders/get-orders` y `/get-order/<id>` — vista del cliente.
+
+    Cubre lo que el codigo legacy hacia mal: filtraba estados a mano (los
+    pedidos `no procesado` y `cancelado` no aparecian nunca), reventaba con
+    pedidos sin envio asociado y no exponia `deliveryNumber`.
+    """
+
+    def setUp(self):
+        cat = Category.objects.create(name='Colgantes', ProductType='Joya')
+        mat = Material.objects.create(name='Cobre', cost=8000)
+        self.product = Joyas.objects.create(
+            name='Colgante rayado', description='x', price=19000,
+            compare_price=0, category=cat, material=mat,
+            weight=Decimal('1.00'), photo='',
+        )
+        self.shipping = Shipping.objects.create(
+            name='Starken por pagar',
+            time_to_delivery='2 a 4 dias habiles',
+            description='Retiro en sucursal.',
+            price=4500,
+            photo='',
+        )
+        self.user = User.objects.create_user(
+            email='ana@rayadito.cl', password='Testpass123',
+            first_name='Ana', last_name='Rios',
+        )
+        self.other = User.objects.create_user(
+            email='otro@rayadito.cl', password='Testpass123',
+            first_name='Otro', last_name='Cliente',
+        )
+
+    def _make_order(self, user, status_value, **extra):
+        order = Order.objects.create(
+            user=user, amount=23500, shipping_price=4500,
+            status=status_value, shipping_id=self.shipping, **extra,
+        )
+        OrderItem.objects.create(
+            product=self.product, order=order,
+            name=self.product.name, price=19000, count=1,
+        )
+        return order
+
+    def test_list_requires_authentication(self):
+        response = self.client.get('/api/orders/get-orders')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_list_returns_orders_in_every_status(self):
+        for value in Order.OrderStatus.values:
+            self._make_order(self.user, value, transaction_id=f'tx-{value}')
+        self.client.force_authenticate(self.user)
+
+        response = self.client.get('/api/orders/get-orders')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        returned = {row['status'] for row in response.data['orders']}
+        self.assertEqual(returned, set(Order.OrderStatus.values))
+
+    def test_list_hides_orders_of_other_users(self):
+        mine = self._make_order(self.user, Order.OrderStatus.processed, transaction_id='mia')
+        self._make_order(self.other, Order.OrderStatus.processed, transaction_id='ajena')
+        self.client.force_authenticate(self.user)
+
+        response = self.client.get('/api/orders/get-orders')
+
+        self.assertEqual([row['id'] for row in response.data['orders']], [mine.id])
+
+    def test_list_survives_order_without_shipping(self):
+        """`shipping_id` es null=True; el codigo viejo hacia .id sobre None."""
+        order = Order.objects.create(
+            user=self.user, amount=19000, status=Order.OrderStatus.processed,
+        )
+        self.client.force_authenticate(self.user)
+
+        response = self.client.get('/api/orders/get-orders')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        row = next(r for r in response.data['orders'] if r['id'] == order.id)
+        self.assertIsNone(row['shipping'])
+        self.assertEqual(row['items_count'], 0)
+
+    def test_detail_exposes_delivery_number_when_shipped(self):
+        order = self._make_order(
+            self.user, Order.OrderStatus.shipping,
+            transaction_id='mp-9001', deliveryNumber='STK-778899',
+        )
+        self.client.force_authenticate(self.user)
+
+        response = self.client.get(f'/api/orders/get-order/{order.transaction_id}')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['order']['deliveryNumber'], 'STK-778899')
+        self.assertEqual(response.data['order']['status'], Order.OrderStatus.shipping)
+        self.assertEqual(response.data['order']['order_items'][0]['name'], 'Colgante rayado')
+
+    def test_detail_delivery_number_is_null_before_dispatch(self):
+        order = self._make_order(
+            self.user, Order.OrderStatus.processed, transaction_id='mp-9002',
+        )
+        self.client.force_authenticate(self.user)
+
+        response = self.client.get(f'/api/orders/get-order/{order.transaction_id}')
+
+        self.assertIsNone(response.data['order']['deliveryNumber'])
+
+    def test_detail_accepts_numeric_id_as_fallback(self):
+        order = self._make_order(self.user, Order.OrderStatus.processed)
+        self.client.force_authenticate(self.user)
+
+        response = self.client.get(f'/api/orders/get-order/{order.id}')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['order']['id'], order.id)
+
+    def test_detail_of_other_user_returns_404(self):
+        order = self._make_order(
+            self.other, Order.OrderStatus.shipping,
+            transaction_id='ajena-1', deliveryNumber='STK-000',
+        )
+        self.client.force_authenticate(self.user)
+
+        response = self.client.get(f'/api/orders/get-order/{order.transaction_id}')
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_amounts_are_integers_not_floats(self):
+        self._make_order(self.user, Order.OrderStatus.processed, transaction_id='mp-clp')
+        self.client.force_authenticate(self.user)
+
+        row = self.client.get('/api/orders/get-orders').data['orders'][0]
+
+        self.assertIsInstance(row['amount'], int)
+        self.assertIsInstance(row['shipping_price'], int)
