@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { CartBadge } from './CartBadge';
@@ -16,11 +17,17 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-piedra-200 bg-piedra-50/95 backdrop-blur-sm">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link
-          href="/"
-          className="font-manuscrita text-2xl text-tierra-600 transition-colors hover:text-tierra-700"
-        >
-          Piedras Rayadito
+        <Link href="/" className="shrink-0" aria-label="Piedras Rayadito — inicio">
+          {/* Logo horizontal (pájaro + marca denominativa), ratio 2.72:1.
+              `alt` conserva el nombre para lectores de pantalla. */}
+          <Image
+            src="/logo-rayadito.png"
+            alt="Piedras Rayadito"
+            width={800}
+            height={294}
+            priority
+            className="h-9 w-auto sm:h-11"
+          />
         </Link>
 
         <nav className="flex items-center gap-6">
