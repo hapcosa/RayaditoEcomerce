@@ -42,6 +42,8 @@ export const metadata: Metadata = {
     siteName: 'Piedras Rayadito',
   },
 };
+// Los iconos y la og-image por defecto salen de las convenciones de archivo del
+// App Router: app/icon.png, app/apple-icon.png y app/opengraph-image.png.
 
 export default function RootLayout({
   children,
