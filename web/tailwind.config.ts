@@ -1,7 +1,7 @@
 import type { Config } from 'tailwindcss';
 
 /**
- * Design tokens — estética artesanal de Chiloé (paleta piedra / tierra / ágata).
+ * Design tokens — paleta tomada del logo: grises, naranjo y cafés claros.
  *
  * Los colores se exponen como variables CSS en `app/globals.css` para que cada
  * fork (ROADMAP Fase 8) pueda re-tematizar cambiando solo esas variables, sin
@@ -16,7 +16,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Neutros cálidos: la "piedra" base de toda la UI.
+        // Grises neutros: la "piedra" base de toda la UI, hasta el negro del logo.
         piedra: {
           50: 'rgb(var(--color-piedra-50) / <alpha-value>)',
           100: 'rgb(var(--color-piedra-100) / <alpha-value>)',
@@ -29,7 +29,7 @@ const config: Config = {
           800: 'rgb(var(--color-piedra-800) / <alpha-value>)',
           900: 'rgb(var(--color-piedra-900) / <alpha-value>)',
         },
-        // Terracota / arcilla: color primario de marca.
+        // Naranjo del logo: color primario de marca (enlaces, botones, activo).
         tierra: {
           50: 'rgb(var(--color-tierra-50) / <alpha-value>)',
           100: 'rgb(var(--color-tierra-100) / <alpha-value>)',
@@ -42,7 +42,7 @@ const config: Config = {
           800: 'rgb(var(--color-tierra-800) / <alpha-value>)',
           900: 'rgb(var(--color-tierra-900) / <alpha-value>)',
         },
-        // Ámbar/miel translúcido de las ágatas: color de acento.
+        // Cafés claros: superficies cálidas, bordes y detalles.
         agata: {
           50: 'rgb(var(--color-agata-50) / <alpha-value>)',
           100: 'rgb(var(--color-agata-100) / <alpha-value>)',
