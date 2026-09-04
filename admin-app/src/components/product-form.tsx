@@ -35,6 +35,17 @@ export const PRODUCT_TYPE_OPTIONS: { value: ProductType; label: string }[] = [
   { value: 'piedra', label: 'Piedra' },
 ];
 
+/**
+ * Mapea `Category.ProductType` ("Joya"/"Piedra") al slug de `product_type`,
+ * para preseleccionar la vitrina al elegir la categoria. Devuelve `null` si la
+ * categoria no declara un tipo que la API acepte.
+ */
+export function productTypeForCategory(category: Category | undefined): ProductType | null {
+  const raw = category?.ProductType?.trim().toLowerCase();
+  const match = PRODUCT_TYPE_OPTIONS.find((o) => o.value === raw);
+  return match ? match.value : null;
+}
+
 /** Solo dígitos: el precio es entero CLP. */
 export function digitsOnly(text: string): string {
   return text.replace(/[^0-9]/g, '');
@@ -130,20 +141,23 @@ export function ProductFormFields({ value, onChange, categories, loadingCats }: 
               <Pressable
                 key={o.value}
                 onPress={() => onChange({ productType: o.value })}
-                style={[styles.chip, { backgroundColor: selected ? theme.text : theme.backgroundElement }]}
+                style={[styles.chip, { backgroundColor: selected ? theme.accent : theme.backgroundElement }]}
               >
-                <ThemedText type="small" style={{ color: selected ? theme.background : theme.text }}>
+                <ThemedText type="small" style={{ color: selected ? theme.onAccent : theme.text }}>
                   {o.label}
                 </ThemedText>
               </Pressable>
             );
           })}
         </View>
+        <ThemedText type="small" themeColor="textSecondary">
+          Define en qué vitrina del sitio aparece: /joyas o /piedras.
+        </ThemedText>
       </Field>
 
       <Field label="Categoría">
         {loadingCats ? (
-          <ActivityIndicator />
+          <ActivityIndicator color={theme.accent} />
         ) : categories.length === 0 ? (
           <ThemedText type="small" themeColor="textSecondary">
             No hay categorías cargadas en el backend.
@@ -155,13 +169,20 @@ export function ProductFormFields({ value, onChange, categories, loadingCats }: 
               return (
                 <Pressable
                   key={c.id}
-                  onPress={() => onChange({ categoryId: c.id })}
+                  onPress={() => {
+                    const inferred = productTypeForCategory(c);
+                    onChange(
+                      inferred
+                        ? { categoryId: c.id, productType: inferred }
+                        : { categoryId: c.id },
+                    );
+                  }}
                   style={[
                     styles.chip,
-                    { backgroundColor: selected ? theme.text : theme.backgroundElement },
+                    { backgroundColor: selected ? theme.accent : theme.backgroundElement },
                   ]}
                 >
-                  <ThemedText type="small" style={{ color: selected ? theme.background : theme.text }}>
+                  <ThemedText type="small" style={{ color: selected ? theme.onAccent : theme.text }}>
                     {c.name}
                   </ThemedText>
                 </Pressable>
@@ -179,9 +200,9 @@ export function ProductFormFields({ value, onChange, categories, loadingCats }: 
               <Pressable
                 key={o.value}
                 onPress={() => onChange({ status: o.value })}
-                style={[styles.chip, { backgroundColor: selected ? theme.text : theme.backgroundElement }]}
+                style={[styles.chip, { backgroundColor: selected ? theme.accent : theme.backgroundElement }]}
               >
-                <ThemedText type="small" style={{ color: selected ? theme.background : theme.text }}>
+                <ThemedText type="small" style={{ color: selected ? theme.onAccent : theme.text }}>
                   {o.label}
                 </ThemedText>
               </Pressable>

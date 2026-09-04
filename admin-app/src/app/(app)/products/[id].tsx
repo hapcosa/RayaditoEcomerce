@@ -16,6 +16,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { API_URL } from '@/api/config';
 import {
@@ -37,7 +38,6 @@ import { cropFromViewer, type ViewerTransform } from '@/utils/crop-image';
 import { pickFromLibrary, takePhoto } from '@/utils/pick-image';
 
 /** Óxido de la paleta tierra (mismo tono que el estado "rechazado"). */
-const DANGER = '#A15C4A';
 
 /** Absolutiza rutas de media relativas (MEDIA_URL). */
 function photoUrl(photo: string | null): string | null {
@@ -47,6 +47,8 @@ function photoUrl(photo: string | null): string | null {
 
 export default function EditProductScreen() {
   const theme = useTheme();
+  // El boton de guardar/eliminar quedaba bajo la barra de gestos del sistema.
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const productId = Number(params.id);
@@ -244,7 +246,7 @@ export default function EditProductScreen() {
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={theme.accent} />
       </View>
     );
   }
@@ -266,7 +268,10 @@ export default function EditProductScreen() {
       style={{ flex: 1, backgroundColor: theme.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: 48 + insets.bottom }]}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Foto principal */}
         <View style={styles.photoBox}>
           {photoPreview ? (
@@ -335,7 +340,7 @@ export default function EditProductScreen() {
               disabled={addingImages}
             >
               {addingImages ? (
-                <ActivityIndicator />
+                <ActivityIndicator color={theme.accent} />
               ) : (
                 <ThemedText type="small" themeColor="textSecondary">
                   + Agregar
@@ -349,28 +354,28 @@ export default function EditProductScreen() {
         </View>
 
         <Pressable
-          style={[styles.submit, { backgroundColor: theme.text, opacity: saving ? 0.6 : 1 }]}
+          style={[styles.submit, { backgroundColor: theme.accent, opacity: saving ? 0.6 : 1 }]}
           onPress={onSave}
           disabled={saving}
         >
           {saving ? (
-            <ActivityIndicator color={theme.background} />
+            <ActivityIndicator color={theme.onAccent} />
           ) : (
-            <ThemedText type="smallBold" style={{ color: theme.background }}>
+            <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
               Guardar cambios
             </ThemedText>
           )}
         </Pressable>
 
         <Pressable
-          style={[styles.deleteBtn, { borderColor: DANGER, opacity: deleting ? 0.6 : 1 }]}
+          style={[styles.deleteBtn, { borderColor: theme.danger, opacity: deleting ? 0.6 : 1 }]}
           onPress={onDelete}
           disabled={deleting}
         >
           {deleting ? (
-            <ActivityIndicator color={DANGER} />
+            <ActivityIndicator color={theme.danger} />
           ) : (
-            <ThemedText type="smallBold" style={{ color: DANGER }}>
+            <ThemedText type="smallBold" style={{ color: theme.danger }}>
               Eliminar producto
             </ThemedText>
           )}

@@ -1,11 +1,30 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { DefaultTheme, ThemeProvider } from 'expo-router';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { ActivityIndicator, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/auth/auth-context';
+import { Brand, Colors } from '@/constants/theme';
+
+/**
+ * Tema de navegacion en la paleta de la marca. Sin esto React Navigation usa
+ * su gris/negro por defecto y la barra de titulo desentona con las pantallas.
+ * Va fijo en claro, como `useTheme`.
+ */
+const NAV_THEME = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: Colors.light.accent,
+    background: Colors.light.background,
+    card: Colors.light.background,
+    text: Colors.light.text,
+    border: Brand.piedra200,
+  },
+} as const;
 
 SplashScreen.preventAutoHideAsync();
 
@@ -27,8 +46,15 @@ function RootNavigator() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" />
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: Colors.light.background,
+        }}
+      >
+        <ActivityIndicator size="large" color={Brand.tierra500} />
       </View>
     );
   }
@@ -42,11 +68,13 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   return (
     <SafeAreaProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <ThemeProvider value={NAV_THEME}>
         <AuthProvider>
+          {/* Iconos oscuros: el fondo es claro y por defecto Android los deja
+              blancos, con la hora y la bateria ilegibles sobre la piedra. */}
+          <StatusBar style="dark" />
           <RootNavigator />
         </AuthProvider>
       </ThemeProvider>

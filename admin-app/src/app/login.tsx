@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/auth/auth-context';
 
@@ -81,7 +82,7 @@ export default function LoginScreen() {
           disabled={!canSubmit}
         >
           {submitting ? (
-            <ActivityIndicator color="#ffffff" />
+            <ActivityIndicator color={Brand.piedra50} />
           ) : (
             <ThemedText type="smallBold" style={styles.buttonText}>
               Ingresar
@@ -108,10 +109,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
   },
-  error: { color: '#d64545' },
+  error: { color: Brand.oxido },
   button: {
     marginTop: 8,
-    backgroundColor: '#208AEF',
+    backgroundColor: Brand.tierra500,
     borderRadius: 10,
     paddingVertical: 15,
     alignItems: 'center',

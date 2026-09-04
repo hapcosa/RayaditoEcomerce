@@ -1,14 +1,11 @@
 /**
- * Learn more about light and dark modes:
- * https://docs.expo.dev/guides/color-schemes/
+ * La app va siempre en el esquema claro de la marca (fondo piedra), igual que
+ * el sitio: en oscuro el fondo se iba a casi negro y desentonaba con la web.
+ * `Colors.dark` sigue definido por si mas adelante se ofrece la opcion.
  */
 
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export function useTheme() {
-  const scheme = useColorScheme();
-  const theme = scheme === 'unspecified' ? 'light' : scheme;
-
-  return Colors[theme];
+  return Colors.light;
 }
