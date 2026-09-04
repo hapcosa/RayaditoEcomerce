@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   linkPrimary: {
     lineHeight: 30,
     fontSize: 14,
-    color: Brand.tierra600,
+    color: Brand.logoNaranjo,
   },
   code: {
     fontFamily: Fonts.mono,

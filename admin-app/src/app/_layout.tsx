@@ -1,4 +1,4 @@
-import { DefaultTheme, ThemeProvider } from 'expo-router';
+import { DarkTheme, ThemeProvider } from 'expo-router';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -12,17 +12,17 @@ import { Brand, Colors } from '@/constants/theme';
 /**
  * Tema de navegacion en la paleta de la marca. Sin esto React Navigation usa
  * su gris/negro por defecto y la barra de titulo desentona con las pantallas.
- * Va fijo en claro, como `useTheme`.
+ * Va fijo en oscuro, como `useTheme`.
  */
 const NAV_THEME = {
-  ...DefaultTheme,
+  ...DarkTheme,
   colors: {
-    ...DefaultTheme.colors,
-    primary: Colors.light.accent,
-    background: Colors.light.background,
-    card: Colors.light.background,
-    text: Colors.light.text,
-    border: Brand.piedra200,
+    ...DarkTheme.colors,
+    primary: Colors.dark.accent,
+    background: Colors.dark.background,
+    card: Colors.dark.background,
+    text: Colors.dark.text,
+    border: Brand.carbon700,
   },
 } as const;
 
@@ -51,10 +51,10 @@ function RootNavigator() {
           flex: 1,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: Colors.light.background,
+          backgroundColor: Colors.dark.background,
         }}
       >
-        <ActivityIndicator size="large" color={Brand.tierra500} />
+        <ActivityIndicator size="large" color={Brand.logoNaranjo} />
       </View>
     );
   }
@@ -72,9 +72,8 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider value={NAV_THEME}>
         <AuthProvider>
-          {/* Iconos oscuros: el fondo es claro y por defecto Android los deja
-              blancos, con la hora y la bateria ilegibles sobre la piedra. */}
-          <StatusBar style="dark" />
+          {/* Iconos claros: el fondo de la app es el negro del logo. */}
+          <StatusBar style="light" />
           <RootNavigator />
         </AuthProvider>
       </ThemeProvider>
