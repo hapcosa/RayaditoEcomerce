@@ -98,7 +98,7 @@ export default function OrderDetailScreen() {
         edges={['bottom']}
         style={[styles.safe, styles.center, { backgroundColor: theme.background }]}
       >
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={theme.accent} />
       </SafeAreaView>
     );
   }
@@ -116,15 +116,29 @@ export default function OrderDetailScreen() {
     );
   }
 
-  const total = (order.amount ?? 0) + order.shipping_price;
+  // `amount` ya viene con el envio incluido (payment/views.py), asi que el
+  // total es `amount` y el subtotal de articulos es `amount - shipping_price`.
+  const total = order.amount ?? 0;
+  const subtotal = total - order.shipping_price;
   const canShip = order.allowed_transitions.includes('enviado');
+  // "Enviado" es la accion habitual: va primera, y los estados que cierran el
+  // pedido (cancelado/rechazado) quedan abajo para no tocarlos por error.
+  const transitions = [...order.allowed_transitions].sort(
+    (x, y) => Number(y === 'enviado') - Number(x === 'enviado'),
+  );
 
   return (
     <SafeAreaView
       edges={['bottom']}
       style={[styles.safe, { backgroundColor: theme.background }]}
     >
-      <ScrollView contentContainerStyle={styles.content}>
+      {/* `automaticallyAdjustKeyboardInsets`: sin esto el teclado tapa el campo
+          de Nº de seguimiento y no hay forma de ver lo que se escribe. */}
+      <ScrollView
+        contentContainerStyle={styles.content}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.statusHead}>
           <View style={[styles.badge, { backgroundColor: ORDER_STATUS_COLOR[order.status] }]}>
             <ThemedText type="small" style={styles.badgeText}>
@@ -148,6 +162,14 @@ export default function OrderDetailScreen() {
             </View>
           ))}
           <View style={[styles.itemRow, styles.totalRow, { borderTopColor: theme.backgroundSelected }]}>
+            <ThemedText type="small" themeColor="textSecondary">
+              Subtotal
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {formatCLP(subtotal)}
+            </ThemedText>
+          </View>
+          <View style={styles.itemRow}>
             <ThemedText type="small" themeColor="textSecondary">
               Envío
             </ThemedText>
@@ -201,7 +223,7 @@ export default function OrderDetailScreen() {
                 />
               ) : null}
               <View style={styles.actions}>
-                {order.allowed_transitions.map((status) => (
+                {transitions.map((status) => (
                   <Pressable
                     key={status}
                     onPress={() => handleChange(status)}

@@ -39,7 +39,8 @@ function StatusBadge({ status }: { status: OrderStatus }) {
 
 function OrderRow({ order }: { order: Order }) {
   const theme = useTheme();
-  const total = (order.amount ?? 0) + order.shipping_price;
+  // `amount` ya incluye el envio (payment/views.py); no volver a sumarlo.
+  const total = order.amount ?? 0;
   const count = order.items.reduce((n, it) => n + it.count, 0);
   return (
     <Link href={`/(app)/orders/${order.id}`} asChild>
@@ -123,7 +124,7 @@ export default function OrdersListScreen() {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" />
+          <ActivityIndicator size="large" color={theme.accent} />
         </View>
       ) : (
         <FlatList
@@ -169,12 +170,12 @@ function FilterChip({
       onPress={onPress}
       style={[
         styles.chip,
-        { backgroundColor: active ? theme.text : theme.backgroundElement },
+        { backgroundColor: active ? theme.accent : theme.backgroundElement },
       ]}
     >
       <ThemedText
         type="small"
-        style={{ color: active ? theme.background : theme.textSecondary }}
+        style={{ color: active ? theme.onAccent : theme.textSecondary }}
       >
         {label}
       </ThemedText>

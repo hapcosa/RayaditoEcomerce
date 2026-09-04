@@ -1,26 +1,53 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Paleta de la app admin. Espeja los tokens de `web/app/globals.css`
+ * (piedra / tierra / agata) para que el sitio y la app se vean de la misma
+ * marca. Al re-tematizar un fork se cambia `Brand` y nada mas.
  */
 
 import '@/global.css';
 
 import { Platform } from 'react-native';
 
+/** Tokens de marca, en hex. Equivalen a las variables RGB de la web. */
+export const Brand = {
+  piedra50: '#FAF9F6',
+  piedra100: '#F4F1EC',
+  piedra200: '#E7E2D9',
+  piedra400: '#B5AB9B',
+  piedra700: '#5C554B',
+  piedra800: '#3F3A33',
+  piedra900: '#26231F',
+  tierra50: '#FAF3EE',
+  tierra500: '#AD5C3A',
+  tierra600: '#944A2D',
+  agata500: '#CB872F',
+  /** Oxido: destructivo/rechazado. Ya lo usa `utils/order-status.ts`. */
+  oxido: '#A15C4A',
+} as const;
+
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: Brand.piedra900,
+    background: Brand.piedra50,
+    backgroundElement: Brand.piedra100,
+    backgroundSelected: Brand.piedra200,
+    textSecondary: Brand.piedra700,
+    /** Primario de marca: chip elegido, boton de accion, FAB. */
+    accent: Brand.tierra500,
+    /** Texto/icono que va encima de `accent`. */
+    onAccent: Brand.piedra50,
+    /** Destructivo: eliminar, rechazar, mensajes de error. */
+    danger: Brand.oxido,
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: Brand.piedra50,
+    background: Brand.piedra900,
+    backgroundElement: Brand.piedra800,
+    backgroundSelected: Brand.piedra700,
+    textSecondary: Brand.piedra400,
+    accent: Brand.tierra500,
+    onAccent: Brand.piedra50,
+    danger: Brand.oxido,
   },
 } as const;
 

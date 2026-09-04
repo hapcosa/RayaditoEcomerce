@@ -10,7 +10,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { API_URL } from '@/api/config';
 import { listProducts, type Product } from '@/api/products';
@@ -58,6 +58,8 @@ function ProductRow({ product }: { product: Product }) {
 
 export default function ProductsListScreen() {
   const theme = useTheme();
+  // El FAB flotante quedaba pisado por la barra de navegacion del sistema.
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,14 +93,14 @@ export default function ProductsListScreen() {
     >
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" />
+          <ActivityIndicator size="large" color={theme.accent} />
         </View>
       ) : (
         <FlatList
           data={products}
           keyExtractor={(p) => String(p.id)}
           renderItem={({ item }) => <ProductRow product={item} />}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: 96 + insets.bottom }]}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />
           }
@@ -120,8 +122,14 @@ export default function ProductsListScreen() {
       )}
 
       <Link href="/(app)/products/new" asChild>
-        <Pressable style={StyleSheet.flatten([styles.fab, { backgroundColor: theme.text }])} hitSlop={8}>
-          <ThemedText type="smallBold" style={{ color: theme.background }}>
+        <Pressable
+          style={StyleSheet.flatten([
+            styles.fab,
+            { backgroundColor: theme.accent, bottom: 28 + insets.bottom },
+          ])}
+          hitSlop={8}
+        >
+          <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
             + Nuevo
           </ThemedText>
         </Pressable>

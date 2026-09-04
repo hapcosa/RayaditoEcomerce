@@ -32,6 +32,8 @@ import Animated, {
 
 import type { ViewerTransform } from '@/utils/crop-image';
 
+import { Brand } from '@/constants/theme';
+
 import { ThemedText } from './themed-text';
 
 const MAX_SCALE = 6;
@@ -288,7 +290,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 28,
     borderRadius: 28,
-    backgroundColor: '#c8763f',
+    backgroundColor: Brand.tierra500,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -297,7 +299,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 28,
     borderRadius: 28,
-    backgroundColor: '#4d6b7a',
+    backgroundColor: Brand.agata500,
     alignItems: 'center',
     justifyContent: 'center',
   },

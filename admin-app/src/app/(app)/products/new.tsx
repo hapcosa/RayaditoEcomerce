@@ -15,6 +15,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   createProduct,
@@ -40,6 +41,8 @@ const EMPTY_FORM: ProductFormValue = {
 
 export default function NewProductScreen() {
   const theme = useTheme();
+  // El boton de guardar/eliminar quedaba bajo la barra de gestos del sistema.
+  const insets = useSafeAreaInsets();
   const router = useRouter();
 
   const [form, setForm] = useState<ProductFormValue>(EMPTY_FORM);
@@ -116,7 +119,10 @@ export default function NewProductScreen() {
       style={{ flex: 1, backgroundColor: theme.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: 48 + insets.bottom }]}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Foto */}
         <View style={styles.photoBox}>
           {photo ? (
@@ -146,14 +152,14 @@ export default function NewProductScreen() {
         />
 
         <Pressable
-          style={[styles.submit, { backgroundColor: theme.text, opacity: submitting ? 0.6 : 1 }]}
+          style={[styles.submit, { backgroundColor: theme.accent, opacity: submitting ? 0.6 : 1 }]}
           onPress={onSubmit}
           disabled={submitting}
         >
           {submitting ? (
-            <ActivityIndicator color={theme.background} />
+            <ActivityIndicator color={theme.onAccent} />
           ) : (
-            <ThemedText type="smallBold" style={{ color: theme.background }}>
+            <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
               Crear producto
             </ThemedText>
           )}
