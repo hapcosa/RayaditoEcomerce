@@ -24,10 +24,31 @@ jobs:
   merge:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    # El contexto `secrets` no se puede usar en el `if` de un paso, asi que el
+    # token se expone como variable de entorno del job para poder consultarlo.
+    env:
+      DEPLOY_TOKEN: ${{ secrets.TEST_DEPLOY_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          # El push de abajo tiene que disparar `deploy-test.yml`. Con el
+          # GITHUB_TOKEN por defecto no lo hace: GitHub ignora los eventos que
+          # genera ese token, para que un workflow no se dispare a si mismo en
+          # bucle. Hace falta un token de usuario.
+          #
+          # Si el secret no esta cargado, `secrets.X` es cadena vacia y el
+          # checkout falla con "Input required and not supplied: token". Caemos
+          # al token por defecto para no romper la integracion de todos los PR;
+          # el paso siguiente avisa que el despliegue no se va a disparar.
+          token: ${{ secrets.TEST_DEPLOY_TOKEN || github.token }}
+
+      - name: Avisar si falta el token de despliegue
+        if: ${{ env.DEPLOY_TOKEN == '' }}
+        run: >-
+          echo "::warning::Falta el secret TEST_DEPLOY_TOKEN. Se reconstruye
+          test pero el despliegue NO se dispara; hay que lanzarlo a mano con
+          'gh workflow run deploy-test.yml --ref test'."
 
       - name: Configurar identidad de git
         run: |
@@ -45,5 +66,8 @@ jobs:
             exit 1
           fi
 
+      # Este push es el que dispara el despliegue: `deploy-test.yml` corre en
+      # `push` a `test`. Sigue exigiendo permiso de escritura en el repo, asi
+      # que el runner self-hosted continua fuera del alcance de los forks.
       - name: Publicar `test`
         run: git push --force origin test
