@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { API_URL } from '@/api/config';
+import { apiUrl } from '@/api/config';
 import { listProducts, type Product } from '@/api/products';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
@@ -27,7 +27,7 @@ const STATUS_LABEL: Record<Product['status'], string> = {
 /** Las fotos vienen como ruta relativa (MEDIA_URL); las absolutizamos. */
 function photoUrl(photo: string | null): string | null {
   if (!photo) return null;
-  return photo.startsWith('http') ? photo : `${API_URL}${photo}`;
+  return photo.startsWith('http') ? photo : `${apiUrl()}${photo}`;
 }
 
 function ProductRow({ product }: { product: Product }) {
