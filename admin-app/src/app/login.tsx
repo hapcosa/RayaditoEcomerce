@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,6 +16,12 @@ import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/auth/auth-context';
+
+/**
+ * El logo viene en tinta clara: la app va siempre en el esquema oscuro
+ * (ver `hooks/use-theme`). El PNG de marca original es negro sobre blanco.
+ */
+const logo = require('../../assets/images/logo-rayadito-ondark.png');
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
@@ -64,7 +71,13 @@ export default function LoginScreen() {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ThemedText type="subtitle">Piedras Rayadito</ThemedText>
+        <Image
+          source={logo}
+          style={styles.logo}
+          resizeMode="contain"
+          accessibilityRole="image"
+          accessibilityLabel="Piedras Rayadito"
+        />
         <ThemedText type="small" themeColor="textSecondary" style={styles.tagline}>
           Panel de administración
         </ThemedText>
@@ -158,7 +171,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     gap: 12,
   },
-  tagline: { marginBottom: 16 },
+  logo: { width: 168, height: 225, alignSelf: 'center' },
+  tagline: { marginBottom: 16, alignSelf: 'center' },
   input: {
     borderRadius: 10,
     paddingHorizontal: 16,
