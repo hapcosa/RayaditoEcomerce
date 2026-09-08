@@ -16,7 +16,9 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "cl.piedrasrayadito.admin",
-      "blockedPermissions": ["android.permission.RECORD_AUDIO"]
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -38,6 +40,14 @@
         {
           "photosPermission": "La app usa tus fotos para subir imágenes de productos.",
           "cameraPermission": "La app usa la cámara para fotografiar productos."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
         }
       ]
     ],

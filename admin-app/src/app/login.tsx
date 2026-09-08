@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { apiUrl, setApiUrl } from '@/api/config';
+import { clearTokens } from '@/api/tokens';
 import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -21,6 +23,25 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Servidor: editable acá porque si apunta al lugar equivocado no hay forma
+  // de entrar, y entonces tampoco de llegar a una pantalla de ajustes.
+  const [servidor, setServidor] = useState(apiUrl());
+  const [editandoServidor, setEditandoServidor] = useState(false);
+
+  async function guardarServidor() {
+    try {
+      const anterior = apiUrl();
+      const guardado = await setApiUrl(servidor);
+      // Los tokens valen solo para el servidor que los emitió: si cambia,
+      // los guardados quedan inservibles y hay que botarlos.
+      if (guardado !== anterior) await clearTokens();
+      setServidor(guardado);
+      setEditandoServidor(false);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Dirección inválida.');
+    }
+  }
 
   const canSubmit = email.trim().length > 0 && password.length > 0 && !submitting;
 
@@ -89,6 +110,41 @@ export default function LoginScreen() {
             </ThemedText>
           )}
         </Pressable>
+
+        {editandoServidor ? (
+          <>
+            <TextInput
+              style={[
+                styles.input,
+                { color: theme.text, backgroundColor: theme.backgroundElement },
+              ]}
+              placeholder="https://piedrasdelrayadito.cl"
+              placeholderTextColor={theme.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              value={servidor}
+              onChangeText={setServidor}
+              onSubmitEditing={guardarServidor}
+            />
+            <Pressable onPress={guardarServidor} hitSlop={8}>
+              <ThemedText type="linkPrimary" style={styles.servidor}>
+                Guardar servidor
+              </ThemedText>
+            </Pressable>
+          </>
+        ) : (
+          <Pressable onPress={() => setEditandoServidor(true)} hitSlop={8}>
+            <ThemedText
+              type="small"
+              themeColor="textSecondary"
+              style={styles.servidor}
+              numberOfLines={1}
+            >
+              Servidor: {servidor} · cambiar
+            </ThemedText>
+          </Pressable>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -118,4 +174,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: { color: '#ffffff' },
+  servidor: { marginTop: 12, textAlign: 'center' },
 });

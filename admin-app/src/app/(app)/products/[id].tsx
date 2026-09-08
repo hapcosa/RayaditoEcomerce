@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { API_URL } from '@/api/config';
+import { apiUrl } from '@/api/config';
 import {
   addGalleryImages,
   deleteGalleryImage,
@@ -42,7 +42,7 @@ import { pickFromLibrary, takePhoto } from '@/utils/pick-image';
 /** Absolutiza rutas de media relativas (MEDIA_URL). */
 function photoUrl(photo: string | null): string | null {
   if (!photo) return null;
-  return photo.startsWith('http') ? photo : `${API_URL}${photo}`;
+  return photo.startsWith('http') ? photo : `${apiUrl()}${photo}`;
 }
 
 export default function EditProductScreen() {
