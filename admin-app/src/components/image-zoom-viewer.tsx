@@ -48,11 +48,23 @@ type Props = {
   onClose: () => void;
   /** Si viene, el visor entra en modo recorte y llama con el encuadre + destino. */
   onCrop?: (t: ViewerTransform, dest: CropDest) => void;
+  /**
+   * Destinos que se ofrecen. Al ALTA de un producto todavia no hay galeria a la
+   * que agregar, asi que esa pantalla pasa solo `['main']`.
+   */
+  dests?: CropDest[];
   /** Deshabilita los botones y muestra spinner mientras se procesa el recorte. */
   busy?: boolean;
 };
 
-export function ImageZoomViewer({ visible, uri, onClose, onCrop, busy }: Props) {
+export function ImageZoomViewer({
+  visible,
+  uri,
+  onClose,
+  onCrop,
+  busy,
+  dests = ['main', 'gallery'],
+}: Props) {
   const { width, height } = useWindowDimensions();
 
   const scale = useSharedValue(1);
@@ -213,20 +225,27 @@ export function ImageZoomViewer({ visible, uri, onClose, onCrop, busy }: Props) 
                 >
                   <ThemedText style={styles.centerBtnText}>Centrar</ThemedText>
                 </Pressable>
-                <Pressable
-                  style={styles.cropBtn}
-                  onPress={() => emitCrop('main')}
-                  disabled={busy}
-                >
-                  <ThemedText style={styles.cropBtnText}>Dejar como principal</ThemedText>
-                </Pressable>
-                <Pressable
-                  style={styles.cropBtnAlt}
-                  onPress={() => emitCrop('gallery')}
-                  disabled={busy}
-                >
-                  <ThemedText style={styles.cropBtnText}>Guardar en galería</ThemedText>
-                </Pressable>
+                {dests.includes('main') && (
+                  <Pressable
+                    style={styles.cropBtn}
+                    onPress={() => emitCrop('main')}
+                    disabled={busy}
+                  >
+                    {/* Sin galería no hay con qué contrastar: el rótulo largo sobra. */}
+                    <ThemedText style={styles.cropBtnText}>
+                      {dests.length === 1 ? 'Usar este encuadre' : 'Dejar como principal'}
+                    </ThemedText>
+                  </Pressable>
+                )}
+                {dests.includes('gallery') && (
+                  <Pressable
+                    style={styles.cropBtnAlt}
+                    onPress={() => emitCrop('gallery')}
+                    disabled={busy}
+                  >
+                    <ThemedText style={styles.cropBtnText}>Guardar en galería</ThemedText>
+                  </Pressable>
+                )}
               </>
             )}
           </View>
