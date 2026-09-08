@@ -43,7 +43,20 @@ export type Category = {
   id: number;
   name: string;
   parent: number | null;
+  /**
+   * Rubro de la categoría ("Joya", "Piedra", …). Texto libre a propósito: el
+   * repo es template multi-rubro (ver AGENTS.md), un fork textil usa "Polera".
+   */
   ProductType: string;
+  /** Productos que cuelgan de la categoría; el backend impide borrarla si no es 0. */
+  product_count: number;
+};
+
+/** Campos editables de una categoría. */
+export type CategoryFields = {
+  name: string;
+  ProductType: string;
+  parent: number | null;
 };
 
 /** Imagen local elegida (cámara/galería) lista para multipart. */
@@ -81,6 +94,33 @@ export async function listProducts(): Promise<Product[]> {
 
 export async function getCategories(): Promise<Category[]> {
   return apiJson<Category[]>('/api/admin/categories/');
+}
+
+export async function createCategory(fields: CategoryFields): Promise<Category> {
+  return apiJson<Category>('/api/admin/categories/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields),
+  });
+}
+
+export async function updateCategory(
+  id: number,
+  fields: CategoryFields,
+): Promise<Category> {
+  return apiJson<Category>(`/api/admin/categories/${id}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields),
+  });
+}
+
+/**
+ * Borra una categoría vacía. El backend responde 409 si tiene productos o
+ * subcategorías (el FK es CASCADE: sin ese guard, un tap se lleva el catálogo).
+ */
+export async function deleteCategory(id: number): Promise<void> {
+  await apiJson<null>(`/api/admin/categories/${id}/`, { method: 'DELETE' });
 }
 
 /** Serializa los campos a strings para un form multipart (todo va como texto). */

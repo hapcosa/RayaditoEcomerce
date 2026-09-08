@@ -21,22 +21,69 @@ from .models import GalleryProduct, Product
 
 
 class AdminCategorySerializer(serializers.ModelSerializer):
+    # Cuántos productos cuelgan de la categoría: la app lo muestra y lo usa para
+    # avisar antes de intentar borrar.
+    product_count = serializers.IntegerField(source='product_set.count', read_only=True)
+
     class Meta:
         model = Category
-        fields = ['id', 'name', 'parent', 'ProductType']
+        fields = ['id', 'name', 'parent', 'ProductType', 'product_count']
+
+    def validate_ProductType(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError('Indicá el rubro (ej. Joya o Piedra).')
+        return value
+
+    def validate_parent(self, value):
+        # Un ciclo dejaría el árbol de categorías irrecorrible (ver category/views).
+        if value is None:
+            return value
+        node = value
+        seen = set()
+        while node is not None:
+            if self.instance is not None and node.pk == self.instance.pk:
+                raise serializers.ValidationError(
+                    'Una categoría no puede colgar de sí misma ni de una hija suya.'
+                )
+            if node.pk in seen:
+                break
+            seen.add(node.pk)
+            node = node.parent
+        return value
 
 
-class AdminCategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    """Listado plano de categorías para el picker de la app admin.
+class AdminCategoryViewSet(viewsets.ModelViewSet):
+    """CRUD de categorías para la app admin.
 
-    Read-only a propósito: crear/editar categorías no es parte del DoD de la
-    Fase 5. Devuelve todas las categorías (sin filtrar por Joya/Piedra) para que
-    el formulario de alta de producto pueda elegir cualquiera.
+    Devuelve todas las categorías (sin filtrar por Joya/Piedra) para que el
+    formulario de alta de producto pueda elegir cualquiera. `ProductType` es
+    texto libre a propósito: el repo es template multi-rubro (ver AGENTS.md), un
+    fork textil crea "Polera" sin tocar el modelo.
     """
     queryset = Category.objects.order_by('ProductType', 'name')
     serializer_class = AdminCategorySerializer
     permission_classes = (IsAdminUser,)
     pagination_class = None
+
+    def destroy(self, request, *args, **kwargs):
+        """Borra solo si la categoría está vacía.
+
+        `Product.category` y `Category.parent` son CASCADE: borrar de un tap
+        desde el teléfono se llevaría productos y subcategorías por delante.
+        """
+        category = self.get_object()
+        products = category.product_set.count()
+        children = category.children.count()
+        if products or children:
+            return Response(
+                {'detail': (
+                    f'No se puede borrar: tiene {products} producto(s) y '
+                    f'{children} subcategoría(s). Movelos o borralos primero.'
+                )},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return super().destroy(request, *args, **kwargs)
 
 
 class AdminGalleryImageSerializer(serializers.ModelSerializer):

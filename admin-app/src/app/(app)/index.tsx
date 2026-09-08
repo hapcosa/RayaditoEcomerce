@@ -33,6 +33,14 @@ export default function DashboardScreen() {
             </ThemedText>
           </Pressable>
         </Link>
+        <Link href="/(app)/categories" asChild>
+          <Pressable style={StyleSheet.flatten([styles.card, { backgroundColor: theme.backgroundElement }])}>
+            <ThemedText type="default">Categorías</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Sin categorías no se puede cargar un producto
+            </ThemedText>
+          </Pressable>
+        </Link>
         <Link href="/(app)/portada" asChild>
           <Pressable style={StyleSheet.flatten([styles.card, { backgroundColor: theme.backgroundElement }])}>
             <ThemedText type="default">Portada</ThemedText>

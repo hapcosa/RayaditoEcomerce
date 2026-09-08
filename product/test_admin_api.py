@@ -203,3 +203,131 @@ class AdminProductApiTests(APITestCase):
         self.client.force_authenticate(self.customer)
         res = self.client.get('/api/admin/categories/')
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class AdminCategoryCrudTests(APITestCase):
+    """CRUD de categorías desde la app admin (sin categorías no se puede crear
+    un producto: el picker queda vacío)."""
+
+    def setUp(self):
+        self.staff = User.objects.create_user(
+            email='dueno2@rayadito.cl', password='Testpass123',
+            first_name='Due', last_name='Ño', is_staff=True,
+        )
+        self.customer = User.objects.create_user(
+            email='cliente2@rayadito.cl', password='Testpass123',
+            first_name='Cli', last_name='Ente',
+        )
+
+    def test_staff_creates_category(self):
+        self.client.force_authenticate(self.staff)
+        res = self.client.post(
+            '/api/admin/categories/',
+            {'name': 'Aros', 'ProductType': 'Joya', 'parent': None}, format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res.data['name'], 'Aros')
+        self.assertEqual(res.data['product_count'], 0)
+        self.assertTrue(Category.objects.filter(name='Aros').exists())
+
+    def test_create_accepts_any_product_type(self):
+        """El repo es template multi-rubro: 'Textil' tiene que entrar igual."""
+        self.client.force_authenticate(self.staff)
+        res = self.client.post(
+            '/api/admin/categories/',
+            {'name': 'Poleras', 'ProductType': 'Textil'}, format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+    def test_create_rejects_blank_product_type(self):
+        self.client.force_authenticate(self.staff)
+        res = self.client.post(
+            '/api/admin/categories/',
+            {'name': 'Sin rubro', 'ProductType': '  '}, format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_rejects_duplicate_name(self):
+        Category.objects.create(name='Aros', ProductType='Joya')
+        self.client.force_authenticate(self.staff)
+        res = self.client.post(
+            '/api/admin/categories/',
+            {'name': 'Aros', 'ProductType': 'Joya'}, format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_requires_staff(self):
+        self.client.force_authenticate(self.customer)
+        res = self.client.post(
+            '/api/admin/categories/',
+            {'name': 'Aros', 'ProductType': 'Joya'}, format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_renames_category(self):
+        cat = Category.objects.create(name='Aros', ProductType='Joya')
+        self.client.force_authenticate(self.staff)
+        res = self.client.patch(
+            f'/api/admin/categories/{cat.id}/', {'name': 'Aros de plata'},
+            format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        cat.refresh_from_db()
+        self.assertEqual(cat.name, 'Aros de plata')
+
+    def test_category_cannot_be_its_own_parent(self):
+        cat = Category.objects.create(name='Aros', ProductType='Joya')
+        self.client.force_authenticate(self.staff)
+        res = self.client.patch(
+            f'/api/admin/categories/{cat.id}/', {'parent': cat.id}, format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_category_cannot_hang_from_its_own_child(self):
+        parent = Category.objects.create(name='Aros', ProductType='Joya')
+        child = Category.objects.create(
+            name='Aros de plata', ProductType='Joya', parent=parent,
+        )
+        self.client.force_authenticate(self.staff)
+        res = self.client.patch(
+            f'/api/admin/categories/{parent.id}/', {'parent': child.id}, format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_staff_deletes_empty_category(self):
+        cat = Category.objects.create(name='Aros', ProductType='Joya')
+        self.client.force_authenticate(self.staff)
+        res = self.client.delete(f'/api/admin/categories/{cat.id}/')
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Category.objects.filter(pk=cat.pk).exists())
+
+    def test_delete_blocked_when_category_has_products(self):
+        """El FK es CASCADE: sin este guard, un tap borra el catálogo."""
+        cat = Category.objects.create(name='Aros', ProductType='Joya')
+        Product.objects.create(
+            name='Aro ágata', description='x', price=10000, compare_price=0,
+            category=cat, product_type=Product.ProductType.JOYA,
+        )
+        self.client.force_authenticate(self.staff)
+        res = self.client.delete(f'/api/admin/categories/{cat.id}/')
+        self.assertEqual(res.status_code, status.HTTP_409_CONFLICT)
+        self.assertTrue(Category.objects.filter(pk=cat.pk).exists())
+        self.assertTrue(Product.objects.filter(category=cat).exists())
+
+    def test_delete_blocked_when_category_has_children(self):
+        parent = Category.objects.create(name='Aros', ProductType='Joya')
+        Category.objects.create(name='Aros de plata', ProductType='Joya', parent=parent)
+        self.client.force_authenticate(self.staff)
+        res = self.client.delete(f'/api/admin/categories/{parent.id}/')
+        self.assertEqual(res.status_code, status.HTTP_409_CONFLICT)
+
+    def test_list_reports_product_count(self):
+        cat = Category.objects.create(name='Aros', ProductType='Joya')
+        Product.objects.create(
+            name='Aro ágata', description='x', price=10000, compare_price=0,
+            category=cat, product_type=Product.ProductType.JOYA,
+        )
+        self.client.force_authenticate(self.staff)
+        res = self.client.get('/api/admin/categories/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data[0]['product_count'], 1)
