@@ -6,6 +6,7 @@
  * Los precios se manejan como string en el form (input numérico) y cada pantalla
  * los convierte a entero CLP al enviar (ver AGENTS.md: dinero entero CLP).
  */
+import { Link } from 'expo-router';
 import {
   ActivityIndicator,
   Pressable,
@@ -159,9 +160,13 @@ export function ProductFormFields({ value, onChange, categories, loadingCats }: 
         {loadingCats ? (
           <ActivityIndicator color={theme.accent} />
         ) : categories.length === 0 ? (
-          <ThemedText type="small" themeColor="textSecondary">
-            No hay categorías cargadas en el backend.
-          </ThemedText>
+          <Link href="/(app)/categories" asChild>
+            <Pressable hitSlop={8}>
+              <ThemedText type="linkPrimary">
+                No hay categorías todavía. Tocá acá para crear la primera.
+              </ThemedText>
+            </Pressable>
+          </Link>
         ) : (
           <View style={styles.chips}>
             {categories.map((c) => {
