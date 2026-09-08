@@ -9,12 +9,13 @@ export const alt = 'Piedras Rayadito — pieza artesanal';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
-// Paleta artesanal (piedra / tierra / ágata), espejo de globals.css.
-const PIEDRA_50 = 'rgb(250, 249, 246)';
-const PIEDRA_500 = 'rgb(148, 138, 122)';
-const PIEDRA_900 = 'rgb(38, 35, 31)';
-const TIERRA_600 = 'rgb(148, 74, 45)';
-const AGATA_500 = 'rgb(203, 135, 47)';
+// Espejo literal de globals.css: Satori no resuelve variables CSS, asi que
+// estos valores hay que actualizarlos a mano si cambia la paleta.
+const PIEDRA_50 = 'rgb(250, 250, 249)';
+const PIEDRA_500 = 'rgb(115, 115, 112)';
+const PIEDRA_900 = 'rgb(29, 29, 27)';
+const TIERRA_600 = 'rgb(168, 72, 14)';
+const AGATA_500 = 'rgb(168, 137, 104)';
 
 /**
  * Carga la variante serif (Cormorant Garamond) solo para el texto pedido.
@@ -77,7 +78,7 @@ export default async function Image({ params }: Props) {
           padding: 64,
           backgroundColor: PIEDRA_50,
           backgroundImage:
-            'radial-gradient(circle at 85% 15%, rgba(203,135,47,0.18), transparent 45%)',
+            'radial-gradient(circle at 85% 15%, rgba(218,95,21,0.16), transparent 45%)',
           fontFamily: serif ? 'Cormorant' : 'serif',
         }}
       >

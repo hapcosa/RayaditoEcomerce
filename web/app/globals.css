@@ -5,43 +5,52 @@
 /**
  * Tokens de color como triples RGB (para soportar `<alpha-value>` de Tailwind).
  * Re-tematizar un fork = sobrescribir estas variables. Ver tailwind.config.ts.
+ *
+ * La paleta sale del logo de la marca, muestreada del PNG: negro #1D1D1B y
+ * naranjo #DA5F15. De ahi los tres ejes: grises neutros, naranjo y cafes
+ * claros. El fondo del sitio se mantiene claro.
  */
 :root {
-  /* Piedra — neutros cálidos */
-  --color-piedra-50: 250 249 246;
-  --color-piedra-100: 244 241 236;
-  --color-piedra-200: 231 226 217;
-  --color-piedra-300: 213 205 192;
-  --color-piedra-400: 181 171 155;
-  --color-piedra-500: 148 138 122;
-  --color-piedra-600: 118 109 96;
-  --color-piedra-700: 92 85 75;
-  --color-piedra-800: 63 58 51;
-  --color-piedra-900: 38 35 31;
+  /* Piedra — grises neutros, del casi-blanco al negro del logo */
+  --color-piedra-50: 250 250 249;
+  --color-piedra-100: 245 245 243;
+  --color-piedra-200: 232 232 229;
+  --color-piedra-300: 201 201 197;
+  /* 400 y 500 estan oscurecidos a proposito: con los valores de antes el texto
+     secundario quedaba en 2.2:1 y 3.3:1 sobre el fondo, debajo del minimo AA. */
+  --color-piedra-400: 142 142 137;
+  --color-piedra-500: 115 115 112;
+  --color-piedra-600: 109 109 104;
+  --color-piedra-700: 84 84 81;
+  --color-piedra-800: 56 56 54;
+  --color-piedra-900: 29 29 27;
 
-  /* Tierra — terracota / arcilla (primario) */
-  --color-tierra-50: 250 243 238;
-  --color-tierra-100: 244 227 216;
-  --color-tierra-200: 232 198 176;
-  --color-tierra-300: 216 162 132;
-  --color-tierra-400: 196 122 88;
-  --color-tierra-500: 173 92 58;
-  --color-tierra-600: 148 74 45;
-  --color-tierra-700: 120 59 37;
-  --color-tierra-800: 96 48 32;
-  --color-tierra-900: 74 39 27;
+  /* Tierra — el naranjo del logo (primario: enlaces, botones, estado activo).
+     El 400 es el naranjo exacto del logo; sirve para bordes y acentos, pero
+     como texto o fondo de boton solo llega a 3.6:1, asi que los pasos de
+     accion son el 500 y el 600, que si cumplen AA. */
+  --color-tierra-50: 253 244 238;
+  --color-tierra-100: 251 229 214;
+  --color-tierra-200: 246 200 165;
+  --color-tierra-300: 238 158 104;
+  --color-tierra-400: 218 95 21;
+  --color-tierra-500: 196 85 15;
+  --color-tierra-600: 168 72 14;
+  --color-tierra-700: 138 60 13;
+  --color-tierra-800: 110 49 12;
+  --color-tierra-900: 86 40 11;
 
-  /* Ágata — ámbar / miel (acento) */
-  --color-agata-50: 253 248 237;
-  --color-agata-100: 250 238 210;
-  --color-agata-200: 244 219 160;
-  --color-agata-300: 236 194 110;
-  --color-agata-400: 224 165 72;
-  --color-agata-500: 203 135 47;
-  --color-agata-600: 173 108 35;
-  --color-agata-700: 138 83 30;
-  --color-agata-800: 112 67 28;
-  --color-agata-900: 92 55 26;
+  /* Ágata — cafés claros: superficies cálidas, bordes y detalles */
+  --color-agata-50: 250 246 241;
+  --color-agata-100: 242 234 224;
+  --color-agata-200: 229 214 196;
+  --color-agata-300: 212 190 163;
+  --color-agata-400: 191 163 130;
+  --color-agata-500: 168 137 104;
+  --color-agata-600: 141 113 84;
+  --color-agata-700: 114 91 68;
+  --color-agata-800: 90 72 54;
+  --color-agata-900: 68 55 42;
 
   /* Superficies semánticas */
   --surface: var(--color-piedra-50);

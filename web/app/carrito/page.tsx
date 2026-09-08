@@ -222,7 +222,7 @@ export default function CarritoPage() {
                     <label className="flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors hover:border-tierra-300"
                       style={{
                         borderColor: selectedShipping === opt.id ? 'rgb(173 92 58)' : undefined,
-                        background: selectedShipping === opt.id ? 'rgb(250 243 238)' : undefined,
+                        background: selectedShipping === opt.id ? 'rgb(var(--color-tierra-50))' : undefined,
                       }}>
                       <input
                         type="radio"

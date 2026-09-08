@@ -14,8 +14,8 @@ export function StarRating({ rating, max = 5, size = 'md' }: StarRatingProps) {
           <svg key={i} viewBox="0 0 20 20" className={sz} aria-hidden="true">
             <defs>
               <linearGradient id={`star-${i}-${rating}`}>
-                <stop offset={`${fill * 100}%`} stopColor="rgb(203 135 47)" />
-                <stop offset={`${fill * 100}%`} stopColor="rgb(213 205 192)" />
+                <stop offset={`${fill * 100}%`} stopColor="rgb(var(--color-tierra-400))" />
+                <stop offset={`${fill * 100}%`} stopColor="rgb(var(--color-piedra-300))" />
               </linearGradient>
             </defs>
             <path
