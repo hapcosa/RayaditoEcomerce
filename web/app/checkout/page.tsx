@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth';
 import { useCartStore } from '@/lib/store/cart';
 import { syncCart, fetchShippingOptions } from '@/lib/api';
-import { processAuthPayment, processGuestPayment } from '@/lib/checkout';
+import { processAuthPayment, processGuestPayment, pushCart } from '@/lib/checkout';
 import { createAddress, fetchAddresses, resumirDireccion } from '@/lib/addresses';
 import { formatCLP } from '@/lib/format';
 import { inputCls, Field } from '@/components/ui/AuthFormWrapper';
@@ -93,8 +93,12 @@ export default function CheckoutPage() {
       let preference, orderId;
 
       if (access) {
-        // Usuario autenticado: la orden apunta a una dirección de su libreta,
-        // así que la nueva se guarda ahí antes de pagar.
+        // El pago autenticado arma la orden con el carrito del backend, así que
+        // primero se sube el que el navegador tiene guardado.
+        await pushCart(access, items.map((i) => ({ product_id: i.product_id, count: i.count })));
+
+        // La orden apunta a una dirección de su libreta, así que la nueva se
+        // guarda ahí antes de pagar.
         const profileId = elegida !== ''
           ? elegida
           : (await createAddress(access, {
