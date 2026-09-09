@@ -38,17 +38,29 @@ import { Brand } from '@/constants/theme';
 
 import { ThemedText } from './themed-text';
 
-/** Cuánto se puede ampliar por sobre el zoom mínimo (el que tapa el marco). */
-const MAX_ZOOM_FACTOR = 6;
-const DOUBLE_TAP_FACTOR = 2.5;
+/**
+ * Niveles de zoom, como múltiplo del zoom mínimo (el que tapa el marco). El
+ * nivel elegido es además el techo del pinch: así el acercamiento es gradual y
+ * no salta de una a la ampliación máxima.
+ */
+const ZOOM_LEVELS = [
+  { key: 'chico', label: 'Zoom chico', factor: 1.6 },
+  { key: 'medio', label: 'Medio', factor: 3 },
+  { key: 'grande', label: 'Grande', factor: 6 },
+];
 
-/** Franjas reservadas arriba (botón cerrar) y abajo (controles). */
+/** Franjas reservadas arriba (botón cerrar) y abajo (controles: 3 filas + botones). */
 const TOP_SAFE = 104;
-const BOTTOM_SAFE = 246;
+const BOTTOM_SAFE = 300;
 const FRAME_PAD = 16;
 
-/** Destino del recorte: agregar a galería (no destructivo) o volverlo la foto principal. */
-export type CropDest = 'gallery' | 'main';
+/**
+ * Destino del recorte:
+ * - `replace`: pisa la foto que se está editando (misma posición, sin sumar otra).
+ * - `gallery`: la agrega a la galería como foto nueva, sin tocar la original.
+ * - `main`: la deja como foto principal del producto.
+ */
+export type CropDest = 'gallery' | 'main' | 'replace';
 
 /** `ratio` null = respetar la proporción de la foto tal como viene. */
 const ASPECTS: { key: string; label: string; ratio: number | null }[] = [
@@ -100,6 +112,8 @@ export function ImageZoomViewer({
   const frH = useSharedValue(0);
   const minScale = useSharedValue(1);
   const clampOn = useSharedValue(false);
+  // Techo del pinch: lo fija el nivel de zoom elegido (los worklets lo leen).
+  const maxFactor = useSharedValue(ZOOM_LEVELS[0].factor);
 
   // Espejo JS del transform: los worklets lo sincronizan (runOnJS) al terminar y
   // los botones lo leen sin tocar ningún `.value` en el hilo JS (evita el
@@ -109,8 +123,10 @@ export function ImageZoomViewer({
     tf.current = { scale: sc, tx: x, ty: y };
   }, []);
 
-  const [aspectKey, setAspectKey] = useState('orig');
+  // 3:4 por defecto: es la proporción con la que se publican las fotos.
+  const [aspectKey, setAspectKey] = useState('3:4');
   const [rot, setRot] = useState(0);
+  const [zoomKey, setZoomKey] = useState(ZOOM_LEVELS[0].key);
 
   // Tamaño natural de la imagen, para calcular el encuadre.
   const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
@@ -132,9 +148,11 @@ export function ImageZoomViewer({
 
   // Foto nueva ⇒ encuadre de cero.
   useEffect(() => {
-    setAspectKey('orig');
+    setAspectKey('3:4');
     setRot(0);
-  }, [uri]);
+    setZoomKey(ZOOM_LEVELS[0].key);
+    maxFactor.value = ZOOM_LEVELS[0].factor;
+  }, [uri, maxFactor]);
 
   /**
    * Rect de la imagen (ya rotada) en `contain` dentro del viewport, marco de
@@ -249,7 +267,7 @@ export function ImageZoomViewer({
   const pinch = Gesture.Pinch()
     .onUpdate((e) => {
       const lo = minScale.value;
-      const next = Math.max(lo, Math.min(savedScale.value * e.scale, lo * MAX_ZOOM_FACTOR));
+      const next = Math.max(lo, Math.min(savedScale.value * e.scale, lo * maxFactor.value));
       scale.value = next;
       tx.value = clampX(tx.value, next);
       ty.value = clampY(ty.value, next);
@@ -276,7 +294,7 @@ export function ImageZoomViewer({
     .numberOfTaps(2)
     .onEnd(() => {
       const lo = minScale.value;
-      const next = scale.value > lo * 1.01 ? lo : lo * DOUBLE_TAP_FACTOR;
+      const next = scale.value > lo * 1.01 ? lo : lo * maxFactor.value;
       scale.value = withTiming(next);
       savedScale.value = next;
       const nx = clampX(tx.value, next);
@@ -301,6 +319,27 @@ export function ImageZoomViewer({
   /** Vuelve al encuadre inicial (zoom mínimo, foto centrada en el marco). */
   function recenter() {
     const sc = layout ? layout.minScale : 1;
+    const x = layout ? layout.baseTx : 0;
+    const y = layout ? layout.baseTy : 0;
+    scale.value = withTiming(sc);
+    savedScale.value = sc;
+    tx.value = withTiming(x);
+    ty.value = withTiming(y);
+    savedTx.value = x;
+    savedTy.value = y;
+    tf.current = { scale: sc, tx: x, ty: y };
+  }
+
+  /**
+   * Salta al nivel de zoom elegido (centrado en el marco) y lo deja como techo
+   * del pinch. Recentrar es lo seguro: con la foto centrada en el marco, ampliar
+   * nunca descubre un borde.
+   */
+  function aplicarZoom(nivel: (typeof ZOOM_LEVELS)[number]) {
+    setZoomKey(nivel.key);
+    maxFactor.value = nivel.factor;
+    const lo = layout ? layout.minScale : 1;
+    const sc = lo * nivel.factor;
     const x = layout ? layout.baseTx : 0;
     const y = layout ? layout.baseTy : 0;
     scale.value = withTiming(sc);
@@ -428,6 +467,18 @@ export function ImageZoomViewer({
                   ))}
                 </View>
                 <View style={styles.toolRow}>
+                  {ZOOM_LEVELS.map((z) => (
+                    <Pressable
+                      key={z.key}
+                      style={[styles.chip, zoomKey === z.key && styles.chipOn]}
+                      onPress={() => aplicarZoom(z)}
+                      hitSlop={6}
+                    >
+                      <ThemedText style={styles.chipText}>{z.label}</ThemedText>
+                    </Pressable>
+                  ))}
+                </View>
+                <View style={styles.toolRow}>
                   <Pressable
                     style={styles.chip}
                     onPress={() => setRot((r) => (r + 90) % 360)}
@@ -440,9 +491,18 @@ export function ImageZoomViewer({
                     <ThemedText style={styles.chipText}>Centrar</ThemedText>
                   </Pressable>
                 </View>
-                {dests.includes('main') && (
+                {dests.includes('replace') && (
                   <Pressable
                     style={styles.cropBtn}
+                    onPress={() => emitCrop('replace')}
+                    disabled={busy}
+                  >
+                    <ThemedText style={styles.cropBtnText}>Guardar</ThemedText>
+                  </Pressable>
+                )}
+                {dests.includes('main') && (
+                  <Pressable
+                    style={dests.includes('replace') ? styles.cropBtnAlt : styles.cropBtn}
                     onPress={() => emitCrop('main')}
                     disabled={busy}
                   >
@@ -454,7 +514,7 @@ export function ImageZoomViewer({
                 )}
                 {dests.includes('gallery') && (
                   <Pressable
-                    style={styles.cropBtnAlt}
+                    style={styles.cropBtnGhost}
                     onPress={() => emitCrop('gallery')}
                     disabled={busy}
                   >
@@ -539,6 +599,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     borderRadius: 28,
     backgroundColor: Brand.agata500,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cropBtnGhost: {
+    alignSelf: 'stretch',
+    paddingVertical: 15,
+    paddingHorizontal: 28,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
   },

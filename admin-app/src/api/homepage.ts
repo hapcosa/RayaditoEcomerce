@@ -49,6 +49,22 @@ export async function updateHeroImage(
   });
 }
 
+/**
+ * Reemplaza la foto de una portada existente (recorte desde el visor): conserva
+ * id, posición y si está activa; solo cambia el archivo.
+ */
+export async function replaceHeroImage(
+  id: number,
+  photo: LocalImage,
+): Promise<HeroImage> {
+  return apiUpload<HeroImage>(
+    `/api/admin/hero-images/${id}/`,
+    photo.uri,
+    { fieldName: 'image', mimeType: photo.mimeType, parameters: {} },
+    'PATCH',
+  );
+}
+
 export async function deleteHeroImage(id: number): Promise<void> {
   await apiJson<null>(`/api/admin/hero-images/${id}/`, { method: 'DELETE' });
 }

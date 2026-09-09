@@ -22,6 +22,7 @@ import { apiUrl } from '@/api/config';
 import {
   addGalleryImages,
   deleteGalleryImage,
+  replaceGalleryImage,
   deleteProduct,
   getCategories,
   getProduct,
@@ -65,7 +66,9 @@ export default function EditProductScreen() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [addingImages, setAddingImages] = useState(false);
-  const [zoomUri, setZoomUri] = useState<string | null>(null);
+  // Qué foto se está viendo/recortando: `galleryId` marca las de la galería,
+  // que son las únicas que se pueden pisar con el recorte ("Guardar").
+  const [zoom, setZoom] = useState<{ uri: string; galleryId?: number } | null>(null);
   const [cropping, setCropping] = useState(false);
 
   const patch = (p: Partial<ProductFormValue>) =>
@@ -143,22 +146,25 @@ export default function EditProductScreen() {
     ]);
   }
 
-  function openZoom(uri: string) {
-    setZoomUri(uri);
+  function openZoom(uri: string, galleryId?: number) {
+    setZoom({ uri, galleryId });
   }
 
   function closeZoom() {
-    setZoomUri(null);
+    setZoom(null);
   }
 
   /**
    * Guarda el recorte encuadrado en el visor. Según el destino elegido:
+   * - `replace`: pisa la foto de la galería que se está editando (misma
+   *   posición, no se suma otra).
    * - `gallery`: lo sube como foto NUEVA de la galería, sin tocar la original.
    * - `main`: lo deja como foto principal (queda pendiente y se sube al tocar
    *   "Guardar cambios", igual que el reemplazo por cámara/galería).
    */
   async function onCrop(t: ViewerTransform, dest: CropDest) {
-    if (!zoomUri) return;
+    if (!zoom) return;
+    const { uri: zoomUri, galleryId } = zoom;
     setCropping(true);
     try {
       const cropped = await cropFromViewer(zoomUri, t);
@@ -170,6 +176,11 @@ export default function EditProductScreen() {
         setNewPhoto(cropped);
         closeZoom();
         Alert.alert('Listo', 'El recorte quedó como foto principal. Tocá "Guardar cambios" para aplicarlo.');
+      } else if (dest === 'replace' && galleryId != null) {
+        const actualizada = await replaceGalleryImage(productId, galleryId, cropped);
+        setGallery((prev) => prev.map((g) => (g.id === galleryId ? actualizada : g)));
+        closeZoom();
+        Alert.alert('Foto reemplazada', 'El recorte quedó en lugar de la foto original.');
       } else {
         const { gallery: created } = await addGalleryImages(productId, [cropped]);
         setGallery((prev) => [...prev, ...created]);
@@ -313,7 +324,7 @@ export default function EditProductScreen() {
               return (
                 <View key={img.id} style={styles.galleryItem}>
                   <Pressable
-                    onPress={() => uri && openZoom(uri)}
+                    onPress={() => uri && openZoom(uri, img.id)}
                     style={styles.galleryImg}
                   >
                     {uri ? (
@@ -383,10 +394,13 @@ export default function EditProductScreen() {
       </ScrollView>
 
       <ImageZoomViewer
-        visible={zoomUri != null}
-        uri={zoomUri}
+        visible={zoom != null}
+        uri={zoom?.uri ?? null}
         onClose={closeZoom}
         onCrop={onCrop}
+        // La principal no se puede "pisar": ese es justamente el botón
+        // "Dejar como principal".
+        dests={zoom?.galleryId != null ? ['replace', 'main', 'gallery'] : ['main', 'gallery']}
         busy={cropping}
       />
     </KeyboardAvoidingView>
