@@ -159,15 +159,35 @@ class AdminProductViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED,
         )
 
-    @action(detail=True, methods=['delete'], url_path=r'images/(?P<image_id>\d+)')
-    def delete_image(self, request, pk=None, image_id=None):
-        """Borra una imagen de la galería del producto."""
+    @action(detail=True, methods=['put', 'patch', 'delete'],
+            url_path=r'images/(?P<image_id>\d+)')
+    def gallery_image(self, request, pk=None, image_id=None):
+        """Reemplaza (PUT/PATCH multipart, campo `images`) o borra una imagen.
+
+        El reemplazo existe para el recorte desde la app: al editar una foto de
+        la galería, el recorte queda EN SU LUGAR, sin sumar una foto nueva ni
+        mover la posición que ya tenía en la lista.
+        """
         product = self.get_object()
-        deleted, _ = GalleryProduct.objects.filter(
-            product=product, id=image_id).delete()
-        if not deleted:
+        image = GalleryProduct.objects.filter(product=product, id=image_id).first()
+        if image is None:
             return Response(
                 {'error': 'Imagen no encontrada en este producto.'},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        return Response(status=status.HTTP_204_NO_CONTENT)
+
+        if request.method == 'DELETE':
+            image.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        photo = request.FILES.get('images') or request.FILES.get('photos')
+        if photo is None:
+            return Response(
+                {'error': 'Adjunta la imagen nueva en el campo `images`.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        image.photos = photo
+        image.save()
+        return Response(
+            AdminGalleryImageSerializer(image).data, status=status.HTTP_200_OK,
+        )

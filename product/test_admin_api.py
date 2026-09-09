@@ -188,6 +188,57 @@ class AdminProductApiTests(APITestCase):
         )
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_staff_replaces_gallery_image_in_place(self):
+        """El recorte de la app pisa la foto editada, sin sumar otra."""
+        self.client.force_authenticate(self.staff)
+        created = self.client.post('/api/admin/products/', self._create_payload(),
+                                   format='multipart')
+        pid = created.data['id']
+        subidas = self.client.post(
+            f'/api/admin/products/{pid}/images/',
+            {'images': [_image_file('a.png')]}, format='multipart',
+        )
+        image_id = subidas.data['gallery'][0]['id']
+        antes = GalleryProduct.objects.get(id=image_id).photos.name
+
+        res = self.client.put(
+            f'/api/admin/products/{pid}/images/{image_id}/',
+            {'images': _image_file('recorte.png')}, format='multipart',
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+        self.assertEqual(GalleryProduct.objects.filter(product_id=pid).count(), 1)
+        self.assertNotEqual(GalleryProduct.objects.get(id=image_id).photos.name, antes)
+
+    def test_replace_gallery_image_without_file_is_400(self):
+        self.client.force_authenticate(self.staff)
+        created = self.client.post('/api/admin/products/', self._create_payload(),
+                                   format='multipart')
+        pid = created.data['id']
+        subidas = self.client.post(
+            f'/api/admin/products/{pid}/images/',
+            {'images': [_image_file('a.png')]}, format='multipart',
+        )
+        image_id = subidas.data['gallery'][0]['id']
+        res = self.client.put(f'/api/admin/products/{pid}/images/{image_id}/',
+                              {}, format='multipart')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_replace_gallery_image_of_other_product_is_404(self):
+        """El id de imagen se valida contra ESE producto, no globalmente."""
+        self.client.force_authenticate(self.staff)
+        uno = self.client.post('/api/admin/products/', self._create_payload(),
+                               format='multipart').data['id']
+        otro = self.client.post('/api/admin/products/', self._create_payload(),
+                                format='multipart').data['id']
+        ajena = self.client.post(
+            f'/api/admin/products/{otro}/images/',
+            {'images': [_image_file('a.png')]}, format='multipart',
+        ).data['gallery'][0]['id']
+
+        res = self.client.put(f'/api/admin/products/{uno}/images/{ajena}/',
+                              {'images': _image_file('b.png')}, format='multipart')
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
     # --- categorías (picker de la app) ---
     def test_staff_lists_all_categories_flat(self):
         Category.objects.create(name='Colgantes', ProductType='Joya')

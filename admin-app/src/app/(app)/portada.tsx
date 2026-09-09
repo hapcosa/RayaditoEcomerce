@@ -24,12 +24,15 @@ import {
   createHeroImage,
   deleteHeroImage,
   listHeroImages,
+  replaceHeroImage,
   updateHeroImage,
   MAX_FOTOS_ACTIVAS,
   type HeroImage,
 } from '@/api/homepage';
+import { ImageZoomViewer, type CropDest } from '@/components/image-zoom-viewer';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
+import { cropFromViewer, type ViewerTransform } from '@/utils/crop-image';
 import { pickFromLibrary, takePhoto } from '@/utils/pick-image';
 
 function photoUrl(photo: string | null): string | null {
@@ -52,6 +55,9 @@ export default function PortadaScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Foto que se está encuadrando en el visor (recorte que pisa la original).
+  const [zoom, setZoom] = useState<{ uri: string; id: number } | null>(null);
+  const [cropping, setCropping] = useState(false);
 
   const activas = fotos.filter((f) => f.is_active);
   const hayCupo = activas.length < MAX_FOTOS_ACTIVAS;
@@ -151,6 +157,32 @@ export default function PortadaScreen() {
     [ejecutar],
   );
 
+  /** Guarda el recorte encima de la foto de portada que se está editando. */
+  const onCrop = useCallback(
+    async (t: ViewerTransform, _dest: CropDest) => {
+      if (!zoom) return;
+      setCropping(true);
+      try {
+        const cortada = await cropFromViewer(zoom.uri, t);
+        if (!cortada) {
+          Alert.alert('Recorte muy chico', 'Ajustá el encuadre y probá de nuevo.');
+          return;
+        }
+        await replaceHeroImage(zoom.id, cortada);
+        setZoom(null);
+        await load();
+      } catch (e) {
+        Alert.alert(
+          'No se pudo recortar',
+          e instanceof Error ? e.message : 'Error desconocido.',
+        );
+      } finally {
+        setCropping(false);
+      }
+    },
+    [zoom, load],
+  );
+
   const inactivas = fotos.filter((f) => !f.is_active);
 
   return (
@@ -196,6 +228,7 @@ export default function PortadaScreen() {
               onBajar={i < activas.length - 1 ? () => mover(i, 1) : undefined}
               onAlternar={() => alternarActiva(foto)}
               onBorrar={() => borrar(foto)}
+              onEditar={(uri) => setZoom({ uri, id: foto.id })}
             />
           ))}
 
@@ -232,12 +265,24 @@ export default function PortadaScreen() {
                   disabled={saving || !hayCupo}
                   onAlternar={() => alternarActiva(foto)}
                   onBorrar={() => borrar(foto)}
+                  onEditar={(uri) => setZoom({ uri, id: foto.id })}
                 />
               ))}
             </View>
           )}
         </ScrollView>
       )}
+
+      <ImageZoomViewer
+        visible={zoom != null}
+        uri={zoom?.uri ?? null}
+        onClose={() => setZoom(null)}
+        onCrop={onCrop}
+        // La portada no tiene galería ni foto principal: el recorte solo pisa
+        // la foto que se está editando.
+        dests={['replace']}
+        busy={cropping}
+      />
     </SafeAreaView>
   );
 }
@@ -249,6 +294,7 @@ function FotoRow({
   onBajar,
   onAlternar,
   onBorrar,
+  onEditar,
 }: {
   foto: HeroImage;
   disabled: boolean;
@@ -256,6 +302,7 @@ function FotoRow({
   onBajar?: () => void;
   onAlternar: () => void;
   onBorrar: () => void;
+  onEditar: (uri: string) => void;
 }) {
   const theme = useTheme();
   const uri = photoUrl(foto.image);
@@ -263,7 +310,9 @@ function FotoRow({
   return (
     <View style={[styles.row, { backgroundColor: theme.backgroundElement }]}>
       {uri ? (
-        <Image source={{ uri }} style={styles.thumb} contentFit="cover" />
+        <Pressable onPress={() => onEditar(uri)} disabled={disabled}>
+          <Image source={{ uri }} style={styles.thumb} contentFit="cover" />
+        </Pressable>
       ) : (
         <View style={[styles.thumb, { backgroundColor: theme.backgroundSelected }]} />
       )}
@@ -281,6 +330,11 @@ function FotoRow({
           {onBajar && (
             <Pressable onPress={onBajar} disabled={disabled} hitSlop={8}>
               <ThemedText type="linkPrimary">↓</ThemedText>
+            </Pressable>
+          )}
+          {uri && (
+            <Pressable onPress={() => onEditar(uri)} disabled={disabled} hitSlop={8}>
+              <ThemedText type="linkPrimary">Recortar</ThemedText>
             </Pressable>
           )}
           <Pressable onPress={onAlternar} disabled={disabled} hitSlop={8}>

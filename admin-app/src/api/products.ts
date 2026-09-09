@@ -194,6 +194,23 @@ export async function deleteGalleryImage(
 }
 
 /**
+ * Reemplaza EN SU LUGAR una imagen de la galería (recorte desde el visor): la
+ * foto editada conserva su id y su posición en la lista, no se suma otra.
+ */
+export async function replaceGalleryImage(
+  productId: number,
+  imageId: number,
+  image: LocalImage,
+): Promise<GalleryImage> {
+  return apiUpload<GalleryImage>(
+    `/api/admin/products/${productId}/images/${imageId}/`,
+    image.uri,
+    { fieldName: 'images', mimeType: image.mimeType, parameters: {} },
+    'PUT',
+  );
+}
+
+/**
  * Sube imágenes adicionales a la galería del producto (campo `images`).
  * El uploader nativo envía un archivo por request, y el backend responde solo
  * con las imágenes creadas en ESA request; subimos secuencialmente y acumulamos
