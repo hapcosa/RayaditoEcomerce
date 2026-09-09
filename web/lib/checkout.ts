@@ -1,41 +1,10 @@
-import type { SavedProfile, CheckoutForm, PaymentPreference, OrderStatus } from '@/types/checkout';
+import type { CheckoutForm, PaymentPreference, OrderStatus } from '@/types/checkout';
 
 const API =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000/api';
 
 function authHeaders(access: string) {
   return { 'Content-Type': 'application/json', Authorization: `JWT ${access}` };
-}
-
-// ---------- Perfil de usuario -----------------------------------------------
-
-export async function fetchProfile(access: string): Promise<SavedProfile | null> {
-  const res = await fetch(`${API}/profile/user`, {
-    headers: authHeaders(access),
-    cache: 'no-store',
-  });
-  if (!res.ok) return null;
-  const data = await res.json() as { profile?: SavedProfile };
-  return data.profile ?? null;
-}
-
-export async function createProfile(
-  access: string,
-  data: Omit<SavedProfile, 'id'>,
-): Promise<SavedProfile> {
-  const res = await fetch(`${API}/profile/create`, {
-    method: 'PUT',
-    headers: authHeaders(access),
-    body: JSON.stringify(data),
-    cache: 'no-store',
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({})) as Record<string, unknown>;
-    const msg = (Object.values(err).flat() as string[]).join(' ') || 'Error al guardar dirección';
-    throw new Error(msg);
-  }
-  const result = await res.json() as { profile?: SavedProfile };
-  return result.profile!;
 }
 
 // ---------- Pago ------------------------------------------------------------

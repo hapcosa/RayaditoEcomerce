@@ -1,3 +1,6 @@
+from io import StringIO
+
+from django.core.management import call_command
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -99,3 +102,62 @@ class ShippingQuoteTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('non_field_errors', response.data)
+
+
+class ShippingCatalogTests(APITestCase):
+    def test_sin_opciones_devuelve_lista_vacia(self):
+        """Catálogo vacío no es un error: el checkout tiene que poder distinguir
+        "no hay opciones cargadas" de "la ruta no responde"."""
+        response = self.client.get('/api/shipp/get-shipping-options')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['shipping_options'], [])
+
+    def test_lista_las_opciones_ordenadas_por_precio(self):
+        caro = Shipping.objects.create(
+            name='Envio expreso', time_to_delivery='24 h',
+            description='Despacho al dia siguiente.', price=7900,
+        )
+        gratis = Shipping.objects.create(
+            name='Retiro en taller', time_to_delivery='Mismo dia',
+            description='Retiro coordinado.', price=0,
+        )
+
+        response = self.client.get('/api/shipp/get-shipping-options')
+
+        self.assertEqual(
+            [option['id'] for option in response.data['shipping_options']],
+            [gratis.id, caro.id],
+        )
+
+    def test_la_opcion_puede_no_tener_foto(self):
+        """"Retiro en taller" no tiene logo; el campo dejó de ser obligatorio."""
+        opcion = Shipping.objects.create(
+            name='Retiro en taller', time_to_delivery='Mismo dia',
+            description='Retiro coordinado.', price=0,
+        )
+
+        self.assertFalse(opcion.photo)
+
+
+class SeedShippingCommandTests(APITestCase):
+    def test_seed_crea_las_opciones_base_y_es_idempotente(self):
+        call_command('seed_shipping', stdout=StringIO())
+        call_command('seed_shipping', stdout=StringIO())
+
+        nombres = set(Shipping.objects.values_list('name', flat=True))
+        self.assertIn('Starken - Por pagar', nombres)
+        self.assertIn('Retiro en taller', nombres)
+        self.assertEqual(Shipping.objects.count(), 2)
+
+    def test_seed_no_pisa_lo_que_el_dueno_edito(self):
+        Shipping.objects.create(
+            name='Starken - Por pagar', time_to_delivery='1 dia',
+            description='Editado a mano.', price=3500,
+        )
+
+        call_command('seed_shipping', stdout=StringIO())
+
+        editada = Shipping.objects.get(name='Starken - Por pagar')
+        self.assertEqual(editada.price, 3500)
+        self.assertEqual(editada.description, 'Editado a mano.')

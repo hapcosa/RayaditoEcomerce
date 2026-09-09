@@ -1,5 +1,13 @@
-export interface SavedProfile {
+/**
+ * Una dirección de la libreta del usuario (`/api/profile/addresses/`).
+ *
+ * `country_region` guarda la **región** chilena, no un país: el nombre viene del
+ * modelo original del backend y lo usan órdenes ya emitidas.
+ */
+export interface Address {
   id: number;
+  /** Alias para reconocerla en la lista ("Casa", "Taller"). Puede venir vacío. */
+  label: string;
   first_name: string;
   last_name: string;
   address_line_1: string;
@@ -7,7 +15,11 @@ export interface SavedProfile {
   zipcode: string;
   phone: string;
   country_region: string;
+  is_default: boolean;
 }
+
+/** Campos editables: la libreta se escribe sin `id` ni banderas derivadas. */
+export type AddressFields = Omit<Address, 'id'>;
 
 /** Campos del formulario para checkout de invitado (y creación de perfil). */
 export interface CheckoutForm {
