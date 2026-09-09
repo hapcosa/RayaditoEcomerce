@@ -296,7 +296,7 @@ export default function CheckoutPage() {
                       <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-piedra-100">
                         {item.product.photo && (
                           <Image src={mediaUrl(item.product.photo)} alt={item.product.name}
-                            fill sizes="48px" className="object-cover" />
+                            fill sizes="48px" className="object-contain" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">

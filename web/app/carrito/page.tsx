@@ -128,7 +128,7 @@ export default function CarritoPage() {
                         alt={item.product.name}
                         fill
                         sizes="96px"
-                        className="object-cover"
+                        className="object-contain"
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center">
