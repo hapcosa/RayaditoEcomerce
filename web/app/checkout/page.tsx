@@ -138,7 +138,7 @@ export default function CheckoutPage() {
   }
 
   if (!mounted) {
-    return <div className="mx-auto max-w-6xl px-6 py-16 text-center text-piedra-500">Cargando…</div>;
+    return <div className="mx-auto max-w-contenido px-4 sm:px-6 lg:px-10 py-16 text-center text-piedra-500">Cargando…</div>;
   }
 
   if (items.length === 0) {
@@ -157,7 +157,7 @@ export default function CheckoutPage() {
   const total = subtotal + (selectedOption?.price ?? 0);
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="mx-auto max-w-contenido px-4 sm:px-6 lg:px-10 py-10">
       <h1 className="mb-8 font-serif text-3xl font-medium text-piedra-900">Checkout</h1>
 
       <form onSubmit={handleSubmit}>

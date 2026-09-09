@@ -92,7 +92,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="mx-auto max-w-contenido px-4 sm:px-6 lg:px-10 py-10">
       <JsonLd data={productJsonLd} />
       {/* Breadcrumb */}
       <nav className="mb-8 flex items-center gap-2 text-sm text-piedra-500" aria-label="Breadcrumb">
@@ -248,7 +248,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           <h2 className="font-serif text-2xl font-medium text-piedra-900">
             También te puede gustar
           </h2>
-          <ul className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {related.map((p) => (
               <li key={p.id}>
                 <ProductCard product={p} />

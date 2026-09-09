@@ -30,14 +30,14 @@ export default function WishlistPage() {
 
   if (!mounted || !access) {
     return (
-      <div className="mx-auto max-w-6xl px-6 py-16 text-center text-piedra-500">
+      <div className="mx-auto max-w-contenido px-4 sm:px-6 lg:px-10 py-16 text-center text-piedra-500">
         Cargando…
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-12">
+    <div className="mx-auto max-w-contenido px-4 sm:px-6 lg:px-10 py-12">
       <p className="font-manuscrita text-xl text-tierra-600">tus favoritos</p>
       <h1 className="mt-1 font-serif text-3xl font-medium text-piedra-900">
         Lista de deseos
@@ -55,7 +55,7 @@ export default function WishlistPage() {
           </Link>
         </div>
       ) : (
-        <ul className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {items.map((item) => {
             const p = item.product;
             const href = `/productos/${p.slug ?? p.id}`;

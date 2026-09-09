@@ -41,7 +41,7 @@ export function CatalogContent({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-12">
+    <div className="mx-auto max-w-contenido px-4 sm:px-6 lg:px-10 py-12">
       {/* Encabezado */}
       <div className="mb-10">
         <p className="font-manuscrita text-xl text-tierra-600">{subtitle}</p>
@@ -190,7 +190,7 @@ export function CatalogContent({
               <p className="mb-4 text-sm text-piedra-500">
                 {products.length} {products.length === 1 ? 'producto' : 'productos'}
               </p>
-              <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                 {products.map((product) => (
                   <li key={product.id}>
                     <ProductCard product={product} />
