@@ -71,7 +71,7 @@ export default function WishlistPage() {
                       alt={p.name}
                       fill
                       sizes="(max-width: 640px) 100vw, 33vw"
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      className="object-contain transition-transform duration-500 group-hover:scale-105"
                     />
                   ) : (
                     <span className="flex h-full items-center justify-center font-manuscrita text-4xl text-piedra-300">

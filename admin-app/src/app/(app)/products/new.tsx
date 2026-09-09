@@ -189,7 +189,7 @@ export default function NewProductScreen() {
         <View style={styles.photoBox}>
           {photo ? (
             <Pressable style={styles.photo} onPress={() => setZoom({ uri: photo.uri, target: 'main' })}>
-              <Image source={{ uri: photo.uri }} style={styles.photoImg} contentFit="cover" />
+              <Image source={{ uri: photo.uri }} style={styles.photoImg} contentFit="contain" />
             </Pressable>
           ) : (
             <View style={[styles.photo, styles.photoEmpty, { backgroundColor: theme.backgroundElement }]}>

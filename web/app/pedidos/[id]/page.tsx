@@ -113,7 +113,7 @@ export default function OrderDetailPage() {
                     alt={item.name}
                     fill
                     sizes="64px"
-                    className="object-cover"
+                    className="object-contain"
                   />
                 ) : (
                   <span className="flex h-full items-center justify-center font-manuscrita text-2xl text-piedra-300">

@@ -276,7 +276,7 @@ export default function EditProductScreen() {
         <View style={styles.photoBox}>
           {photoPreview ? (
             <Pressable style={styles.photo} onPress={() => openZoom(photoPreview)}>
-              <Image source={{ uri: photoPreview }} style={styles.photoImg} contentFit="cover" />
+              <Image source={{ uri: photoPreview }} style={styles.photoImg} contentFit="contain" />
             </Pressable>
           ) : (
             <View style={[styles.photo, styles.photoEmpty, { backgroundColor: theme.backgroundElement }]}>

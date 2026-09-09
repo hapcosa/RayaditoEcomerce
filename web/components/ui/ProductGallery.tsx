@@ -37,7 +37,9 @@ export function ProductGallery({
           alt={`${productName} — imagen ${active + 1}`}
           fill
           sizes="(max-width: 768px) 100vw, 50vw"
-          className="object-cover"
+          // `contain`, no `cover`: el marco es cuadrado y las fotos del taller
+          // son verticales; recortarlas se comía la pieza.
+          className="object-contain"
           priority={active === 0}
         />
       </div>
@@ -56,7 +58,7 @@ export function ProductGallery({
               ].join(' ')}
               aria-label={`Ver imagen ${i + 1}`}
             >
-              <Image src={mediaUrl(src)} alt="" fill sizes="64px" className="object-cover" />
+              <Image src={mediaUrl(src)} alt="" fill sizes="64px" className="object-contain" />
             </button>
           ))}
         </div>

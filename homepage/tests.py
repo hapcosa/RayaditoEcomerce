@@ -170,3 +170,23 @@ class HeroImageAdminAPITests(MediaTemporalMixin, TestCase):
 
         self.assertEqual(res.status_code, 204)
         self.assertFalse(HeroImage.objects.exists())
+
+
+@media_temporal
+class HeroImageMedidasTests(MediaTemporalMixin, TestCase):
+    """El sitio dibuja cada foto con su proporción: necesita las medidas."""
+
+    def test_la_api_publica_devuelve_ancho_y_alto(self):
+        HeroImage.objects.create(image=foto('medidas.jpg'))
+        res = APIClient().get(HERO_LIST)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.data[0]['width'], 8)
+        self.assertEqual(res.data[0]['height'], 8)
+
+    def test_una_foto_sin_archivo_no_voltea_la_portada(self):
+        hero = HeroImage.objects.create(image=foto('borrada.jpg'))
+        hero.image.storage.delete(hero.image.name)
+        res = APIClient().get(HERO_LIST)
+        self.assertEqual(res.status_code, 200)
+        self.assertIsNone(res.data[0]['width'])
+        self.assertIsNone(res.data[0]['height'])

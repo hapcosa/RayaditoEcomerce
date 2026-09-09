@@ -6,4 +6,7 @@ export interface HeroImage {
   alt_text: string;
   caption: string;
   position: number;
+  /** Medidas reales del archivo. `null` si el archivo no se pudo leer. */
+  width: number | null;
+  height: number | null;
 }
