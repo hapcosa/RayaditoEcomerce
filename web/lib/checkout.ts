@@ -7,6 +7,31 @@ function authHeaders(access: string) {
   return { 'Content-Type': 'application/json', Authorization: `JWT ${access}` };
 }
 
+// ---------- Carrito del servidor --------------------------------------------
+
+/**
+ * Deja el carrito del servidor igual al del navegador.
+ *
+ * La tienda guarda el carrito en `localStorage` para que funcione sin sesión,
+ * pero el pago autenticado arma la orden desde el carrito del backend. Sin este
+ * paso el servidor no ve nada y responde "No tienes productos en tu carrito".
+ */
+export async function pushCart(
+  access: string,
+  items: { product_id: number; count: number }[],
+): Promise<void> {
+  const res = await fetch(`${API}/cart/replace`, {
+    method: 'POST',
+    headers: authHeaders(access),
+    body: JSON.stringify({ cart_items: items }),
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? 'No se pudo preparar tu carrito');
+  }
+}
+
 // ---------- Pago ------------------------------------------------------------
 
 /** Checkout autenticado: usa el carrito + perfil del backend. */

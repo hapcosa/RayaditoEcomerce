@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions, status
+from django.db import transaction
 from django.db.models import Sum
 
 from .models import Carrito, CarritoItem
@@ -209,3 +210,49 @@ class SynchCartProduct(APIView):
                 {'error': 'Ha ocurrido un error mientras intentabamos sincronizar '
                           'su carrito, intente mas tarde'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ReplaceCartView(APIView):
+    """Deja el carrito del servidor igual al que el navegador tiene guardado.
+
+    La tienda mantiene el carrito en `localStorage` (funciona sin sesión), pero
+    el pago autenticado arma la orden desde `Carrito`. Sin este paso el
+    servidor no ve nada y el checkout responde "No tienes productos en tu
+    carrito" aunque el resumen muestre los productos.
+    """
+
+    def post(self, request, format=None):
+        entries = request.data.get('cart_items')
+        if not isinstance(entries, list):
+            return Response({'error': 'cart_items debe ser una lista'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Se valida todo antes de tocar el carrito: un id inválido no puede
+        # dejar al usuario con el carrito a medio escribir.
+        deseado = []
+        for entry in entries:
+            try:
+                product_id = int(entry['product_id'])
+                count = max(int(entry.get('count', 1)), 1)
+            except (KeyError, TypeError, ValueError):
+                return Response({'error': 'Item de carrito inválido'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            product = Product.objects.filter(id=product_id).first()
+            if product is None:
+                return Response({'error': 'producto no existe'},
+                                status=status.HTTP_404_NOT_FOUND)
+            if not _has_available_stock(product, count):
+                return Response({'error': f'Stock insuficiente para {product.name}'},
+                                status=status.HTTP_409_CONFLICT)
+            deseado.append((product, count))
+
+        cart, _ = Carrito.objects.get_or_create(user=request.user)
+        with transaction.atomic():
+            CarritoItem.objects.filter(carrito=cart).delete()
+            CarritoItem.objects.bulk_create([
+                CarritoItem(carrito=cart, product=product, count=count)
+                for product, count in deseado
+            ])
+            _sync_total_items(cart)
+
+        return Response({'cart': _serialize_cart(cart)}, status=status.HTTP_200_OK)

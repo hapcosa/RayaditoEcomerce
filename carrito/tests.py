@@ -161,3 +161,86 @@ class CartQuantityTests(APITestCase):
                              {'product_id': self.p1.id, 'count': 2}, format='json')
         self.assertEqual(ok.status_code, status.HTTP_200_OK)
         self.assertEqual(ok.data['cart'][0]['count'], 2)
+
+
+class ReplaceCartTests(APITestCase):
+    """`/api/cart/replace` deja el carrito del servidor igual al del navegador.
+
+    Sin este paso el pago autenticado no ve los productos que la tienda guarda
+    en `localStorage` y responde "No tienes productos en tu carrito".
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='cami@rayadito.cl', password='x',
+            first_name='Cami', last_name='Vera',
+        )
+        self.cart = Carrito.objects.get(user=self.user)
+        cat = Category.objects.create(name='Anillos', ProductType='Joya')
+        mat = Material.objects.create(name='Plata', cost=15000)
+        self.p1 = Joyas.objects.create(
+            name='Anillo', description='x', price=25000, compare_price=0,
+            category=cat, material=mat, weight=Decimal('1.00'), photo='',
+        )
+        self.p2 = Joyas.objects.create(
+            name='Aros', description='x', price=12000, compare_price=0,
+            category=cat, material=mat, weight=Decimal('1.00'), photo='',
+        )
+        self.client.force_authenticate(self.user)
+
+    def replace(self, items):
+        return self.client.post('/api/cart/replace', {'cart_items': items}, format='json')
+
+    def test_llena_un_carrito_vacio(self):
+        res = self.replace([{'product_id': self.p1.id, 'count': 2}])
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data['cart']), 1)
+        self.assertEqual(res.data['cart'][0]['count'], 2)
+        self.assertEqual(Carrito.objects.get(id=self.cart.id).total_items, 2)
+
+    def test_reemplaza_lo_que_habia(self):
+        CarritoItem.objects.create(carrito=self.cart, product=self.p1, count=5)
+
+        self.replace([{'product_id': self.p2.id, 'count': 1}])
+
+        quedaron = CarritoItem.objects.filter(carrito=self.cart)
+        self.assertEqual([item.product_id for item in quedaron], [self.p2.id])
+        self.assertEqual(Carrito.objects.get(id=self.cart.id).total_items, 1)
+
+    def test_lista_vacia_vacia_el_carrito(self):
+        CarritoItem.objects.create(carrito=self.cart, product=self.p1, count=3)
+
+        res = self.replace([])
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(CarritoItem.objects.filter(carrito=self.cart).count(), 0)
+        self.assertEqual(Carrito.objects.get(id=self.cart.id).total_items, 0)
+
+    def test_producto_inexistente_no_toca_el_carrito(self):
+        CarritoItem.objects.create(carrito=self.cart, product=self.p1, count=3)
+
+        res = self.replace([{'product_id': self.p2.id}, {'product_id': 99999}])
+
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+        quedaron = CarritoItem.objects.filter(carrito=self.cart)
+        self.assertEqual([item.product_id for item in quedaron], [self.p1.id])
+
+    def test_sin_stock_devuelve_409(self):
+        ProductVariant.objects.create(product=self.p1, stock=1, is_active=True)
+
+        res = self.replace([{'product_id': self.p1.id, 'count': 4}])
+
+        self.assertEqual(res.status_code, status.HTTP_409_CONFLICT)
+
+    def test_cantidad_invalida_es_400(self):
+        res = self.replace([{'product_id': self.p1.id, 'count': 'dos'}])
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_requiere_sesion(self):
+        self.client.force_authenticate(None)
+
+        res = self.replace([{'product_id': self.p1.id}])
+
+        self.assertIn(res.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
