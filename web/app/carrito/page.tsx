@@ -84,7 +84,7 @@ export default function CarritoPage() {
   // hidratacion no empuje el contenido.
   if (!storeReady || loading) {
     return (
-      <div className="mx-auto min-h-[60vh] max-w-6xl px-6 py-10" aria-busy="true">
+      <div className="mx-auto min-h-[60vh] max-w-contenido px-4 sm:px-6 lg:px-10 py-10" aria-busy="true">
         <h1 className="mb-8 font-serif text-3xl font-medium text-piedra-900">
           Carrito
         </h1>
@@ -102,7 +102,7 @@ export default function CarritoPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="mx-auto max-w-contenido px-4 sm:px-6 lg:px-10 py-10">
       <h1 className="mb-8 font-serif text-3xl font-medium text-piedra-900">
         Carrito
       </h1>

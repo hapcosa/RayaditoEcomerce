@@ -63,6 +63,9 @@ const config: Config = {
         manuscrita: ['var(--font-manuscrita)', 'cursive'],
       },
       maxWidth: {
+        // Ancho de contenido: la tienda usa casi toda la pantalla en monitores
+        // grandes; el texto largo se sigue acotando con `max-w-prosa`.
+        contenido: '90rem',
         prosa: '68ch',
       },
     },

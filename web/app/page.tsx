@@ -27,22 +27,19 @@ export default async function HomePage() {
           className="absolute inset-0"
           style={{
             backgroundImage: [
-              // Bandas suaves: son fondo, no deben competir con las fotos.
-              'repeating-linear-gradient(115deg,' +
-                ' rgb(var(--color-agata-200) / 0.28) 0px, rgb(var(--color-agata-200) / 0.28) 22px,' +
-                ' rgb(var(--color-agata-100) / 0.22) 22px, rgb(var(--color-agata-100) / 0.22) 40px,' +
-                ' rgb(var(--color-piedra-200) / 0.20) 40px, rgb(var(--color-piedra-200) / 0.20) 64px,' +
-                ' rgb(var(--color-piedra-50) / 0.60) 64px, rgb(var(--color-piedra-50) / 0.60) 92px)',
               // Luz cálida superior derecha, con el naranjo del logo.
-              'radial-gradient(120% 90% at 80% 0%, rgb(var(--color-tierra-400) / 0.16), transparent 60%)',
+              'radial-gradient(120% 90% at 80% 0%, rgb(var(--color-tierra-400) / 0.18), transparent 62%)',
+              // Contraluz frío abajo a la izquierda: da profundidad sin dibujar
+              // ningún patrón (las rayas diagonales se sacaron a pedido).
+              'radial-gradient(90% 70% at 0% 100%, rgb(var(--color-agata-200) / 0.30), transparent 65%)',
               // Base clara para legibilidad.
-              'linear-gradient(180deg, rgb(var(--color-piedra-50) / 0.20), rgb(var(--color-piedra-50) / 0.90))',
+              'linear-gradient(180deg, rgb(var(--color-piedra-100) / 0.70), rgb(var(--color-piedra-50) / 0.95))',
             ].join(','),
           }}
         />
 
         <div
-          className={`relative mx-auto max-w-6xl px-6 ${
+          className={`relative mx-auto max-w-contenido px-4 sm:px-6 lg:px-10 ${
             hero.length > 0 ? 'py-16 sm:py-20' : 'py-28 sm:py-36'
           }`}
         >
@@ -87,7 +84,7 @@ export default async function HomePage() {
           Van debajo de la portada, que es donde el dueño quiere que aparezca
           lo que va subiendo. */}
       {latest.length > 0 && (
-        <section className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
+        <section className="mx-auto max-w-contenido px-4 sm:px-6 lg:px-10 py-16 sm:py-20">
           <div className="mb-8 flex items-end justify-between gap-4">
             <div>
               <p className="font-manuscrita text-xl text-tierra-600">
@@ -105,7 +102,7 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
+          <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {latest.map((product) => (
               <li key={product.id}>
                 <ProductCard product={product} />

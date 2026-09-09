@@ -27,7 +27,7 @@ export function SiteFooter() {
 
   return (
     <footer className="mt-20 border-t border-piedra-700 bg-piedra-900 text-piedra-300">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 py-14 md:grid-cols-2 lg:grid-cols-4">
+      <div className="mx-auto grid max-w-contenido grid-cols-1 gap-10 px-4 sm:px-6 lg:px-10 py-14 md:grid-cols-2 lg:grid-cols-4">
         {/* Marca */}
         <div className="flex flex-col gap-3">
           <span className="font-manuscrita text-2xl text-tierra-300">Piedras Rayadito</span>
@@ -107,7 +107,7 @@ export function SiteFooter() {
       </div>
 
       <div className="border-t border-piedra-800">
-        <div className="mx-auto max-w-6xl px-6 py-6 text-xs text-piedra-500">
+        <div className="mx-auto max-w-contenido px-4 sm:px-6 lg:px-10 py-6 text-xs text-piedra-500">
           © {year} Piedras Rayadito · Chiloé, Chile. Todos los derechos reservados.
         </div>
       </div>

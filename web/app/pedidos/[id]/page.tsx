@@ -46,7 +46,7 @@ export default function OrderDetailPage() {
 
   if (!mounted || !access) {
     return (
-      <div className="mx-auto max-w-6xl px-6 py-16 text-center text-piedra-500">
+      <div className="mx-auto max-w-contenido px-4 sm:px-6 lg:px-10 py-16 text-center text-piedra-500">
         Cargando…
       </div>
     );
@@ -65,7 +65,7 @@ export default function OrderDetailPage() {
 
   if (!order) {
     return (
-      <div className="mx-auto max-w-6xl px-6 py-16 text-center text-piedra-500">
+      <div className="mx-auto max-w-contenido px-4 sm:px-6 lg:px-10 py-16 text-center text-piedra-500">
         Cargando pedido…
       </div>
     );

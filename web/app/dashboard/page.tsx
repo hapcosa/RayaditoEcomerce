@@ -26,7 +26,7 @@ export default function DashboardPage() {
 
   if (!mounted || !user) {
     return (
-      <div className="mx-auto max-w-6xl px-6 py-16 text-center text-piedra-500">
+      <div className="mx-auto max-w-contenido px-4 sm:px-6 lg:px-10 py-16 text-center text-piedra-500">
         Cargando…
       </div>
     );
