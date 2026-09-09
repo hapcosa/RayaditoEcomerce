@@ -8,23 +8,18 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth';
 import { useCartStore } from '@/lib/store/cart';
 import { syncCart, fetchShippingOptions } from '@/lib/api';
-import { fetchProfile, createProfile, processAuthPayment, processGuestPayment } from '@/lib/checkout';
+import { processAuthPayment, processGuestPayment } from '@/lib/checkout';
+import { createAddress, fetchAddresses, resumirDireccion } from '@/lib/addresses';
 import { formatCLP } from '@/lib/format';
 import { inputCls, Field } from '@/components/ui/AuthFormWrapper';
+import { AddressForm, DIRECCION_VACIA } from '@/components/account/AddressForm';
 import type { HydratedCartItem, ShippingOption } from '@/types/cart';
-import type { SavedProfile, CheckoutForm } from '@/types/checkout';
+import type { Address, AddressFields, CheckoutForm } from '@/types/checkout';
 
-const EMPTY_FORM: CheckoutForm = {
-  email: '',
-  first_name: '',
-  last_name: '',
-  address_line_1: '',
-  city: '',
-  state_province_region: '',
-  postal_zip_code: '',
-  telephone_number: '',
-  shipping_id: '',
-};
+/** Datos de contacto; la dirección vive aparte, en `direccion`. */
+type Contacto = Pick<CheckoutForm, 'email' | 'first_name' | 'last_name'>;
+
+const CONTACTO_VACIO: Contacto = { email: '', first_name: '', last_name: '' };
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -34,9 +29,11 @@ export default function CheckoutPage() {
   const [mounted, setMounted] = useState(false);
   const [hydrated, setHydrated] = useState<HydratedCartItem[]>([]);
   const [shipping, setShipping] = useState<ShippingOption[]>([]);
-  const [profile, setProfile] = useState<SavedProfile | null>(null);
-  const [showAddressForm, setShowAddressForm] = useState(false);
-  const [form, setForm] = useState<CheckoutForm>(EMPTY_FORM);
+  const [direcciones, setDirecciones] = useState<Address[]>([]);
+  /** Dirección guardada elegida; `''` = escribir una nueva. */
+  const [elegida, setElegida] = useState<number | ''>('');
+  const [direccion, setDireccion] = useState<AddressFields>(DIRECCION_VACIA);
+  const [form, setForm] = useState<Contacto>(CONTACTO_VACIO);
   const [selectedShipping, setSelectedShipping] = useState<number | ''>('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,40 +48,39 @@ export default function CheckoutPage() {
     Promise.all([
       syncCart(items),
       fetchShippingOptions(),
-      access ? fetchProfile(access) : Promise.resolve(null),
-    ]).then(([cart, opts, prof]) => {
+      access ? fetchAddresses(access) : Promise.resolve([] as Address[]),
+    ]).then(([cart, opts, guardadas]) => {
       setHydrated(cart);
       setShipping(opts);
       if (opts.length > 0) setSelectedShipping(opts[0].id);
-      if (prof) {
-        setProfile(prof);
-        setForm((f) => ({
-          ...f,
-          email: user?.email ?? '',
-          first_name: prof.first_name,
-          last_name: prof.last_name,
-          address_line_1: prof.address_line_1,
-          city: prof.city,
-          state_province_region: prof.country_region,
-          postal_zip_code: prof.zipcode,
-          telephone_number: prof.phone,
-        }));
+
+      if (user) {
+        setForm({ email: user.email, first_name: user.first_name, last_name: user.last_name });
+      }
+      setDirecciones(guardadas);
+      const principal = guardadas.find((d) => d.is_default) ?? guardadas[0];
+      if (principal) {
+        setElegida(principal.id);
       } else if (user) {
-        setForm((f) => ({
-          ...f,
-          email: user.email,
+        // Sin libreta se escribe una dirección nueva, con el nombre ya cargado.
+        setDireccion((d) => ({
+          ...d,
           first_name: user.first_name,
           last_name: user.last_name,
+          is_default: true,
         }));
-        setShowAddressForm(true);
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, access]);
 
-  function setField(k: keyof CheckoutForm) {
+  function setField(k: keyof Contacto) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }));
+  }
+
+  function setCampoDireccion(campo: keyof AddressFields, valor: string | boolean) {
+    setDireccion((d) => ({ ...d, [campo]: valor }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -97,29 +93,32 @@ export default function CheckoutPage() {
       let preference, orderId;
 
       if (access) {
-        // Usuario autenticado: necesita perfil guardado en el backend.
-        let profileId = profile?.id;
-        if (!profileId) {
-          const created = await createProfile(access, {
-            first_name: form.first_name,
-            last_name: form.last_name,
-            address_line_1: form.address_line_1,
-            city: form.city,
-            zipcode: form.postal_zip_code,
-            phone: form.telephone_number,
-            country_region: form.state_province_region,
-          });
-          profileId = created.id;
-        }
+        // Usuario autenticado: la orden apunta a una dirección de su libreta,
+        // así que la nueva se guarda ahí antes de pagar.
+        const profileId = elegida !== ''
+          ? elegida
+          : (await createAddress(access, {
+              ...direccion,
+              first_name: direccion.first_name || form.first_name,
+              last_name: direccion.last_name || form.last_name,
+            })).id;
         ({ preference, orderId } = await processAuthPayment(access, profileId, selectedShipping));
       } else {
-        // Invitado: envía items directamente.
+        // Invitado: envía items y datos directamente, sin guardar nada.
         const guestItems = hydrated.map((item) => ({
           product: { id: item.product.id },
           count: item.count,
         }));
         ({ preference, orderId } = await processGuestPayment(
-          { ...form, shipping_id: String(selectedShipping) },
+          {
+            ...form,
+            address_line_1: direccion.address_line_1,
+            city: direccion.city,
+            state_province_region: direccion.country_region,
+            postal_zip_code: direccion.zipcode,
+            telephone_number: direccion.phone,
+            shipping_id: String(selectedShipping),
+          },
           guestItems,
         ));
       }
@@ -152,6 +151,7 @@ export default function CheckoutPage() {
     );
   }
 
+  const direccionElegida = direcciones.find((d) => d.id === elegida);
   const subtotal = hydrated.reduce((s, i) => s + i.product.price * i.count, 0);
   const selectedOption = shipping.find((s) => s.id === selectedShipping);
   const total = subtotal + (selectedOption?.price ?? 0);
@@ -198,52 +198,77 @@ export default function CheckoutPage() {
 
             {/* Dirección */}
             <section>
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-4 flex items-center justify-between gap-4">
                 <h2 className="font-serif text-xl text-piedra-900">Dirección de entrega</h2>
-                {profile && !showAddressForm && (
-                  <button type="button" onClick={() => setShowAddressForm(true)}
+                {access && direcciones.length > 0 && (
+                  <Link href="/dashboard/direcciones"
                     className="text-xs text-tierra-600 hover:underline">
-                    Cambiar
-                  </button>
+                    Administrar
+                  </Link>
                 )}
               </div>
 
-              {profile && !showAddressForm ? (
-                <div className="rounded-xl border border-tierra-200 bg-tierra-50/50 p-5 text-sm text-piedra-700">
-                  <p className="font-medium">{profile.first_name} {profile.last_name}</p>
-                  <p>{profile.address_line_1}</p>
-                  <p>{profile.city}{profile.country_region ? `, ${profile.country_region}` : ''} {profile.zipcode}</p>
-                  {profile.phone && <p>Tel: {profile.phone}</p>}
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4 rounded-xl border border-piedra-200 bg-white p-5">
-                  <Field label="Dirección" id="address">
-                    <input id="address" type="text" required value={form.address_line_1}
-                      onChange={setField('address_line_1')} className={inputCls}
-                      placeholder="Av. Arturo Prat 123" />
-                  </Field>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label="Ciudad" id="city">
-                      <input id="city" type="text" required value={form.city}
-                        onChange={setField('city')} className={inputCls} placeholder="Puerto Montt" />
-                    </Field>
-                    <Field label="Región" id="region">
-                      <input id="region" type="text" required value={form.state_province_region}
-                        onChange={setField('state_province_region')} className={inputCls}
-                        placeholder="Los Lagos" />
-                    </Field>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label="Código postal" id="zip">
-                      <input id="zip" type="text" value={form.postal_zip_code}
-                        onChange={setField('postal_zip_code')} className={inputCls} />
-                    </Field>
-                    <Field label="Teléfono" id="phone">
-                      <input id="phone" type="tel" required value={form.telephone_number}
-                        onChange={setField('telephone_number')} className={inputCls}
-                        placeholder="+56 9 1234 5678" />
-                    </Field>
-                  </div>
+              {/* Con libreta cargada se elige una y no se escribe nada. */}
+              {direcciones.length > 0 && (
+                <ul className="mb-4 flex flex-col gap-2">
+                  {direcciones.map((d) => (
+                    <li key={d.id}>
+                      <label className={[
+                        'flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-sm transition-colors',
+                        elegida === d.id
+                          ? 'border-tierra-400 bg-tierra-50'
+                          : 'border-piedra-200 bg-white hover:border-piedra-300',
+                      ].join(' ')}>
+                        <input type="radio" name="direccion" checked={elegida === d.id}
+                          onChange={() => setElegida(d.id)} className="mt-0.5 accent-tierra-500" />
+                        <div className="flex-1">
+                          <p className="font-medium text-piedra-900">
+                            {d.label || `${d.first_name} ${d.last_name}`}
+                            {d.is_default && (
+                              <span className="ml-2 rounded-full bg-tierra-100 px-2 py-0.5 text-xs font-medium text-tierra-700">
+                                Principal
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-piedra-700">{resumirDireccion(d)}</p>
+                          {d.phone && <p className="text-xs text-piedra-500">Tel: {d.phone}</p>}
+                        </div>
+                      </label>
+                    </li>
+                  ))}
+                  <li>
+                    <label className={[
+                      'flex cursor-pointer items-center gap-3 rounded-xl border p-4 text-sm transition-colors',
+                      elegida === ''
+                        ? 'border-tierra-400 bg-tierra-50'
+                        : 'border-piedra-200 bg-white hover:border-piedra-300',
+                    ].join(' ')}>
+                      <input type="radio" name="direccion" checked={elegida === ''}
+                        onChange={() => setElegida('')} className="accent-tierra-500" />
+                      <span className="font-medium text-piedra-900">Usar otra dirección</span>
+                    </label>
+                  </li>
+                </ul>
+              )}
+
+              {elegida === '' && (
+                <div className="rounded-xl border border-piedra-200 bg-white p-5">
+                  <AddressForm
+                    value={direccion}
+                    onChange={setCampoDireccion}
+                    idPrefix="checkout"
+                    ocultarNombre
+                    labelPrincipal={access ? 'Usar como mi dirección principal' : undefined}
+                  />
+                  {access && (
+                    <p className="mt-4 text-xs text-piedra-500">
+                      Esta dirección queda guardada en{' '}
+                      <Link href="/dashboard/direcciones" className="text-tierra-600 hover:underline">
+                        mis direcciones
+                      </Link>{' '}
+                      para que no tengas que escribirla de nuevo.
+                    </p>
+                  )}
                 </div>
               )}
             </section>
@@ -252,7 +277,10 @@ export default function CheckoutPage() {
             <section>
               <h2 className="mb-4 font-serif text-xl text-piedra-900">Método de envío</h2>
               {shipping.length === 0 ? (
-                <p className="text-sm text-piedra-500">Sin opciones de envío disponibles.</p>
+                <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                  Todavía no hay métodos de envío configurados. Escribinos y coordinamos
+                  el despacho a mano.
+                </p>
               ) : (
                 <ul className="flex flex-col gap-2">
                   {shipping.map((opt) => (
@@ -329,6 +357,13 @@ export default function CheckoutPage() {
                   <dd>{formatCLP(total)}</dd>
                 </div>
               </dl>
+
+              {direccionElegida && (
+                <p className="mt-4 border-t border-piedra-100 pt-3 text-xs text-piedra-500">
+                  Enviamos a{' '}
+                  <span className="text-piedra-700">{resumirDireccion(direccionElegida)}</span>
+                </p>
+              )}
 
               {error && (
                 <p className="mt-4 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-700">{error}</p>

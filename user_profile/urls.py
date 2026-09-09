@@ -1,9 +1,8 @@
-from django.urls import path
-from .views import GetUserProfileView, UpdateUserProfileView, DeleteUserProfileView, CreateUserProfileView
+from rest_framework.routers import DefaultRouter
 
-urlpatterns = [
-    path('user', GetUserProfileView.as_view()),
-    path('update', UpdateUserProfileView.as_view()),
-    path('delete', DeleteUserProfileView.as_view()),
-    path('create', CreateUserProfileView.as_view()),
-]
+from .views import AddressViewSet
+
+router = DefaultRouter()
+router.register('addresses', AddressViewSet, basename='address')
+
+urlpatterns = router.urls

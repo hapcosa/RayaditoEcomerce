@@ -49,6 +49,11 @@ export default function DashboardPage() {
           href="/pedidos"
         />
         <DashCard
+          title="Mis direcciones"
+          description="Guardá las direcciones que reutilizás al pagar."
+          href="/dashboard/direcciones"
+        />
+        <DashCard
           title="Lista de deseos"
           description="Las piezas que guardaste como favoritas."
           href="/wishlist"

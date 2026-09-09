@@ -65,19 +65,14 @@ class GetShippingView(APIView):
     permission_classes = (permissions.AllowAny, )
 
     def get(self, request, format=None):
-        if Shipping.objects.all().exists():
-            shipping_options = Shipping.objects.order_by('name').all()
-            shipping_options = ShippingSerializer(shipping_options, many=True)
-
-            return Response(
-                {'shipping_options': shipping_options.data},
-                status=status.HTTP_200_OK
-            )
-        else:
-            return Response(
-                {'error': 'No shipping options available'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        # Sin opciones cargadas la respuesta es una lista vacía, no un 404: que
+        # el catálogo de envíos esté vacío no es un error del cliente, y el 404
+        # hacía que el checkout no pudiera distinguirlo de una ruta caída.
+        shipping_options = Shipping.objects.order_by('price', 'name')
+        return Response(
+            {'shipping_options': ShippingSerializer(shipping_options, many=True).data},
+            status=status.HTTP_200_OK
+        )
 
 
 class QuoteShippingView(APIView):

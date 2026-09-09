@@ -10,7 +10,9 @@ class Shipping(models.Model):
     time_to_delivery = models.CharField(max_length=255)
     description = models.TextField(max_length=1000)
     price = models.PositiveIntegerField(default=0)
-    photo = models.ImageField(upload_to='logos/%y/%m')
+    # Opcional: opciones como "Retiro en taller" no tienen logo, y sin esto
+    # no se pueden crear desde /admin/ ni desde un seed.
+    photo = models.ImageField(upload_to='logos/%y/%m', blank=True, null=True)
 
     def __str__(self):
         return self.name

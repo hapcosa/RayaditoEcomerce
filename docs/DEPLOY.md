@@ -239,6 +239,7 @@ git pull
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python manage.py migrate
 .venv/bin/python manage.py collectstatic --noinput   # estáticos del admin
+.venv/bin/python manage.py seed_shipping             # opciones de envío base (idempotente)
 (cd web && npm ci && npm run build)
 sudo systemctl restart rayadito-api rayadito-web
 ```
