@@ -406,6 +406,11 @@ pyrightconfig.json
 **/*.backup.*
 **/*.back.*
 
+# STATIC_ROOT: lo genera `manage.py collectstatic` en cada deploy (ver
+# docs/DEPLOY.md). Estaba versionado y dejaba el repo de prod sucio en cada
+# despliegue. Anclado con `/` para no tapar `admin-app/assets/` (iconos de la app).
+/assets/
+
 node_modules
 
 *.sublime*

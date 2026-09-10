@@ -54,6 +54,11 @@ jobs:
         run: python manage.py check
       - name: Run migrations
         run: python manage.py migrate --noinput
+      # STATIC_ROOT ya no esta versionado: sin este paso no existe el manifest
+      # de ManifestStaticFilesStorage y cualquier vista con {% static %} (el
+      # admin de Django) revienta en los tests.
+      - name: Collect static files
+        run: python manage.py collectstatic --noinput
       - name: Run tests
         run: python manage.py test --verbosity 2
 
