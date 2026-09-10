@@ -244,6 +244,10 @@ git pull
 sudo systemctl restart rayadito-api rayadito-web
 ```
 
+`assets/` (STATIC_ROOT) **no está versionado**: lo produce `collectstatic`. En un
+servidor nuevo hay que correrlo antes del primer arranque, o el admin de Django
+responde 500 (le falta el manifest de `ManifestStaticFilesStorage`).
+
 ## 5. Verificación post-deploy
 
 ```bash
