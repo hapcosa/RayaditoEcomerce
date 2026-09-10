@@ -411,6 +411,18 @@ pyrightconfig.json
 # despliegue. Anclado con `/` para no tapar `admin-app/assets/` (iconos de la app).
 /assets/
 
+# MEDIA_ROOT: lo que suben el admin y la app (fotos de producto, portada,
+# logos de envío). Vive en el disco del servidor y en el backup de la DB, no en
+# git. Las fotos de la data de dev que ya estaban versionadas se dejan como
+# están: git no ignora lo que ya trackea.
+/public/photos/
+/public/portada/
+/public/logos/
+
+# Copias sueltas del .env (`.env.dev-backup` y compañía): tienen secretos.
+.env.*
+!.env.example
+
 node_modules
 
 *.sublime*
