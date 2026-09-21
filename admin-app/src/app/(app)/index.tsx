@@ -41,6 +41,14 @@ export default function DashboardScreen() {
             </ThemedText>
           </Pressable>
         </Link>
+        <Link href="/(app)/attributes" asChild>
+          <Pressable style={StyleSheet.flatten([styles.card, { backgroundColor: theme.backgroundElement }])}>
+            <ThemedText type="default">Atributos</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Tallas, colores y medidas que usan las categorías
+            </ThemedText>
+          </Pressable>
+        </Link>
         <Link href="/(app)/portada" asChild>
           <Pressable style={StyleSheet.flatten([styles.card, { backgroundColor: theme.backgroundElement }])}>
             <ThemedText type="default">Portada</ThemedText>
