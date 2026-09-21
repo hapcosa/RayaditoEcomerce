@@ -8,7 +8,7 @@
  * pero solo esos dos valores hacen que el producto caiga en /joyas o /piedras.
  */
 import { Stack, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,11 +16,22 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Switch,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import {
+  attachCategoryAttribute,
+  detachCategoryAttribute,
+  getCategoryAttributes,
+  listAttributes,
+  updateCategoryAttribute,
+  KIND_LABEL,
+  type Attribute,
+  type CategoryAttribute,
+} from '@/api/attributes';
 import {
   createCategory,
   deleteCategory,
@@ -61,6 +72,164 @@ function posiblesMadres(cats: Category[], id: number | null): Category[] {
   return cats.filter((c) => !prohibidas.has(c.id));
 }
 
+/**
+ * Atributos que aplican a una categoría: los propios se enganchan, se marcan
+ * obligatorios y se quitan desde acá; los heredados de una ancestra se listan
+ * en gris y sin acciones — se editan en la categoría que los definió (el
+ * backend responde 404 si se intenta desde la hija).
+ */
+function SeccionAtributos({ categoryId }: { categoryId: number }) {
+  const theme = useTheme();
+  const [items, setItems] = useState<CategoryAttribute[]>([]);
+  const [todos, setTodos] = useState<Attribute[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [ocupado, setOcupado] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const cargar = useCallback(async () => {
+    setError(null);
+    try {
+      const [propios, disponibles] = await Promise.all([
+        getCategoryAttributes(categoryId),
+        listAttributes(),
+      ]);
+      setItems(propios);
+      setTodos(disponibles);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudieron cargar los atributos.');
+    } finally {
+      setCargando(false);
+    }
+  }, [categoryId]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  /** Los que todavía no aplican: ni propios ni heredados. */
+  const sinEnganchar = useMemo(() => {
+    const yaEstan = new Set(items.map((i) => i.attribute.id));
+    return todos.filter((a) => !yaEstan.has(a.id));
+  }, [items, todos]);
+
+  async function correr(accion: () => Promise<unknown>, titulo: string) {
+    setOcupado(true);
+    try {
+      await accion();
+      await cargar();
+    } catch (e) {
+      Alert.alert(titulo, e instanceof Error ? e.message : 'Error desconocido.');
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  if (cargando) return <ActivityIndicator color={theme.accent} />;
+
+  return (
+    <View style={styles.atributos}>
+      {error && (
+        <ThemedText type="small" themeColor="textSecondary">
+          {error}
+        </ThemedText>
+      )}
+
+      {items.length === 0 && !error ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          Sin atributos. Enganchá uno de abajo (se crean en la pantalla de
+          Atributos).
+        </ThemedText>
+      ) : null}
+
+      {items.map((it) => {
+        const heredado = it.inherited_from != null;
+        return (
+          <View key={it.id} style={styles.atributoFila}>
+            <View style={styles.atributoTexto}>
+              <ThemedText type="smallBold" themeColor={heredado ? 'textSecondary' : 'text'}>
+                {it.attribute.name}
+                {it.attribute.unit ? ` (${it.attribute.unit})` : ''}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {KIND_LABEL[it.attribute.kind]}
+                {it.attribute.is_variant_option ? ' · variantes' : ''}
+                {heredado
+                  ? ` · heredado de ${it.inherited_from?.name}`
+                  : it.is_required
+                    ? ' · obligatorio'
+                    : ''}
+              </ThemedText>
+            </View>
+
+            {heredado ? null : (
+              <>
+                <Switch
+                  value={it.is_required}
+                  disabled={ocupado}
+                  onValueChange={(v) =>
+                    correr(
+                      () =>
+                        updateCategoryAttribute(categoryId, it.attribute.id, {
+                          is_required: v,
+                        }),
+                      'No se pudo cambiar',
+                    )
+                  }
+                  thumbColor={theme.accent}
+                />
+                <Pressable
+                  hitSlop={8}
+                  disabled={ocupado}
+                  onPress={() =>
+                    correr(
+                      () => detachCategoryAttribute(categoryId, it.attribute.id),
+                      'No se pudo quitar',
+                    )
+                  }
+                >
+                  <ThemedText type="small" style={{ color: theme.danger }}>
+                    Quitar
+                  </ThemedText>
+                </Pressable>
+              </>
+            )}
+          </View>
+        );
+      })}
+
+      {sinEnganchar.length > 0 && (
+        <>
+          <ThemedText type="small" themeColor="textSecondary">
+            Agregar:
+          </ThemedText>
+          <View style={styles.chips}>
+            {sinEnganchar.map((a) => (
+              <Pressable
+                key={a.id}
+                disabled={ocupado}
+                onPress={() =>
+                  correr(
+                    () =>
+                      attachCategoryAttribute(categoryId, {
+                        attribute_id: a.id,
+                        is_required: false,
+                        sort_order: items.length,
+                      }),
+                    'No se pudo agregar',
+                  )
+                }
+                style={[styles.chip, { backgroundColor: theme.backgroundSelected }]}
+              >
+                <ThemedText type="small">+ {a.name}</ThemedText>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      )}
+    </View>
+  );
+}
+
 export default function CategoriesScreen() {
   const theme = useTheme();
   const [cats, setCats] = useState<Category[]>([]);
@@ -69,6 +238,8 @@ export default function CategoriesScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
+  /** Categoría con la sección de atributos desplegada. */
+  const [atributosDe, setAtributosDe] = useState<number | null>(null);
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -341,12 +512,22 @@ export default function CategoriesScreen() {
                 >
                   <ThemedText type="linkPrimary">Editar</ThemedText>
                 </Pressable>
+                <Pressable
+                  onPress={() => setAtributosDe(atributosDe === c.id ? null : c.id)}
+                  hitSlop={8}
+                  disabled={saving}
+                >
+                  <ThemedText type="linkPrimary">
+                    {atributosDe === c.id ? 'Ocultar atributos' : 'Atributos'}
+                  </ThemedText>
+                </Pressable>
                 <Pressable onPress={() => borrar(c)} hitSlop={8} disabled={saving}>
                   <ThemedText type="small" style={{ color: theme.danger }}>
                     Borrar
                   </ThemedText>
                 </Pressable>
               </View>
+              {atributosDe === c.id && <SeccionAtributos categoryId={c.id} />}
             </View>
           ))}
         </ScrollView>
@@ -365,5 +546,8 @@ const styles = StyleSheet.create({
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
   acciones: { flexDirection: 'row', alignItems: 'center', gap: 20 },
   boton: { borderRadius: 24, paddingVertical: 12, paddingHorizontal: 22, alignItems: 'center' },
+  atributos: { gap: 10, paddingTop: 4 },
+  atributoFila: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  atributoTexto: { flex: 1, gap: 2 },
   botonAncho: { alignSelf: 'stretch' },
 });
