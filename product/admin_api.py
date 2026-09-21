@@ -9,6 +9,8 @@ que catalogo publico aparece el producto: por eso aca es obligatorio y solo
 acepta 'joya' o 'piedra'. Sin el, el producto queda 'general' e invisible en la
 tienda.
 """
+from decimal import Decimal, InvalidOperation
+
 from django.db import IntegrityError
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
@@ -19,7 +21,21 @@ from rest_framework.response import Response
 from category.models import Category, CategoryAttribute
 
 from .admin_attributes_api import AdminAttributeSerializer
-from .models import Attribute, GalleryProduct, Product
+from .models import (
+    Attribute, AttributeKind, AttributeValue, GalleryProduct, Product,
+    ProductAttributeValue,
+)
+
+
+def _parse_numeric(texto):
+    """Decimal del texto que escribio el staff, o `None` si no es un numero.
+
+    Acepta la coma decimal: en es-CL se escribe 3,5 y no 3.5.
+    """
+    try:
+        return Decimal(texto.replace(',', '.'))
+    except (InvalidOperation, AttributeError):
+        return None
 
 
 class AdminCategorySerializer(serializers.ModelSerializer):
@@ -281,3 +297,128 @@ class AdminProductViewSet(viewsets.ModelViewSet):
         return Response(
             AdminGalleryImageSerializer(image).data, status=status.HTTP_200_OK,
         )
+
+    @action(detail=True, methods=['get', 'put'], url_path='attributes')
+    def attribute_values(self, request, pk=None):
+        """Ficha de atributos del producto: qué aplica y qué valor tiene.
+
+        El GET devuelve **un renglón por atributo que aplica** (los de su
+        categoría, propios y heredados), con `value` en `null` si todavía no se
+        cargó. Así la app arma el formulario sin cruzar dos endpoints.
+
+        El PUT recibe `{"values": [{"attribute_id": N, ...}, ...]}` y toca
+        **solo los atributos nombrados**: los que no vienen quedan como están.
+        Según el `kind` del atributo:
+
+        - `select` → `value_id`, un `AttributeValue` de ese atributo.
+        - `text`/`integer`/`decimal` → `value`, el texto que escribió el staff;
+          se reutiliza el `AttributeValue` con ese texto o se crea.
+
+        `value_id: null` o `value: ""` borra el valor cargado.
+
+        Un producto lleva **un** valor por atributo: cargar otro reemplaza al
+        anterior. Las variantes (mismo modelo en varias tallas, con stock por
+        talla) quedan fuera: acá cada pieza es única y su talla es un dato de
+        la pieza.
+        """
+        product = self.get_object()
+        aplicables = {
+            link.attribute_id: link
+            for link in product.category.effective_attributes()
+        } if product.category_id else {}
+
+        if request.method == 'PUT':
+            error = self._save_attribute_values(product, request.data, aplicables)
+            if error is not None:
+                return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
+
+        cargados = {
+            pav.attribute_value.attribute_id: pav.attribute_value
+            for pav in product.attribute_values.select_related(
+                'attribute_value__attribute',
+            )
+        }
+        return Response([
+            {
+                'attribute': AdminAttributeSerializer(link.attribute).data,
+                'is_required': link.is_required,
+                'inherited_from': (
+                    None if link.category_id == product.category_id
+                    else {'id': link.category_id, 'name': link.category.name}
+                ),
+                'value_id': cargados[attr_id].id if attr_id in cargados else None,
+                'value': cargados[attr_id].value if attr_id in cargados else None,
+            }
+            for attr_id, link in aplicables.items()
+        ])
+
+    @staticmethod
+    def _save_attribute_values(product, data, aplicables):
+        """Aplica el PUT. Devuelve el mensaje de error, o `None` si salió bien.
+
+        Valida todo antes de escribir: media ficha guardada es peor que un 400.
+        """
+        entradas = data.get('values')
+        if not isinstance(entradas, list):
+            return 'Mandá `values` con la lista de atributos a guardar.'
+
+        pendientes = []
+        for entrada in entradas:
+            if not isinstance(entrada, dict):
+                return 'Cada elemento de `values` tiene que ser un objeto.'
+            attr_id = entrada.get('attribute_id')
+            link = aplicables.get(attr_id)
+            if link is None:
+                return (
+                    'Ese atributo no aplica a la categoría del producto. '
+                    'Enganchalo a la categoría primero.'
+                )
+            attribute = link.attribute
+
+            if attribute.kind == AttributeKind.SELECT:
+                value_id = entrada.get('value_id')
+                if value_id in (None, ''):
+                    pendientes.append((attribute, None))
+                    continue
+                value = AttributeValue.objects.filter(
+                    attribute=attribute, id=value_id,
+                ).first()
+                if value is None:
+                    return f'Ese valor no pertenece a "{attribute.name}".'
+                pendientes.append((attribute, value))
+                continue
+
+            texto = entrada.get('value')
+            texto = '' if texto is None else str(texto).strip()
+            if not texto:
+                pendientes.append((attribute, None))
+                continue
+            numero = _parse_numeric(texto)
+            if attribute.kind == AttributeKind.INTEGER and (
+                numero is None or numero != numero.to_integral_value()
+            ):
+                return f'"{attribute.name}" lleva un número entero.'
+            if attribute.kind == AttributeKind.DECIMAL and numero is None:
+                return f'"{attribute.name}" lleva un número (ej. 3,5).'
+            pendientes.append((attribute, (texto, numero)))
+
+        for attribute, destino in pendientes:
+            # Un valor por atributo: lo viejo se va, venga lo que venga.
+            ProductAttributeValue.objects.filter(
+                product=product, attribute_value__attribute=attribute,
+            ).delete()
+            if destino is None:
+                continue
+            if isinstance(destino, tuple):
+                texto, numero = destino
+                # Los valores libres tambien viven en `AttributeValue`: el
+                # modelo no guarda texto suelto en el producto. Se reutiliza el
+                # que ya exista para no llenar la tabla de duplicados.
+                destino, _ = AttributeValue.objects.get_or_create(
+                    attribute=attribute, value=texto,
+                    defaults={'numeric_value': numero},
+                )
+            ProductAttributeValue.objects.create(
+                product=product, attribute_value=destino,
+            )
+        return None

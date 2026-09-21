@@ -24,7 +24,14 @@ import {
   type Category,
   type LocalImage,
 } from '@/api/products';
+import { setProductAttributes } from '@/api/attributes';
 import { ImageZoomViewer } from '@/components/image-zoom-viewer';
+import {
+  attributePayload,
+  faltaAtributo,
+  ProductAttributeFields,
+  useProductAttributes,
+} from '@/components/product-attributes';
 import { ProductFormFields, type ProductFormValue } from '@/components/product-form';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
@@ -69,6 +76,10 @@ export default function NewProductScreen() {
   const [cropping, setCropping] = useState(false);
 
   const patch = (p: Partial<ProductFormValue>) => setForm((f) => ({ ...f, ...p }));
+
+  // Atributos de la categoría elegida (talla, alto…). El producto todavía no
+  // existe, así que los valores se mandan recién después del POST.
+  const atributos = useProductAttributes(form.categoryId);
 
   useEffect(() => {
     (async () => {
@@ -133,7 +144,7 @@ export default function NewProductScreen() {
     if (form.categoryId == null) return 'Elegí una categoría.';
     if (form.productType == null) return 'Elegí el tipo: joya o piedra.';
     if (!photo) return 'Agregá una foto del producto.';
-    return null;
+    return faltaAtributo(atributos.fields, atributos.draft);
   }
 
   async function onSubmit() {
@@ -155,6 +166,23 @@ export default function NewProductScreen() {
         is_featured: form.isFeatured,
         photo: photo!,
       });
+      if (atributos.fields.length > 0) {
+        // Mismo criterio que la galería: el producto ya está creado, un fallo
+        // acá no lo tira abajo.
+        try {
+          await setProductAttributes(
+            created.id,
+            attributePayload(atributos.fields, atributos.draft),
+          );
+        } catch (e) {
+          Alert.alert(
+            'Producto creado',
+            `Se creó el producto, pero no se guardaron los atributos: ${
+              e instanceof Error ? e.message : 'error desconocido'
+            }. Cargalos desde la pantalla de edición.`,
+          );
+        }
+      }
       if (extras.length > 0) {
         // El producto ya existe: si la galería falla, no se pierde el alta.
         try {
@@ -218,6 +246,14 @@ export default function NewProductScreen() {
           onChange={patch}
           categories={categories}
           loadingCats={loadingCats}
+        />
+
+        <ProductAttributeFields
+          fields={atributos.fields}
+          draft={atributos.draft}
+          onChange={atributos.setValor}
+          loading={atributos.loading}
+          error={atributos.error}
         />
 
         {/* Galería: opcional, se sube después de crear el producto. */}

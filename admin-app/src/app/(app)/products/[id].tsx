@@ -31,7 +31,14 @@ import {
   type GalleryImage,
   type LocalImage,
 } from '@/api/products';
+import { setProductAttributes } from '@/api/attributes';
 import { ImageZoomViewer, type CropDest } from '@/components/image-zoom-viewer';
+import {
+  attributePayload,
+  faltaAtributo,
+  ProductAttributeFields,
+  useProductAttributes,
+} from '@/components/product-attributes';
 import { ProductFormFields, type ProductFormValue } from '@/components/product-form';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
@@ -73,6 +80,10 @@ export default function EditProductScreen() {
 
   const patch = (p: Partial<ProductFormValue>) =>
     setForm((f) => (f ? { ...f, ...p } : f));
+
+  // La primera carga trae los valores guardados del producto; si se cambia de
+  // categoría, la lista pasa a salir de la categoría nueva.
+  const atributos = useProductAttributes(form?.categoryId ?? null, productId);
 
   useEffect(() => {
     (async () => {
@@ -200,7 +211,7 @@ export default function EditProductScreen() {
     if (!f.price) return 'El precio es obligatorio.';
     if (f.categoryId == null) return 'Elegí una categoría.';
     if (f.productType == null) return 'Elegí el tipo: joya o piedra.';
-    return null;
+    return faltaAtributo(atributos.fields, atributos.draft);
   }
 
   async function onSave() {
@@ -226,6 +237,23 @@ export default function EditProductScreen() {
         },
         newPhoto,
       );
+      if (atributos.fields.length > 0) {
+        // El producto ya se guardó: si esto falla, decirlo sin dar a entender
+        // que se perdió todo el resto.
+        try {
+          await setProductAttributes(
+            productId,
+            attributePayload(atributos.fields, atributos.draft),
+          );
+        } catch (e) {
+          Alert.alert(
+            'Cambios guardados',
+            `Se guardó el producto, pero no los atributos: ${
+              e instanceof Error ? e.message : 'error desconocido'
+            }.`,
+          );
+        }
+      }
       router.back();
     } catch (e) {
       Alert.alert('No se pudo guardar', e instanceof Error ? e.message : 'Error desconocido.');
@@ -311,6 +339,14 @@ export default function EditProductScreen() {
           onChange={patch}
           categories={categories}
           loadingCats={loadingCats}
+        />
+
+        <ProductAttributeFields
+          fields={atributos.fields}
+          draft={atributos.draft}
+          onChange={atributos.setValor}
+          loading={atributos.loading}
+          error={atributos.error}
         />
 
         {/* Galería */}

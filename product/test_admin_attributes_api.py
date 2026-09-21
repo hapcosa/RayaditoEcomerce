@@ -342,3 +342,181 @@ class AdminCategoryAttributeApiTests(APITestCase):
             f'/api/admin/categories/{self.anillos.id}/attributes/',
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class AdminProductAttributeValueApiTests(APITestCase):
+    """Ficha de atributos de un producto: `/api/admin/products/{id}/attributes/`.
+
+    El caso del dueño: cada anillo es una pieza única y lleva SU talla, así que
+    el valor va en el producto y no genera variantes con stock propio.
+    """
+
+    def setUp(self):
+        self.staff = User.objects.create_user(
+            email='dueno@rayadito.cl', password='Testpass123',
+            first_name='Due', last_name='Ño', is_staff=True,
+        )
+        self.joyas = Category.objects.create(name='Joyas', ProductType='Joya')
+        self.anillos = Category.objects.create(
+            name='Anillos', ProductType='Joya', parent=self.joyas,
+        )
+        self.talla = Attribute.objects.create(
+            name='Talla', slug='talla-test', kind=AttributeKind.SELECT,
+        )
+        self.t16 = AttributeValue.objects.create(attribute=self.talla, value='16')
+        self.t17 = AttributeValue.objects.create(attribute=self.talla, value='17')
+        self.alto = Attribute.objects.create(
+            name='Alto', slug='alto-test', unit='cm', kind=AttributeKind.DECIMAL,
+        )
+        CategoryAttribute.objects.create(
+            category=self.anillos, attribute=self.talla,
+        )
+        # Heredado: lo define la madre y también aplica al anillo.
+        CategoryAttribute.objects.create(category=self.joyas, attribute=self.alto)
+        self.producto = Product.objects.create(
+            name='Anillo ágata', description='x', price=20000,
+            category=self.anillos, photo='photos/x.png',
+        )
+        self.url = f'/api/admin/products/{self.producto.pk}/attributes/'
+        self.client.force_authenticate(user=self.staff)
+
+    def test_get_lists_own_and_inherited_attributes_without_values(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        porNombre = {row['attribute']['name']: row for row in response.data}
+        self.assertEqual(set(porNombre), {'Talla', 'Alto'})
+        self.assertIsNone(porNombre['Talla']['value'])
+        self.assertIsNone(porNombre['Talla']['inherited_from'])
+        self.assertEqual(porNombre['Alto']['inherited_from']['name'], 'Joyas')
+
+    def test_put_assigns_a_select_value(self):
+        response = self.client.put(self.url, {'values': [
+            {'attribute_id': self.talla.pk, 'value_id': self.t16.pk},
+        ]}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        porNombre = {row['attribute']['name']: row for row in response.data}
+        self.assertEqual(porNombre['Talla']['value'], '16')
+        self.assertEqual(
+            list(self.producto.attribute_values.values_list(
+                'attribute_value__value', flat=True)),
+            ['16'],
+        )
+
+    def test_reassigning_replaces_the_previous_value(self):
+        self.client.put(self.url, {'values': [
+            {'attribute_id': self.talla.pk, 'value_id': self.t16.pk},
+        ]}, format='json')
+        self.client.put(self.url, {'values': [
+            {'attribute_id': self.talla.pk, 'value_id': self.t17.pk},
+        ]}, format='json')
+        self.assertEqual(
+            list(self.producto.attribute_values.values_list(
+                'attribute_value__value', flat=True)),
+            ['17'],
+        )
+
+    def test_null_value_clears_it(self):
+        self.client.put(self.url, {'values': [
+            {'attribute_id': self.talla.pk, 'value_id': self.t16.pk},
+        ]}, format='json')
+        response = self.client.put(self.url, {'values': [
+            {'attribute_id': self.talla.pk, 'value_id': None},
+        ]}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(self.producto.attribute_values.exists())
+
+    def test_put_only_touches_the_attributes_it_names(self):
+        self.client.put(self.url, {'values': [
+            {'attribute_id': self.talla.pk, 'value_id': self.t16.pk},
+        ]}, format='json')
+        self.client.put(self.url, {'values': [
+            {'attribute_id': self.alto.pk, 'value': '3,5'},
+        ]}, format='json')
+        valores = set(self.producto.attribute_values.values_list(
+            'attribute_value__value', flat=True))
+        self.assertEqual(valores, {'16', '3,5'})
+
+    def test_free_value_creates_the_attribute_value_with_its_number(self):
+        response = self.client.put(self.url, {'values': [
+            {'attribute_id': self.alto.pk, 'value': '3,5'},
+        ]}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        creado = AttributeValue.objects.get(attribute=self.alto, value='3,5')
+        self.assertEqual(str(creado.numeric_value), '3.500')
+
+    def test_free_value_is_reused_not_duplicated(self):
+        self.client.put(self.url, {'values': [
+            {'attribute_id': self.alto.pk, 'value': '3,5'},
+        ]}, format='json')
+        otro = Product.objects.create(
+            name='Otro anillo', description='x', price=1000,
+            category=self.anillos, photo='photos/x.png',
+        )
+        self.client.put(f'/api/admin/products/{otro.pk}/attributes/', {'values': [
+            {'attribute_id': self.alto.pk, 'value': '3,5'},
+        ]}, format='json')
+        self.assertEqual(
+            AttributeValue.objects.filter(attribute=self.alto, value='3,5').count(), 1,
+        )
+
+    def test_decimal_attribute_rejects_text(self):
+        response = self.client.put(self.url, {'values': [
+            {'attribute_id': self.alto.pk, 'value': 'grande'},
+        ]}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('número', response.data['detail'])
+        self.assertFalse(self.producto.attribute_values.exists())
+
+    def test_integer_attribute_rejects_decimals(self):
+        piezas = Attribute.objects.create(
+            name='Piezas', slug='piezas-test', kind=AttributeKind.INTEGER,
+        )
+        CategoryAttribute.objects.create(category=self.anillos, attribute=piezas)
+        response = self.client.put(self.url, {'values': [
+            {'attribute_id': piezas.pk, 'value': '2,5'},
+        ]}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('entero', response.data['detail'])
+
+    def test_attribute_not_hooked_to_the_category_is_rejected(self):
+        suelto = Attribute.objects.create(
+            name='Origen', slug='origen-test', kind=AttributeKind.TEXT,
+        )
+        response = self.client.put(self.url, {'values': [
+            {'attribute_id': suelto.pk, 'value': 'Chiloé'},
+        ]}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('no aplica', response.data['detail'])
+
+    def test_value_from_another_attribute_is_rejected(self):
+        otra = Attribute.objects.create(
+            name='Color', slug='color-test', kind=AttributeKind.SELECT,
+        )
+        ajeno = AttributeValue.objects.create(attribute=otra, value='Verde')
+        response = self.client.put(self.url, {'values': [
+            {'attribute_id': self.talla.pk, 'value_id': ajeno.pk},
+        ]}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('no pertenece', response.data['detail'])
+
+    def test_nothing_is_written_when_one_entry_is_invalid(self):
+        """Se valida todo antes de escribir: media ficha guardada es peor."""
+        response = self.client.put(self.url, {'values': [
+            {'attribute_id': self.talla.pk, 'value_id': self.t16.pk},
+            {'attribute_id': self.alto.pk, 'value': 'grande'},
+        ]}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(self.producto.attribute_values.exists())
+
+    def test_missing_values_key_is_rejected(self):
+        response = self.client.put(self.url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_non_staff_cannot_write_values(self):
+        cliente = User.objects.create_user(
+            email='cliente2@rayadito.cl', password='Testpass123',
+            first_name='C', last_name='L',
+        )
+        self.client.force_authenticate(user=cliente)
+        response = self.client.put(self.url, {'values': []}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

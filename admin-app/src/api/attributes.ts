@@ -182,3 +182,39 @@ export async function detachCategoryAttribute(
     { method: 'DELETE' },
   );
 }
+
+/**
+ * Un atributo que aplica a un producto, con el valor que tenga cargado.
+ * `value_id`/`value` en `null` = todavía sin cargar.
+ */
+export type ProductAttributeField = {
+  attribute: Attribute;
+  is_required: boolean;
+  inherited_from: { id: number; name: string } | null;
+  value_id: number | null;
+  value: string | null;
+};
+
+/** Qué atributos aplican al producto y qué valor tiene cada uno. */
+export async function getProductAttributes(
+  productId: number,
+): Promise<ProductAttributeField[]> {
+  return apiJson<ProductAttributeField[]>(
+    `/api/admin/products/${productId}/attributes/`,
+  );
+}
+
+/**
+ * Guarda los valores. Toca solo los atributos nombrados; `value_id: null` o
+ * `value: ''` borra el que hubiera. Para los `select` va `value_id`; para
+ * texto/entero/decimal, `value` con lo que escribió el staff.
+ */
+export async function setProductAttributes(
+  productId: number,
+  values: { attribute_id: number; value_id?: number | null; value?: string | null }[],
+): Promise<ProductAttributeField[]> {
+  return apiJson<ProductAttributeField[]>(
+    `/api/admin/products/${productId}/attributes/`,
+    { method: 'PUT', ...jsonBody({ values }) },
+  );
+}
