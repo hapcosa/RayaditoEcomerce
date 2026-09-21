@@ -9,15 +9,17 @@ que catalogo publico aparece el producto: por eso aca es obligatorio y solo
 acepta 'joya' o 'piedra'. Sin el, el producto queda 'general' e invisible en la
 tienda.
 """
+from django.db import IntegrityError
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
-from category.models import Category
+from category.models import Category, CategoryAttribute
 
-from .models import GalleryProduct, Product
+from .admin_attributes_api import AdminAttributeSerializer
+from .models import Attribute, GalleryProduct, Product
 
 
 class AdminCategorySerializer(serializers.ModelSerializer):
@@ -53,6 +55,31 @@ class AdminCategorySerializer(serializers.ModelSerializer):
         return value
 
 
+class AdminCategoryAttributeSerializer(serializers.ModelSerializer):
+    """Enganche categoría↔atributo, con el atributo expandido para la app."""
+    attribute = AdminAttributeSerializer(read_only=True)
+    attribute_id = serializers.PrimaryKeyRelatedField(
+        queryset=Attribute.objects.all(), source='attribute', write_only=True,
+    )
+    # De qué categoría viene: `null` si es propio, el nombre de la ancestra si
+    # se hereda. La app usa esto para mostrar los heredados en gris y no
+    # ofrecer borrarlos desde la hija.
+    inherited_from = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CategoryAttribute
+        fields = [
+            'id', 'attribute', 'attribute_id', 'is_required', 'sort_order',
+            'inherited_from',
+        ]
+
+    def get_inherited_from(self, obj):
+        target = self.context.get('category')
+        if target is None or obj.category_id == target.pk:
+            return None
+        return {'id': obj.category_id, 'name': obj.category.name}
+
+
 class AdminCategoryViewSet(viewsets.ModelViewSet):
     """CRUD de categorías para la app admin.
 
@@ -84,6 +111,69 @@ class AdminCategoryViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_409_CONFLICT,
             )
         return super().destroy(request, *args, **kwargs)
+
+    @action(detail=True, methods=['get', 'post'], url_path='attributes')
+    def attributes(self, request, pk=None):
+        """Lista los atributos que aplican a la categoría, o engancha uno nuevo.
+
+        El GET devuelve propios **y** heredados de las ancestras ya resueltos:
+        "Anillos" hereda Material de "Joyas" sin que nadie lo repita. El POST
+        siempre crea el enganche en *esta* categoría.
+        """
+        category = self.get_object()
+        if request.method == 'GET':
+            serializer = AdminCategoryAttributeSerializer(
+                category.effective_attributes(), many=True,
+                context={**self.get_serializer_context(), 'category': category},
+            )
+            return Response(serializer.data)
+        serializer = AdminCategoryAttributeSerializer(
+            data=request.data,
+            context={**self.get_serializer_context(), 'category': category},
+        )
+        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.save(category=category)
+        except IntegrityError:
+            return Response(
+                {'detail': f'"{category.name}" ya tiene ese atributo.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['patch', 'delete'],
+            url_path=r'attributes/(?P<attribute_id>\d+)')
+    def attribute(self, request, pk=None, attribute_id=None):
+        """Cambia (obligatorio/orden) o desengancha un atributo de la categoría.
+
+        Solo alcanza a los enganches **propios**: un heredado se edita en la
+        categoría que lo definió, si no una hija podría romperle la
+        configuración a la madre y a todas sus hermanas.
+        """
+        category = self.get_object()
+        link = CategoryAttribute.objects.filter(
+            category=category, attribute_id=attribute_id,
+        ).select_related('attribute').first()
+        if link is None:
+            inherited = any(
+                item.attribute_id == int(attribute_id)
+                for item in category.effective_attributes()
+            )
+            detail = (
+                f'Ese atributo lo hereda "{category.name}" de una categoría '
+                'madre: editalo ahí.'
+            ) if inherited else 'Esta categoría no tiene ese atributo.'
+            return Response({'detail': detail}, status=status.HTTP_404_NOT_FOUND)
+        if request.method == 'DELETE':
+            link.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        serializer = AdminCategoryAttributeSerializer(
+            link, data=request.data, partial=True,
+            context={**self.get_serializer_context(), 'category': category},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 
 class AdminGalleryImageSerializer(serializers.ModelSerializer):
