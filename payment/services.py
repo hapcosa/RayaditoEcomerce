@@ -3,6 +3,7 @@ import os
 import mercadopago
 from django.db import transaction
 from django.db.models import Sum
+from django.utils import timezone
 from django.utils.text import slugify
 
 from carrito.models import Carrito, CarritoItem
@@ -124,7 +125,14 @@ def record_payment(payment_data):
     with transaction.atomic():
         order.status = order_status
         order.transaction_id = str(payment_data['id'])
-        order.save(update_fields=['status', 'transaction_id'])
+        update_fields = ['status', 'transaction_id']
+        # Solo la primera aprobacion mueve el reloj: MercadoPago reenvia la misma
+        # notificacion varias veces, y un reembolso posterior no borra que se
+        # pago. Desde aca se cuenta el plazo de despacho.
+        if order_status == Order.OrderStatus.processed and order.paid_at is None:
+            order.paid_at = timezone.now()
+            update_fields.append('paid_at')
+        order.save(update_fields=update_fields)
 
         installments = int(payment_data.get('installments') or 1)
         payment, _created = Payments.objects.update_or_create(

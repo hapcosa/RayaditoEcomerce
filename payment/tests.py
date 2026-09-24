@@ -6,12 +6,14 @@ from unittest import mock
 
 from django.core.management import call_command
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from carrito.models import Carrito, CarritoItem
 from category.models import Category
 from orders.models import Order, OrderItem
+from payment import services
 from payment.models import Payments
 from product.models import Product, ProductVariant
 from shipping.models import Shipping
@@ -217,6 +219,7 @@ class MercadoPagoFlowTests(APITestCase):
         self.assertEqual(self.variant.stock, 3)
         self.assertFalse(CarritoItem.objects.filter(carrito=self.cart).exists())
         self.assertEqual(Carrito.objects.get(id=self.cart.id).total_items, 0)
+        self.assertIsNotNone(order.paid_at)
 
     @mock.patch.dict(os.environ, {'MERCADOPAGO_ACCESS_TOKEN': 'test-token'}, clear=False)
     def test_rejected_webhook_marks_order_refused_without_deducting_stock(self):
@@ -434,3 +437,72 @@ class MercadoPagoFlowTests(APITestCase):
         self.assertEqual(order.status, Order.OrderStatus.refused)
         self.assertEqual(payment.status, Payments.PaymentStatus.REJECTED)
         self.assertFalse(payment.stock_deducted)
+
+
+class PaidAtTests(APITestCase):
+    """`paid_at` es el reloj del plazo de despacho: solo lo mueve una aprobacion."""
+
+    def setUp(self):
+        self.category = Category.objects.create(name='Anillos', ProductType='Joya')
+        self.product = Product.objects.create(
+            name='Anillo de plata',
+            product_type='joya',
+            description='Hecho a mano',
+            price=25000,
+            compare_price=0,
+            category=self.category,
+            photo='',
+        )
+        self.order = Order.objects.create(amount=25000)
+        OrderItem.objects.create(
+            order=self.order,
+            product=self.product,
+            name=self.product.name,
+            price=25000,
+            count=1,
+        )
+
+    def _notify(self, status_value, payment_id=777):
+        return services.record_payment({
+            'id': payment_id,
+            'external_reference': str(self.order.id),
+            'status': status_value,
+            'status_detail': '',
+            'installments': 1,
+        })
+
+    def test_an_approved_payment_stamps_paid_at(self):
+        before = timezone.now()
+
+        self._notify('approved')
+
+        self.order.refresh_from_db()
+        self.assertIsNotNone(self.order.paid_at)
+        self.assertGreaterEqual(self.order.paid_at, before)
+
+    def test_a_repeated_notification_does_not_move_the_clock(self):
+        self._notify('approved')
+        self.order.refresh_from_db()
+        first = self.order.paid_at
+
+        self._notify('approved')
+
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.paid_at, first)
+
+    def test_a_rejected_payment_leaves_paid_at_empty(self):
+        self._notify('rejected')
+
+        self.order.refresh_from_db()
+        self.assertIsNone(self.order.paid_at)
+
+    def test_a_refund_cancels_the_order_but_keeps_paid_at(self):
+        self._notify('approved')
+        self.order.refresh_from_db()
+        paid_at = self.order.paid_at
+
+        self._notify('refunded')
+
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.OrderStatus.cancelled)
+        self.assertEqual(self.order.paid_at, paid_at)
