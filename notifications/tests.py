@@ -1,10 +1,14 @@
 """Aviso al admin cuando entra una venta."""
+from datetime import timedelta
+from io import StringIO
 from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.core import mail
 from django.db import transaction
 from django.test import override_settings
+from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from category.models import Category
@@ -358,3 +362,141 @@ class PaidOrderPushTests(APITestCase):
 
         post.assert_not_called()
         self.assertEqual(len(mail.outbox), 1)
+
+
+@override_settings(
+    ADMIN_NOTIFY_EMAILS=['duena@rayadito.cl'],
+    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    BACKEND_BASE_URL='https://api.piedrasdelrayadito.cl',
+    DISPATCH_SLA_HOURS=72,
+    DISPATCH_WARN_HOURS=24,
+)
+class PendingDispatchTests(APITestCase):
+    """Aviso de plazo: con SLA 72 h y aviso 24 h antes, sale a las 48 h."""
+
+    def setUp(self):
+        self.category = Category.objects.create(name='Anillos', ProductType='Joya')
+        self.product = Product.objects.create(
+            name='Anillo de plata', product_type='joya', description='Hecho a mano',
+            price=25000, compare_price=0, category=self.category, photo='',
+        )
+        self.now = timezone.now()
+
+    def _order(self, hours_ago, status=Order.OrderStatus.processed, **extra):
+        order = Order.objects.create(
+            email='ana@cliente.cl', amount=29500, shipping_price=4500,
+            full_name='Ana Ríos', status=status,
+            paid_at=self.now - timedelta(hours=hours_ago), **extra,
+        )
+        OrderItem.objects.create(
+            order=order, product=self.product, name=self.product.name,
+            price=25000, count=1,
+        )
+        return order
+
+    def _run(self, *args):
+        out = StringIO()
+        call_command('notify_pending_dispatch', *args, stdout=out, stderr=StringIO())
+        return out.getvalue()
+
+    def test_a_fresh_order_is_not_warned_about(self):
+        self._order(hours_ago=10)
+
+        self.assertEqual(list(notify.orders_to_warn(self.now)), [])
+        self._run()
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_an_order_inside_the_warning_window_is_warned_about(self):
+        order = self._order(hours_ago=50)
+
+        self._run()
+
+        self.assertEqual(len(mail.outbox), 1)
+        message = mail.outbox[0]
+        self.assertIn(f'#{order.id}', message.subject)
+        self.assertIn('Plazo por vencer', message.subject)
+        self.assertIn('quedan 22 horas', message.subject)
+        self.assertIn('Ana Ríos', message.body)
+        self.assertIn('Para despachar este pedido quedan 22 horas.', message.body)
+        order.refresh_from_db()
+        self.assertIsNotNone(order.dispatch_warned_at)
+
+    def test_an_overdue_order_says_so(self):
+        self._order(hours_ago=100)
+
+        self._run()
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('Plazo vencido', mail.outbox[0].subject)
+        self.assertIn('venció hace 28 horas', mail.outbox[0].subject)
+        self.assertIn('El plazo para despachar este pedido venció hace 28 horas.',
+                      mail.outbox[0].body)
+
+    def test_an_order_is_only_warned_about_once(self):
+        self._order(hours_ago=50)
+
+        self._run()
+        self._run()
+
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_a_dispatched_order_is_left_alone(self):
+        self._order(hours_ago=50, status=Order.OrderStatus.shipping)
+
+        self._run()
+
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_an_unpaid_order_is_left_alone(self):
+        # Sin `paid_at` no hay reloj: el pedido se creo pero nunca se pago.
+        Order.objects.create(amount=29500, status=Order.OrderStatus.not_processed)
+
+        self._run()
+
+        self.assertEqual(len(mail.outbox), 0)
+
+    @override_settings(ADMIN_NOTIFY_EMAILS=[])
+    def test_with_no_channel_the_order_stays_unmarked(self):
+        # Si no sale por ningun lado, no se marca como avisado: al configurar
+        # el canal el aviso tiene que salir, no haberse perdido en silencio.
+        order = self._order(hours_ago=50)
+
+        self._run()
+
+        order.refresh_from_db()
+        self.assertIsNone(order.dispatch_warned_at)
+
+    def test_dry_run_changes_nothing(self):
+        order = self._order(hours_ago=50)
+
+        output = self._run('--dry-run')
+
+        self.assertIn(f'Order {order.id}', output)
+        self.assertEqual(len(mail.outbox), 0)
+        order.refresh_from_db()
+        self.assertIsNone(order.dispatch_warned_at)
+
+    def test_the_warning_also_pushes(self):
+        admin = User.objects.create_superuser(
+            email='duena@rayadito.cl', password='Testpass123',
+            first_name='Duena', last_name='Rayadito',
+        )
+        DevicePushToken.objects.create(token='ExponentPushToken[abc]', user=admin)
+        order = self._order(hours_ago=50)
+        response = mock.Mock()
+        response.json.return_value = {'data': [{'status': 'ok'}]}
+        response.raise_for_status.return_value = None
+
+        with mock.patch('notifications.expo.requests.post', return_value=response) as post:
+            self._run()
+
+        message = post.call_args.kwargs['json'][0]
+        self.assertIn(f'#{order.id}', message['title'])
+        self.assertEqual(message['data'],
+                         {'type': 'pending_dispatch', 'order_id': order.id})
+
+    def test_the_deadline_is_counted_from_the_payment(self):
+        order = self._order(hours_ago=50)
+
+        self.assertEqual(notify.dispatch_deadline(order),
+                         order.paid_at + timedelta(hours=72))

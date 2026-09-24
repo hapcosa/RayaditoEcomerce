@@ -395,6 +395,12 @@ BACKEND_BASE_URL = env('BACKEND_BASE_URL', default='')
 # el push: eso depende de que haya aparatos registrados.
 EXPO_ACCESS_TOKEN = env('EXPO_ACCESS_TOKEN', default='')
 
+# Plazo para despachar un pedido pagado, y cuanto antes avisar que se vence.
+# El reloj arranca en `Order.paid_at`, no en la creacion del pedido. Con 72 y
+# 24, el aviso sale a las 48 h de pagado y el plazo vence a las 72 h.
+DISPATCH_SLA_HOURS = env.int('DISPATCH_SLA_HOURS', default=72)
+DISPATCH_WARN_HOURS = env.int('DISPATCH_WARN_HOURS', default=24)
+
 
 # Detrás del túnel de Cloudflare, `cloudflared` habla HTTP plano contra este
 # proceso y el TLS lo termina Cloudflare. Confiar en el Host reenviado hace que
