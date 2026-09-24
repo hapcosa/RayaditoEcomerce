@@ -1,14 +1,11 @@
-from decimal import Decimal
-
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from category.models import Category
-from metaproduct.models import Material
 from orders.models import Order, OrderItem
-from product.models import Joyas
+from product.models import Product
 from shipping.models import Shipping
 
 User = get_user_model()
@@ -19,10 +16,9 @@ class OrderMoneyTests(TestCase):
 
     def setUp(self):
         cat = Category.objects.create(name='Anillos', ProductType='Joya')
-        mat = Material.objects.create(name='Plata', cost=15000)
-        self.product = Joyas.objects.create(
+        self.product = Product.objects.create(
             name='Anillo', description='x', price=25000, compare_price=0,
-            category=cat, material=mat, weight=Decimal('1.00'), photo='',
+            category=cat, product_type=Product.ProductType.JOYA, photo='',
         )
 
     def test_order_amount_is_integer(self):
@@ -123,11 +119,10 @@ class CustomerOrderApiTests(APITestCase):
 
     def setUp(self):
         cat = Category.objects.create(name='Colgantes', ProductType='Joya')
-        mat = Material.objects.create(name='Cobre', cost=8000)
-        self.product = Joyas.objects.create(
+        self.product = Product.objects.create(
             name='Colgante rayado', description='x', price=19000,
-            compare_price=0, category=cat, material=mat,
-            weight=Decimal('1.00'), photo='',
+            compare_price=0, category=cat,
+            product_type=Product.ProductType.JOYA, photo='',
         )
         self.shipping = Shipping.objects.create(
             name='Starken por pagar',

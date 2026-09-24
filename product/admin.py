@@ -6,8 +6,6 @@ from .models import (
     ProductAttributeValue,
     ProductVariant,
     ProductVariantAttributeValue,
-    Joyas,
-    Piedras,
     GalleryProduct,
     Review,
 )
@@ -23,18 +21,6 @@ class ProductVariantInline(admin.TabularInline):
     extra = 1
 
 
-class JoyasAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'product_type', 'status', 'compare_price', 'price', 'available_stock', 'sold',)
-    list_display_links=('id', 'name',)
-    list_filter = ('category', 'product_type', 'status')
-    list_editable = ('compare_price','price', 'status', 'sold',)
-    list_per_page = 25
-class PiedrasAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'product_type', 'status', 'compare_price', 'price', 'available_stock', 'sold',)
-    list_display_links=('id', 'name',)
-    list_filter = ('category', 'product_type', 'status')
-    list_editable = ('compare_price','price', 'status', 'sold',)
-    list_per_page = 25
 class Galleryproducts(admin.ModelAdmin):
     list_display =('id', 'product')
     list_display_links=('id', 'product')
@@ -89,8 +75,6 @@ class ProductVariantAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Product, ProductAdmin)
-admin.site.register(Joyas, JoyasAdmin)
-admin.site.register(Piedras, PiedrasAdmin)
 admin.site.register(GalleryProduct, Galleryproducts)
 admin.site.register(Review, ReviewAdmin)
 admin.site.register(Attribute, AttributeAdmin)
