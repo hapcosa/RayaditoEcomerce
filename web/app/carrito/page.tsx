@@ -10,10 +10,10 @@ import { formatCLP } from '@/lib/format';
 import type { HydratedCartItem, ShippingOption } from '@/types/cart';
 
 export default function CarritoPage() {
-  const { items, removeItem, updateCount, clear } = useCartStore();
+  const { items, removeItem, updateCount, clear, shippingId, setShippingId } =
+    useCartStore();
   const [hydrated, setHydrated] = useState<HydratedCartItem[]>([]);
   const [shipping, setShipping] = useState<ShippingOption[]>([]);
-  const [selectedShipping, setSelectedShipping] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Zustand persist necesita un tick para hidratar desde localStorage.
@@ -34,9 +34,9 @@ export default function CarritoPage() {
     ]).then(([cart, opts]) => {
       setHydrated(cart);
       setShipping(opts);
-      if (opts.length > 0 && selectedShipping === null) {
-        setSelectedShipping(opts[0].id);
-      }
+      // Se respeta lo elegido antes; si ya no existe (o no habia), la primera.
+      const vigente = opts.some((o) => o.id === useCartStore.getState().shippingId);
+      if (!vigente) setShippingId(opts.length > 0 ? opts[0].id : null);
     }).catch(() => {
       setHydrated([]);
     }).finally(() => setLoading(false));
@@ -47,7 +47,7 @@ export default function CarritoPage() {
     (sum, item) => sum + item.product.price * item.count,
     0,
   );
-  const selectedOption = shipping.find((s) => s.id === selectedShipping) ?? null;
+  const selectedOption = shipping.find((s) => s.id === shippingId) ?? null;
   const shippingCost = selectedOption?.price ?? 0;
   const total = subtotal + shippingCost;
 
@@ -221,15 +221,15 @@ export default function CarritoPage() {
                   <li key={opt.id}>
                     <label className="flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors hover:border-tierra-300"
                       style={{
-                        borderColor: selectedShipping === opt.id ? 'rgb(173 92 58)' : undefined,
-                        background: selectedShipping === opt.id ? 'rgb(var(--color-tierra-50))' : undefined,
+                        borderColor: shippingId === opt.id ? 'rgb(173 92 58)' : undefined,
+                        background: shippingId === opt.id ? 'rgb(var(--color-tierra-50))' : undefined,
                       }}>
                       <input
                         type="radio"
                         name="shipping"
                         value={opt.id}
-                        checked={selectedShipping === opt.id}
-                        onChange={() => setSelectedShipping(opt.id)}
+                        checked={shippingId === opt.id}
+                        onChange={() => setShippingId(opt.id)}
                         className="mt-0.5 accent-tierra-500"
                       />
                       <div className="flex-1 text-sm">
