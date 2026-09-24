@@ -36,9 +36,9 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
           <div className="absolute left-2 top-2 flex flex-col gap-1">
-            {product.available_stock === 0 && (
+            {(product.sold || product.available_stock === 0) && (
               <span className="rounded-full bg-piedra-800/80 px-2.5 py-0.5 text-xs font-medium text-piedra-50">
-                Agotado
+                {product.sold ? 'Vendida' : 'Agotado'}
               </span>
             )}
             {hasDiscount && (

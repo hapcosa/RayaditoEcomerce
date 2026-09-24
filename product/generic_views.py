@@ -13,15 +13,25 @@ from .serializers import AttributeSerializer, ProductSerializer
 SORT_FIELDS = {'date_created', 'price', 'name'}
 
 
-def _base_products():
+def _published_products():
+    """Todo lo publicado, vendido o no.
+
+    Solo lo usa la ficha de producto: una pieza vendida sigue teniendo URL
+    propia para que no se rompan los enlaces compartidos en redes. El resto del
+    catalogo parte de `_base_products()`.
+    """
     return Product.objects.filter(
-        sold=False,
         status=Product.ProductStatus.PUBLISHED,
     ).select_related('category').prefetch_related(
         'attribute_values__attribute_value__attribute',
         'variants__attributes__attribute',
         'galleryproduct_set',
     )
+
+
+def _base_products():
+    """Lo que se puede comprar: publicado y sin vender."""
+    return _published_products().filter(sold=False)
 
 
 def _category_filter(queryset, category_id):
@@ -85,7 +95,10 @@ def _limit(queryset, raw_limit):
 
 
 def _get_product(identifier):
-    queryset = _base_products()
+    # A proposito sobre `_published_products()`: la ficha de una pieza vendida
+    # responde 200 y el front la muestra como "Vendida", en vez del 404 que
+    # dejaba muertos los enlaces de Instagram al marcarla.
+    queryset = _published_products()
     try:
         return get_object_or_404(queryset, id=int(identifier))
     except (TypeError, ValueError):
