@@ -41,6 +41,7 @@ PROJECT_APPS = [
     'orders',
     'user_profile',
     'payment',
+    'notifications',
     'suggestions',
     'wishlist',
     'homepage',
@@ -381,6 +382,14 @@ DEFAULT_FROM_EMAIL = env(
     'DEFAULT_FROM_EMAIL',
     default='Piedras Rayadito - Taller de joyeria y lapidacion <no-reply@piedrasdelrayadito.cl>',
 )
+
+# Avisos al dueno (venta aprobada, plazo de despacho por vencer). Lista vacia =
+# apagados, que es lo que corresponde en desarrollo y en los tests: nadie quiere
+# un correo por cada pago de prueba.
+ADMIN_NOTIFY_EMAILS = env.list('ADMIN_NOTIFY_EMAILS', default=[])
+# Dominio publico de este backend, para linkear el pedido en el admin de Django
+# desde el aviso. Vacio = el aviso va sin link.
+BACKEND_BASE_URL = env('BACKEND_BASE_URL', default='')
 
 
 # Detrás del túnel de Cloudflare, `cloudflared` habla HTTP plano contra este

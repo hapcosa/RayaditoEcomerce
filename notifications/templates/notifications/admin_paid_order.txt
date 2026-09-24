@@ -1,0 +1,25 @@
+{% load money %}Entró una venta.
+
+Pedido #{{ order.id }}
+Total: ${{ order.amount|clp }} CLP (envío ${{ order.shipping_price|clp }})
+Pago: {{ order.transaction_id|default:"—" }}
+
+Comprador
+  {{ order.full_name|default:"—" }}
+  {{ customer_email|default:"—" }}
+  {{ order.telephone_number|default:"—" }}
+
+Envío{% if order.shipping_id %} por {{ order.shipping_id.name }}{% endif %}
+  {{ order.address_line_1|default:"—" }}
+  {{ order.city|default:"—" }}, {{ order.get_region_display }}
+  {{ order.postal_zip_code|default:"—" }}
+
+Piezas
+{% for item in items %}  - {{ item.count }} x {{ item.name }} — ${{ item.price|clp }} c/u
+{% empty %}  (el pedido no tiene ítems)
+{% endfor %}
+Falta despacharlo: cuando salga, cárgale el número de
+seguimiento y pásalo a "enviado".
+{% if admin_url %}
+{{ admin_url }}
+{% endif %}
