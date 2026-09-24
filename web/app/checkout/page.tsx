@@ -24,7 +24,7 @@ const CONTACTO_VACIO: Contacto = { email: '', first_name: '', last_name: '' };
 export default function CheckoutPage() {
   const router = useRouter();
   const { access, user } = useAuthStore();
-  const { items, clear: clearCart } = useCartStore();
+  const { items, clear: clearCart, shippingId, setShippingId } = useCartStore();
 
   const [mounted, setMounted] = useState(false);
   const [hydrated, setHydrated] = useState<HydratedCartItem[]>([]);
@@ -52,7 +52,10 @@ export default function CheckoutPage() {
     ]).then(([cart, opts, guardadas]) => {
       setHydrated(cart);
       setShipping(opts);
-      if (opts.length > 0) setSelectedShipping(opts[0].id);
+      // Lo elegido en el carrito llega ya marcado; si esa opcion ya no esta
+      // disponible se cae a la primera.
+      const elegido = opts.find((o) => o.id === shippingId) ?? opts[0];
+      if (elegido) setSelectedShipping(elegido.id);
 
       if (user) {
         setForm({ email: user.email, first_name: user.first_name, last_name: user.last_name });
@@ -297,7 +300,10 @@ export default function CheckoutPage() {
                       ].join(' ')}>
                         <input type="radio" name="shipping" value={opt.id}
                           checked={selectedShipping === opt.id}
-                          onChange={() => setSelectedShipping(opt.id)}
+                          onChange={() => {
+                            setSelectedShipping(opt.id);
+                            setShippingId(opt.id);
+                          }}
                           className="mt-0.5 accent-tierra-500" />
                         <div className="flex-1">
                           <p className="text-sm font-medium text-piedra-900">{opt.name}</p>

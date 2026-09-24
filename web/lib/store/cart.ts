@@ -10,9 +10,16 @@ export interface LocalCartItem {
 
 interface CartStore {
   items: LocalCartItem[];
+  /**
+   * Opcion de envio elegida en el carrito, para que el checkout no la vuelva
+   * a preguntar. Es solo una preferencia: el checkout la valida contra las
+   * opciones vigentes y el precio real lo calcula el backend.
+   */
+  shippingId: number | null;
   addItem: (product_id: number) => void;
   removeItem: (product_id: number) => void;
   updateCount: (product_id: number, count: number) => void;
+  setShippingId: (shippingId: number | null) => void;
   clear: () => void;
 }
 
@@ -20,6 +27,7 @@ export const useCartStore = create<CartStore>()(
   persist(
     (set) => ({
       items: [],
+      shippingId: null,
 
       addItem: (product_id) =>
         set((s) => {
@@ -37,7 +45,9 @@ export const useCartStore = create<CartStore>()(
           ),
         })),
 
-      clear: () => set({ items: [] }),
+      setShippingId: (shippingId) => set({ shippingId }),
+
+      clear: () => set({ items: [], shippingId: null }),
     }),
     { name: 'rayadito-cart' },
   ),
