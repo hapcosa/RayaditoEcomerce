@@ -8,6 +8,7 @@ Reglas: un usuario solo ve sus propios pedidos, en cualquier estado.
 from django.db.models import Count
 from django.http import Http404
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import permissions, status
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
@@ -33,9 +34,16 @@ class DispatchOrderView(APIView):
             )
 
         order = get_object_or_404(Order, id=order_id)
+        update_fields = ['deliveryNumber', 'status']
+        # Esta vista no tiene maquina de estados: se puede llamar de nuevo para
+        # corregir el numero de seguimiento. En ese caso el pedido ya estaba
+        # enviado y la fecha de despacho no se toca.
+        if order.status != Order.OrderStatus.shipping:
+            order.shipped_at = timezone.now()
+            update_fields.append('shipped_at')
         order.deliveryNumber = delivery_number
         order.status = Order.OrderStatus.shipping
-        order.save(update_fields=['deliveryNumber', 'status'])
+        order.save(update_fields=update_fields)
 
         return Response(
             {

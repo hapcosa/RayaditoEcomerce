@@ -31,6 +31,23 @@ class Order(models.Model):
     telephone_number = models.CharField(max_length=255, blank=True)
     shipping_id = models.ForeignKey(Shipping, on_delete=models.DO_NOTHING, blank=True, null=True)
     date_issued = models.DateTimeField(auto_now_add=datetime.now)
+    # `date_issued` es cuando se creo el pedido, no cuando se pago: entre uno y
+    # otro puede no pasar nada nunca (el cliente abandona el checkout). El reloj
+    # de despacho se cuenta desde `paid_at`.
+    paid_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='Primera vez que MercadoPago aprobo el pago. Null = nunca se pago.',
+    )
+    shipped_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='Cuando el pedido paso a "enviado".',
+    )
+    # Lo escribe el aviso de plazo de despacho por vencer (comando programado),
+    # para no repetir el mismo aviso en cada corrida. Todavia no lo setea nadie.
+    dispatch_warned_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='Ultimo aviso al admin de que el plazo de despacho esta por vencer.',
+    )
     profile = models.ForeignKey(UserProfile, on_delete=models.DO_NOTHING, null=True )
     deliveryNumber = models.CharField(max_length=255, null=True, blank=True)
 

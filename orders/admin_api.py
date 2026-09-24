@@ -6,6 +6,7 @@ endpoint de cambio de estado con **máquina de estados** (transiciones válidas)
 Nota de scope: el descuento/reposición de stock es responsabilidad de Fase 2
 (pagos); aquí solo se cambia el estado operativo del pedido.
 """
+from django.utils import timezone
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser
@@ -43,7 +44,7 @@ class AdminOrderSerializer(serializers.ModelSerializer):
             'id', 'status', 'transaction_id', 'amount', 'shipping_price',
             'full_name', 'email', 'address_line_1', 'city', 'postal_zip_code',
             'region', 'telephone_number', 'deliveryNumber', 'date_issued',
-            'items', 'allowed_transitions',
+            'paid_at', 'shipped_at', 'items', 'allowed_transitions',
         ]
 
     def get_allowed_transitions(self, obj):
@@ -110,6 +111,8 @@ class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
                 )
             order.deliveryNumber = delivery_number
             update_fields.append('deliveryNumber')
+            order.shipped_at = timezone.now()
+            update_fields.append('shipped_at')
 
         order.status = new_status
         order.save(update_fields=update_fields)
