@@ -46,6 +46,7 @@ const EMPTY_FORM: ProductFormValue = {
   productType: null,
   status: 'published',
   isFeatured: false,
+  sold: false,
   categoryId: null,
 };
 
@@ -164,6 +165,7 @@ export default function NewProductScreen() {
         product_type: form.productType!,
         status: form.status,
         is_featured: form.isFeatured,
+        sold: form.sold,
         photo: photo!,
       });
       if (atributos.fields.length > 0) {

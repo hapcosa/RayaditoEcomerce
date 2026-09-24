@@ -62,6 +62,7 @@ export type ProductFormValue = {
   status: ProductStatus;
   isFeatured: boolean;
   categoryId: number | null;
+  sold: boolean;
 };
 
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -80,9 +81,21 @@ type Props = {
   onChange: (patch: Partial<ProductFormValue>) => void;
   categories: Category[];
   loadingCats: boolean;
+  /**
+   * Muestra el interruptor "Vendida". Solo en edición: un producto que recién
+   * se está dando de alta no puede estar vendido, y marcarlo lo sacaría del
+   * catálogo apenas creado.
+   */
+  showSold?: boolean;
 };
 
-export function ProductFormFields({ value, onChange, categories, loadingCats }: Props) {
+export function ProductFormFields({
+  value,
+  onChange,
+  categories,
+  loadingCats,
+  showSold = false,
+}: Props) {
   const theme = useTheme();
   const inputStyle = [
     styles.input,
@@ -220,6 +233,20 @@ export function ProductFormFields({ value, onChange, categories, loadingCats }: 
         <ThemedText type="smallBold">Destacado</ThemedText>
         <Switch value={value.isFeatured} onValueChange={(v) => onChange({ isFeatured: v })} />
       </View>
+
+      {showSold && (
+        <View style={styles.field}>
+          <View style={styles.switchRow}>
+            <ThemedText type="smallBold">Vendida</ThemedText>
+            <Switch value={value.sold} onValueChange={(v) => onChange({ sold: v })} />
+          </View>
+          <ThemedText type="small" themeColor="textSecondary">
+            {value.sold
+              ? 'No aparece en la tienda ni se puede comprar. Apágalo si vuelve a estar disponible.'
+              : 'Márcala si la vendiste fuera de la tienda (en persona, por redes): deja de aparecer en el catálogo.'}
+          </ThemedText>
+        </View>
+      )}
     </>
   );
 }
