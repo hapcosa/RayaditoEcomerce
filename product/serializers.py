@@ -5,8 +5,6 @@ from .models import (
     Product,
     ProductAttributeValue,
     ProductVariant,
-    Joyas,
-    Piedras,
     GalleryProduct,
     Review,
 )
@@ -105,22 +103,6 @@ class ProductSerializer(serializers.ModelSerializer):
             'is_featured', 'date_created', 'available_stock',
             'attributes', 'variants', 'gallery',
         ]
-
-
-class JoyasSerializer(serializers.ModelSerializer):
-    class Meta:
-        model=Joyas
-        fields = '__all__'
-
-
-class PiedrasSerializer(serializers.ModelSerializer):
-    class Meta:
-        model=Piedras
-        fields = '__all__'
-class RelationPiedraJoyaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model=GalleryProduct
-        fields = '__all__'
 
 
 class ReviewSerializer(serializers.ModelSerializer):

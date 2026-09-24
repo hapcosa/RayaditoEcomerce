@@ -183,37 +183,9 @@ class ProductVariantAttributeValue(models.Model):
     def __str__(self):
         return f'{self.variant} - {self.attribute_value}'
 
-class Joyas(Product):
-    class Meta:
-        verbose_name = 'Joyas'
-        verbose_name_plural = 'Joyas'
-    material = models.ForeignKey(Material, on_delete=models.CASCADE)
-    weight = models.DecimalField(max_digits=5, decimal_places=2)
-
-class Piedras(Product):
-    class Meta:
-        verbose_name = 'Piedras'
-        verbose_name_plural = 'Piedras'
-    large = models.DecimalField(max_digits=5, decimal_places=2)
-    width = models.DecimalField(max_digits=5, decimal_places=2)
-    height = models.DecimalField(max_digits=5, decimal_places=2)
-    nombrePiedra = models.ForeignKey(NombrePiedra, on_delete=models.CASCADE)
-
-#clases relacionales muchos a muchos o muchos  a uno
-class RelationPiedraJoya(models.Model):
-    class Meta:
-        verbose_name = 'Piedrasin'
-        verbose_name_plural = 'Piedrasin'
-    nombrePiedra = models.ForeignKey(NombrePiedra, on_delete=models.CASCADE)
-    joya = models.ForeignKey(Joyas, on_delete=models.CASCADE)
-    cantidad = models.IntegerField()
-
 class GalleryProduct(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     photos = models.ImageField(upload_to='photos/%y/%m')
-class JoyaMateriales(models.Model):
-    joya = models.ForeignKey(Joyas , on_delete=models.CASCADE)
-    material = models.ForeignKey(Material, on_delete=models.CASCADE)
 
 
 class Review(models.Model):

@@ -1,16 +1,13 @@
-from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from category.models import Category
-from metaproduct.models import Material
 from product.models import (
     GalleryProduct,
     Attribute,
     AttributeValue,
-    Joyas,
     Product,
     ProductAttributeValue,
     ProductVariant,
@@ -26,10 +23,9 @@ class ReviewApiTests(APITestCase):
             first_name='Ana', last_name='Ríos',
         )
         cat = Category.objects.create(name='Anillos', ProductType='Joya')
-        mat = Material.objects.create(name='Plata', cost=1000)
-        self.product = Joyas.objects.create(
+        self.product = Product.objects.create(
             name='Anillo', description='x', price=10000, compare_price=0,
-            category=cat, material=mat, weight=Decimal('1.00'), photo='',
+            category=cat, product_type=Product.ProductType.JOYA, photo='',
         )
 
     def _url(self, action):
