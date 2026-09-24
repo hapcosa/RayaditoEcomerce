@@ -12,13 +12,15 @@ import { formatCLP } from '@/lib/format';
 import { absoluteUrl } from '@/lib/site';
 
 interface PageProps {
-  params: { slug: string };
+  // Next 15 entrega los parámetros de ruta como promesa.
+  params: Promise<{ slug: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
   try {
-    const product = await fetchProduct(params.slug);
-    const canonical = absoluteUrl(`/productos/${product.slug ?? params.slug}`);
+    const product = await fetchProduct(slug);
+    const canonical = absoluteUrl(`/productos/${product.slug ?? slug}`);
     return {
       title: product.name,
       description: product.description.slice(0, 160),
@@ -38,9 +40,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ProductDetailPage({ params }: PageProps) {
+  const { slug } = await params;
   let product;
   try {
-    product = await fetchProduct(params.slug);
+    product = await fetchProduct(slug);
   } catch {
     notFound();
   }

@@ -1,22 +1,24 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { apiActivate } from '@/lib/auth';
 import { AuthFormWrapper } from '@/components/ui/AuthFormWrapper';
 
 interface PageProps {
-  params: { uid: string; token: string };
+  // Next 15 entrega los parámetros de ruta como promesa, también en el cliente.
+  params: Promise<{ uid: string; token: string }>;
 }
 
 export default function ActivatePage({ params }: PageProps) {
+  const { uid, token } = use(params);
   const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
 
   useEffect(() => {
-    apiActivate(params.uid, params.token)
+    apiActivate(uid, token)
       .then(() => setStatus('ok'))
       .catch(() => setStatus('error'));
-  }, [params.uid, params.token]);
+  }, [uid, token]);
 
   return (
     <AuthFormWrapper title="Activación de cuenta">
