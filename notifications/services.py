@@ -7,13 +7,15 @@ por no poder mandar un mail, MercadoPago reintentaria la notificacion y
 terminaria deshabilitando el endpoint.
 """
 import logging
+from datetime import timedelta
 
 from django.conf import settings
 from django.core.mail import EmailMessage
 from django.db import transaction
 from django.template.loader import render_to_string
+from django.utils import timezone
 
-from orders.models import OrderItem
+from orders.models import Order, OrderItem
 
 from . import expo
 from .formatting import clp
@@ -153,3 +155,93 @@ def notify_paid_order_on_commit(order):
     volver todo atras; el correo, en cambio, no se puede des-enviar.
     """
     transaction.on_commit(lambda: notify_paid_order(order))
+
+
+def dispatch_deadline(order):
+    """Hasta cuando hay para despachar. None si el pedido no se pago."""
+    if not order.paid_at:
+        return None
+    return order.paid_at + timedelta(hours=settings.DISPATCH_SLA_HOURS)
+
+
+def orders_to_warn(now=None):
+    """Pedidos pagados, sin despachar y con el plazo cerca o vencido.
+
+    Se avisa una sola vez por pedido (`dispatch_warned_at`): el objetivo es que
+    el aviso signifique algo, y un recordatorio cada hora se vuelve ruido que se
+    ignora. Un pedido ya vencido entra igual, porque la condicion es "queda
+    menos de DISPATCH_WARN_HOURS", y para uno vencido queda tiempo negativo.
+    """
+    now = now or timezone.now()
+    margin = timedelta(
+        hours=settings.DISPATCH_SLA_HOURS - settings.DISPATCH_WARN_HOURS)
+    return (
+        Order.objects
+        .filter(
+            status=Order.OrderStatus.processed,
+            paid_at__isnull=False,
+            paid_at__lte=now - margin,
+            dispatch_warned_at__isnull=True,
+        )
+        .select_related('shipping_id', 'user')
+        .order_by('paid_at')
+    )
+
+
+def _time_left_text(deadline, now):
+    """'quedan 5 h' / 'vencio hace 2 dias'. Redondeado a la hora."""
+    delta = deadline - now
+    # Redondeado, no truncado: a las 21 h 59 min quedan 22 horas, y decir 21
+    # suena a que se perdio una hora en el camino.
+    hours = round(abs(delta).total_seconds() / 3600)
+    if hours >= 48:
+        amount = f'{hours // 24} días'
+    elif hours == 1:
+        amount = '1 hora'
+    else:
+        amount = f'{hours} horas'
+    if delta.total_seconds() >= 0:
+        return f'quedan {amount}'
+    return f'venció hace {amount}'
+
+
+def notify_pending_dispatch(order, now=None):
+    """Avisa que a un pedido pagado se le vence el plazo de despacho.
+
+    Devuelve True si el aviso salio por algun canal. Si no salio por ninguno
+    (sin correos configurados y sin aparatos registrados) devuelve False, y
+    quien llama no debe marcar el pedido como avisado: si no, el aviso se
+    perderia en silencio para siempre.
+    """
+    now = now or timezone.now()
+    deadline = dispatch_deadline(order)
+    items = list(OrderItem.objects.select_related('product').filter(order=order))
+    left = _time_left_text(deadline, now)
+    vencido = deadline < now
+
+    sent = send_admin_mail(
+        subject=(f'{"Plazo vencido" if vencido else "Plazo por vencer"} — '
+                 f'pedido #{order.id} ({left})'),
+        template='notifications/admin_pending_dispatch.txt',
+        context={
+            'order': order,
+            'items': items,
+            'deadline': deadline,
+            'headline': (
+                f'El plazo para despachar este pedido {left}.' if vencido
+                else f'Para despachar este pedido {left}.'
+            ),
+            'admin_url': order_admin_url(order),
+            'customer_email': order.email or (order.user.email if order.user_id else ''),
+        },
+    )
+    try:
+        pushed = push_admins(
+            title=f'{"Plazo vencido" if vencido else "Falta despachar"} — pedido #{order.id}',
+            body=f'{(order.full_name or "Sin nombre").strip()} · {left}',
+            data={'type': 'pending_dispatch', 'order_id': order.id},
+        )
+    except Exception:
+        logger.exception('no se pudo pushear el plazo del pedido %s', order.id)
+        pushed = 0
+    return sent or bool(pushed)

@@ -324,6 +324,67 @@ Las fotos ya subidas hay que copiarlas al bucket a mano (`rclone`/`aws s3 sync`
 sobre `public/photos/`); las rutas guardadas en la base son relativas y siguen
 resolviendo.
 
+### Aviso de plazo de despacho
+
+`notify_pending_dispatch` recorre los pedidos pagados que siguen en `procesado`
+y avisa —correo y push— cuando al plazo le quedan menos de
+`DISPATCH_WARN_HOURS`. El reloj arranca en `Order.paid_at`, así que un carrito
+abandonado nunca entra. Con los valores por defecto (72 y 24) el aviso sale a
+las 48 h de pagado.
+
+Se avisa **una sola vez por pedido** (`Order.dispatch_warned_at`): un
+recordatorio cada hora se vuelve ruido que se ignora. Si el aviso no sale por
+ningún canal —sin `ADMIN_NOTIFY_EMAILS` y sin aparatos registrados— el pedido
+queda sin marcar y se reintenta en la corrida siguiente.
+
+Para ver qué haría sin mandar nada:
+
+```bash
+.venv/bin/python manage.py notify_pending_dispatch --dry-run
+```
+
+`/etc/systemd/system/rayadito-dispatch-notice.service`:
+
+```ini
+[Unit]
+Description=Aviso de plazo de despacho de Piedras Rayadito
+
+[Service]
+Type=oneshot
+User=USUARIO
+WorkingDirectory=/home/USUARIO/rayadito
+EnvironmentFile=/home/USUARIO/rayadito/.env
+ExecStart=/home/USUARIO/rayadito/.venv/bin/python manage.py notify_pending_dispatch
+```
+
+`/etc/systemd/system/rayadito-dispatch-notice.timer`:
+
+```ini
+[Unit]
+Description=Revisión horaria del plazo de despacho
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+```bash
+sudo systemctl enable --now rayadito-dispatch-notice.timer
+systemctl list-timers 'rayadito-*'   # confirma que quedó agendado
+```
+
+> `Persistent=true` hace que, si el PC estuvo apagado, la corrida perdida se
+> ejecute al arrancar. Sin eso, apagar el equipo un fin de semana significa no
+> enterarse de ningún plazo vencido.
+>
+> Un timer habilitado puede estar caído igual: revisa
+> `systemctl list-timers 'rayadito-*'` cada tanto. A `rayadito-backup.timer` le
+> pasó eso, dejó de correr el 7 de septiembre de 2026 y nadie se enteró —
+> `journalctl -u rayadito-backup` dice por qué.
+
 ## 8. Backups
 
 `scripts/backup-db.sh` vuelca Postgres comprimido, empaqueta la media y rota lo
