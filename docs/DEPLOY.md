@@ -162,6 +162,14 @@ pedido, y usa el mismo SMTP que el resto de los correos (`EMAIL_*`). Va después
 de que la venta quedó guardada, y si el servidor de correo falla el aviso se
 pierde pero la venta no: el error queda en el log de `rayadito-api`.
 
+El mismo aviso se manda como push a la app admin, a todos los aparatos de staff
+registrados en `/api/admin/push-tokens/`. No hay nada que configurar en el
+servidor: si no hay aparatos registrados, no se manda push. `EXPO_ACCESS_TOKEN`
+solo hace falta si la cuenta Expo tiene activado "enhanced security"; sin él, en
+ese caso, Expo rechaza los envíos. Los aparatos registrados y su último error se
+ven en `/admin/notifications/devicepushtoken/`; un token que Expo declara muerto
+se desactiva solo.
+
 Y en `web/.env.local`:
 
 ```bash

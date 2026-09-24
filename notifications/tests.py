@@ -8,7 +8,9 @@ from django.test import override_settings
 from rest_framework.test import APITestCase
 
 from category.models import Category
+from notifications import services as notify
 from notifications.formatting import clp
+from notifications.models import DevicePushToken
 from notifications.services import notify_paid_order_on_commit
 from orders.models import Order, OrderItem
 from payment import services
@@ -129,3 +131,230 @@ class AdminSaleEmailTests(APITestCase):
 
         self.assertEqual(len(mail.outbox), 1)
         self.assertNotIn('/admin/orders/order/', mail.outbox[0].body)
+
+
+@override_settings(ADMIN_NOTIFY_EMAILS=[], EXPO_ACCESS_TOKEN='')
+class PushTokenRegistrationTests(APITestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email='duena@rayadito.cl', password='Testpass123',
+            first_name='Duena', last_name='Rayadito',
+        )
+        self.customer = User.objects.create_user(
+            email='ana@cliente.cl', password='Testpass123',
+            first_name='Ana', last_name='Rios',
+        )
+        self.url = '/api/admin/push-tokens/'
+
+    def test_registering_requires_staff(self):
+        self.client.force_authenticate(self.customer)
+        res = self.client.post(self.url, {'token': 'ExponentPushToken[abc]'},
+                               format='json')
+
+        self.assertEqual(res.status_code, 403)
+        self.assertFalse(DevicePushToken.objects.exists())
+
+    def test_staff_registers_a_device(self):
+        self.client.force_authenticate(self.admin)
+        res = self.client.post(
+            self.url, {'token': 'ExponentPushToken[abc]', 'platform': 'android'},
+            format='json',
+        )
+
+        self.assertEqual(res.status_code, 201, res.data)
+        device = DevicePushToken.objects.get()
+        self.assertEqual(device.user, self.admin)
+        self.assertEqual(device.platform, 'android')
+        self.assertTrue(device.is_active)
+
+    def test_registering_twice_keeps_one_row_and_revives_it(self):
+        DevicePushToken.objects.create(
+            token='ExponentPushToken[abc]', user=self.admin,
+            is_active=False, last_error='DeviceNotRegistered',
+        )
+        self.client.force_authenticate(self.admin)
+
+        res = self.client.post(self.url, {'token': 'ExponentPushToken[abc]'},
+                               format='json')
+
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertEqual(DevicePushToken.objects.count(), 1)
+        device = DevicePushToken.objects.get()
+        self.assertTrue(device.is_active)
+        self.assertEqual(device.last_error, '')
+
+    def test_unregistering_deactivates_without_deleting(self):
+        DevicePushToken.objects.create(token='ExponentPushToken[abc]',
+                                       user=self.admin)
+        self.client.force_authenticate(self.admin)
+
+        res = self.client.delete(self.url, {'token': 'ExponentPushToken[abc]'},
+                                 format='json')
+
+        self.assertEqual(res.status_code, 204)
+        device = DevicePushToken.objects.get()
+        self.assertFalse(device.is_active)
+
+
+@override_settings(ADMIN_NOTIFY_EMAILS=[], EXPO_ACCESS_TOKEN='')
+class PushSendingTests(APITestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email='duena@rayadito.cl', password='Testpass123',
+            first_name='Duena', last_name='Rayadito',
+        )
+        self.device = DevicePushToken.objects.create(
+            token='ExponentPushToken[abc]', user=self.admin, platform='android',
+        )
+
+    def _expo_response(self, tickets):
+        response = mock.Mock()
+        response.json.return_value = {'data': tickets}
+        response.raise_for_status.return_value = None
+        return response
+
+    def test_a_push_reaches_every_active_staff_device(self):
+        DevicePushToken.objects.create(token='ExponentPushToken[tablet]',
+                                       user=self.admin)
+        with mock.patch('notifications.expo.requests.post',
+                        return_value=self._expo_response(
+                            [{'status': 'ok'}, {'status': 'ok'}])) as post:
+            delivered = notify.push_admins('Hola', 'Cuerpo', {'order_id': 1})
+
+        self.assertEqual(delivered, 2)
+        messages = post.call_args.kwargs['json']
+        self.assertEqual([m['to'] for m in messages],
+                         ['ExponentPushToken[abc]', 'ExponentPushToken[tablet]'])
+        self.assertEqual(messages[0]['data'], {'order_id': 1})
+
+    def test_an_inactive_device_is_skipped(self):
+        self.device.is_active = False
+        self.device.save(update_fields=['is_active'])
+
+        with mock.patch('notifications.expo.requests.post') as post:
+            delivered = notify.push_admins('Hola', 'Cuerpo')
+
+        self.assertEqual(delivered, 0)
+        post.assert_not_called()
+
+    def test_a_device_that_expo_rejects_is_deactivated(self):
+        tickets = [{'status': 'error', 'message': 'no existe',
+                    'details': {'error': 'DeviceNotRegistered'}}]
+        with mock.patch('notifications.expo.requests.post',
+                        return_value=self._expo_response(tickets)):
+            delivered = notify.push_admins('Hola', 'Cuerpo')
+
+        self.assertEqual(delivered, 0)
+        self.device.refresh_from_db()
+        self.assertFalse(self.device.is_active)
+        self.assertEqual(self.device.last_error, 'DeviceNotRegistered')
+
+    def test_another_expo_error_keeps_the_device_but_records_it(self):
+        tickets = [{'status': 'error', 'message': 'mensaje muy largo',
+                    'details': {'error': 'MessageTooBig'}}]
+        with mock.patch('notifications.expo.requests.post',
+                        return_value=self._expo_response(tickets)):
+            notify.push_admins('Hola', 'Cuerpo')
+
+        self.device.refresh_from_db()
+        self.assertTrue(self.device.is_active)
+        self.assertEqual(self.device.last_error, 'MessageTooBig')
+
+    def test_expo_being_down_does_not_deactivate_anything(self):
+        with mock.patch('notifications.expo.requests.post',
+                        side_effect=OSError('sin red')):
+            delivered = notify.push_admins('Hola', 'Cuerpo')
+
+        self.assertEqual(delivered, 0)
+        self.device.refresh_from_db()
+        self.assertTrue(self.device.is_active)
+
+    def test_the_access_token_travels_when_it_is_configured(self):
+        with override_settings(EXPO_ACCESS_TOKEN='secreto'):
+            with mock.patch('notifications.expo.requests.post',
+                            return_value=self._expo_response(
+                                [{'status': 'ok'}])) as post:
+                notify.push_admins('Hola', 'Cuerpo')
+
+        self.assertEqual(post.call_args.kwargs['headers']['authorization'],
+                         'Bearer secreto')
+
+
+@override_settings(
+    ADMIN_NOTIFY_EMAILS=['duena@rayadito.cl'],
+    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    EXPO_ACCESS_TOKEN='',
+)
+class PaidOrderPushTests(APITestCase):
+    """El pago aprobado dispara los dos canales, y ninguno depende del otro."""
+
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email='duena@rayadito.cl', password='Testpass123',
+            first_name='Duena', last_name='Rayadito',
+        )
+        self.category = Category.objects.create(name='Anillos', ProductType='Joya')
+        self.product = Product.objects.create(
+            name='Anillo de plata', product_type='joya', description='Hecho a mano',
+            price=25000, compare_price=0, category=self.category, photo='',
+        )
+        self.order = Order.objects.create(
+            email='ana@cliente.cl', amount=54500, shipping_price=4500,
+            full_name='Ana Ríos',
+        )
+        OrderItem.objects.create(
+            order=self.order, product=self.product, name=self.product.name,
+            price=25000, count=2,
+        )
+        self.device = DevicePushToken.objects.create(
+            token='ExponentPushToken[abc]', user=self.admin, platform='android',
+        )
+
+    def _approve(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            return services.record_payment({
+                'id': 4242,
+                'external_reference': str(self.order.id),
+                'status': 'approved',
+                'status_detail': 'accredited',
+                'installments': 1,
+            })
+
+    def _ok_response(self):
+        response = mock.Mock()
+        response.json.return_value = {'data': [{'status': 'ok'}]}
+        response.raise_for_status.return_value = None
+        return response
+
+    def test_an_approved_payment_pushes_the_sale(self):
+        with mock.patch('notifications.expo.requests.post',
+                        return_value=self._ok_response()) as post:
+            self._approve()
+
+        message = post.call_args.kwargs['json'][0]
+        self.assertEqual(message['title'], 'Venta aprobada — $54.500')
+        self.assertIn(f'Pedido #{self.order.id}', message['body'])
+        self.assertIn('Ana Ríos', message['body'])
+        self.assertIn('2 piezas', message['body'])
+        self.assertEqual(message['data'],
+                         {'type': 'paid_order', 'order_id': self.order.id})
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_a_push_failure_does_not_block_the_email(self):
+        with mock.patch('notifications.expo.requests.post',
+                        side_effect=OSError('sin red')):
+            self._approve()
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.OrderStatus.processed)
+
+    def test_a_device_of_someone_who_is_no_longer_staff_gets_nothing(self):
+        self.admin.is_staff = False
+        self.admin.save(update_fields=['is_staff'])
+
+        with mock.patch('notifications.expo.requests.post') as post:
+            self._approve()
+
+        post.assert_not_called()
+        self.assertEqual(len(mail.outbox), 1)
