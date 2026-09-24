@@ -1,0 +1,23 @@
+{% load money %}{{ headline }}
+
+Pedido #{{ order.id }} — ${{ order.amount|clp }} CLP
+Pagado: {{ order.paid_at|date:"d/m/Y H:i" }}
+Plazo:  {{ deadline|date:"d/m/Y H:i" }}
+
+Comprador
+  {{ order.full_name|default:"—" }}
+  {{ customer_email|default:"—" }}
+  {{ order.telephone_number|default:"—" }}
+
+Envío{% if order.shipping_id %} por {{ order.shipping_id.name }}{% endif %}
+  {{ order.address_line_1|default:"—" }}
+  {{ order.city|default:"—" }}, {{ order.get_region_display }}
+
+Piezas
+{% for item in items %}  - {{ item.count }} x {{ item.name }}
+{% empty %}  (el pedido no tiene ítems)
+{% endfor %}
+Cuando salga, cárgale el número de seguimiento y pásalo a "enviado".
+{% if admin_url %}
+{{ admin_url }}
+{% endif %}
