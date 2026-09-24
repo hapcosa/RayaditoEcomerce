@@ -149,7 +149,18 @@ SOCIAL_AUTH_ALLOWED_REDIRECT_URIS=https://piedrasdelrayadito.cl/auth/social/call
 
 FRONTEND_BASE_URL=https://piedrasdelrayadito.cl
 MERCADOPAGO_NOTIFICATION_URL=https://piedrasdelrayadito.cl/api/payment/webhook
+
+# Avisos al dueño. Sin `ADMIN_NOTIFY_EMAILS` no se manda nada: es lo que
+# corresponde en desarrollo, pero en producción deja la venta sin aviso.
+ADMIN_NOTIFY_EMAILS=contacto@piedrasdelrayadito.cl
+# Dominio de este backend, para que el aviso traiga el link al pedido en /admin/.
+BACKEND_BASE_URL=https://piedrasdelrayadito.cl
 ```
+
+El aviso de venta sale cuando MercadoPago aprueba el pago, una sola vez por
+pedido, y usa el mismo SMTP que el resto de los correos (`EMAIL_*`). Va después
+de que la venta quedó guardada, y si el servidor de correo falla el aviso se
+pierde pero la venta no: el error queda en el log de `rayadito-api`.
 
 Y en `web/.env.local`:
 

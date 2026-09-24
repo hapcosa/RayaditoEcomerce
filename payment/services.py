@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from carrito.models import Carrito, CarritoItem
+from notifications.services import notify_paid_order_on_commit
 from orders.models import Order, OrderItem
 from .models import Payments
 
@@ -106,6 +107,10 @@ def apply_approved_payment(payment):
 
     payment.stock_deducted = True
     payment.save(update_fields=['stock_deducted', 'updated_at'])
+
+    # Un solo aviso por venta: si `stock_deducted` ya estaba puesto salimos
+    # arriba, y MercadoPago reenvia la misma aprobacion varias veces.
+    notify_paid_order_on_commit(payment.order)
 
 
 def record_payment(payment_data):
