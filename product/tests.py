@@ -163,3 +163,63 @@ class GenericProductApiTests(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data['attributes'][0]['slug'], 'talla')
         self.assertEqual(res.data['attributes'][0]['values'][0]['value'], 'M')
+
+
+class SoldProductVisibilityTests(APITestCase):
+    """Una pieza vendida sale del catálogo pero conserva su ficha.
+
+    El dueño vende piezas por Instagram y las marca vendidas desde la app. Antes
+    eso hacía 404 la URL del producto y dejaba muerto el enlace que ya había
+    compartido; ahora la ficha responde y el front la muestra como "Vendida".
+    """
+
+    def setUp(self):
+        self.category = Category.objects.create(name='Anillos', ProductType='Joya')
+        self.disponible = Product.objects.create(
+            name='Anillo ágata', description='x', price=25000, compare_price=0,
+            category=self.category, product_type=Product.ProductType.JOYA, photo='',
+        )
+        self.vendida = Product.objects.create(
+            name='Colgante jaspe', description='y', price=30000, compare_price=0,
+            category=self.category, product_type=Product.ProductType.JOYA, photo='',
+            sold=True,
+        )
+
+    def test_detail_of_sold_product_still_resolves(self):
+        res = self.client.get(f'/api/products/{self.vendida.slug}')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data['product']['sold'])
+        # Sin variantes el stock sale de `sold`: el front lo usa para bloquear
+        # el botón de comprar.
+        self.assertEqual(res.data['product']['available_stock'], 0)
+
+    def test_sold_product_is_hidden_from_the_catalog(self):
+        res = self.client.get('/api/products/')
+        nombres = [p['name'] for p in res.data['products']]
+        self.assertEqual(nombres, [self.disponible.name])
+
+    def test_sold_product_is_hidden_from_search(self):
+        res = self.client.post('/api/products/search', {'search': 'jaspe'}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['search_products'], [])
+
+    def test_sold_product_is_not_offered_as_related(self):
+        res = self.client.get(f'/api/products/related/{self.disponible.slug}')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['related_products'], [])
+
+    def test_related_still_works_from_a_sold_product(self):
+        res = self.client.get(f'/api/products/related/{self.vendida.slug}')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        nombres = [p['name'] for p in res.data['related_products']]
+        self.assertEqual(nombres, [self.disponible.name])
+
+    def test_unpublished_product_stays_hidden_even_if_it_is_not_sold(self):
+        # El cambio abre la ficha a las vendidas, no a los borradores.
+        borrador = Product.objects.create(
+            name='Borrador', description='z', price=1000, compare_price=0,
+            category=self.category, product_type=Product.ProductType.JOYA, photo='',
+            status=Product.ProductStatus.DRAFT,
+        )
+        res = self.client.get(f'/api/products/{borrador.slug}')
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)

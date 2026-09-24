@@ -54,7 +54,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
   ]);
 
   const hasDiscount = product.compare_price > product.price;
-  const outOfStock = product.available_stock === 0;
+  // Una pieza vendida conserva su ficha (el enlace compartido en redes sigue
+  // vivo), pero no se puede comprar. `sold` manda sobre el stock: sin variantes
+  // cargadas `available_stock` sale de él, y si las hubiera, marcarla vendida
+  // igual la saca de la venta.
+  const vendida = product.sold;
+  const outOfStock = vendida || product.available_stock === 0;
   const avgRating =
     reviews.length > 0
       ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
@@ -79,9 +84,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
       // Moneda siempre en entero CLP (ver AGENTS.md).
       priceCurrency: 'CLP',
       price: product.price,
-      availability: outOfStock
-        ? 'https://schema.org/OutOfStock'
-        : 'https://schema.org/InStock',
+      availability: vendida
+        ? 'https://schema.org/SoldOut'
+        : outOfStock
+          ? 'https://schema.org/OutOfStock'
+          : 'https://schema.org/InStock',
     },
     ...(reviews.length > 0
       ? {
@@ -145,14 +152,26 @@ export default async function ProductDetailPage({ params }: PageProps) {
           </div>
 
           {/* Stock */}
-          <p
-            className={[
-              'text-sm font-medium',
-              outOfStock ? 'text-piedra-400' : 'text-green-700',
-            ].join(' ')}
-          >
-            {outOfStock ? 'Sin stock' : `${product.available_stock} disponibles`}
-          </p>
+          <div className="flex flex-col gap-1">
+            <p
+              className={[
+                'text-sm font-medium',
+                outOfStock ? 'text-piedra-400' : 'text-green-700',
+              ].join(' ')}
+            >
+              {vendida
+                ? 'Vendida'
+                : outOfStock
+                  ? 'Sin stock'
+                  : `${product.available_stock} disponibles`}
+            </p>
+            {vendida && (
+              <p className="text-sm text-piedra-500">
+                Esta pieza ya encontró dueño. Cada una es única, pero puedes
+                encargar algo parecido o mirar el resto del taller.
+              </p>
+            )}
+          </div>
 
           {/* Variantes */}
           {product.variants.filter((v) => v.is_active).length > 0 && (
