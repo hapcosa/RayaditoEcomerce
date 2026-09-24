@@ -390,6 +390,10 @@ ADMIN_NOTIFY_EMAILS = env.list('ADMIN_NOTIFY_EMAILS', default=[])
 # Dominio publico de este backend, para linkear el pedido en el admin de Django
 # desde el aviso. Vacio = el aviso va sin link.
 BACKEND_BASE_URL = env('BACKEND_BASE_URL', default='')
+# Push de Expo. Solo hace falta si la cuenta Expo tiene activado "enhanced
+# security"; sin eso el envio no lleva credencial. No habilita ni deshabilita
+# el push: eso depende de que haya aparatos registrados.
+EXPO_ACCESS_TOKEN = env('EXPO_ACCESS_TOKEN', default='')
 
 
 # Detrás del túnel de Cloudflare, `cloudflared` habla HTTP plano contra este
