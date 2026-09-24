@@ -46,16 +46,18 @@ async function loadSerif(text: string): Promise<ArrayBuffer | null> {
 }
 
 interface Props {
-  params: { slug: string };
+  // Next 15 entrega los parámetros de ruta como promesa.
+  params: Promise<{ slug: string }>;
 }
 
 export default async function Image({ params }: Props) {
+  const { slug } = await params;
   let name = 'Piezas únicas de Chiloé';
   let price: string | null = null;
   let typeLabel = 'Artesanía';
 
   try {
-    const product = await fetchProduct(params.slug);
+    const product = await fetchProduct(slug);
     name = product.name;
     price = formatCLP(product.price);
     typeLabel = product.product_type === 'piedra' ? 'Piedra lapidada' : 'Joya artesanal';

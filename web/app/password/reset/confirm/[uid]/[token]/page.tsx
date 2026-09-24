@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { use, useState } from 'react';
 import { apiResetPasswordConfirm } from '@/lib/auth';
 import {
   AuthFormWrapper,
@@ -11,10 +11,12 @@ import {
 } from '@/components/ui/AuthFormWrapper';
 
 interface PageProps {
-  params: { uid: string; token: string };
+  // Next 15 entrega los parámetros de ruta como promesa, también en el cliente.
+  params: Promise<{ uid: string; token: string }>;
 }
 
 export default function ResetPasswordConfirmPage({ params }: PageProps) {
+  const { uid, token } = use(params);
   const [newPassword, setNewPassword] = useState('');
   const [reNewPassword, setReNewPassword] = useState('');
   const [error, setError] = useState('');
@@ -31,8 +33,8 @@ export default function ResetPasswordConfirmPage({ params }: PageProps) {
     setLoading(true);
     try {
       await apiResetPasswordConfirm({
-        uid: params.uid,
-        token: params.token,
+        uid,
+        token,
         new_password: newPassword,
         re_new_password: reNewPassword,
       });

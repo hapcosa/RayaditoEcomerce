@@ -20,9 +20,11 @@ interface SearchParams {
 export default async function JoyasPage({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  // Next 15 entrega los parámetros de búsqueda como promesa.
+  searchParams: Promise<SearchParams>;
 }) {
-  const { search, category_id, min_price, max_price, sortBy, order } = searchParams;
+  const filters = await searchParams;
+  const { search, category_id, min_price, max_price, sortBy, order } = filters;
 
   const [products, categories] = await Promise.all([
     fetchProducts({
@@ -43,7 +45,7 @@ export default async function JoyasPage({
       subtitle="Piedras Rayadito"
       products={products}
       categories={categories}
-      filters={searchParams}
+      filters={filters}
       baseHref="/joyas"
     />
   );
