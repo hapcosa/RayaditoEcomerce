@@ -104,6 +104,7 @@ export default function EditProductScreen() {
           status: product.status,
           isFeatured: product.is_featured,
           categoryId: product.category,
+          sold: product.sold,
         });
         setCurrentPhoto(photoUrl(product.photo));
         setGallery(product.gallery);
@@ -234,6 +235,7 @@ export default function EditProductScreen() {
           product_type: form.productType!,
           status: form.status,
           is_featured: form.isFeatured,
+          sold: form.sold,
         },
         newPhoto,
       );
@@ -339,6 +341,7 @@ export default function EditProductScreen() {
           onChange={patch}
           categories={categories}
           loadingCats={loadingCats}
+          showSold
         />
 
         <ProductAttributeFields

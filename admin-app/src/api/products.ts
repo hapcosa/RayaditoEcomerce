@@ -76,6 +76,12 @@ export type ProductFields = {
   product_type: ProductType;
   status: ProductStatus;
   is_featured: boolean;
+  /**
+   * Pieza ya vendida. Hoy es el unico control de inventario real: sin
+   * variantes cargadas, `available_stock` sale de aca (0 si esta vendida, 1 si
+   * no). Una pieza vendida desaparece del catalogo publico.
+   */
+  sold: boolean;
 };
 
 export type NewProduct = ProductFields & { photo: LocalImage };
@@ -134,6 +140,7 @@ function fieldsToParams(fields: ProductFields): Record<string, string> {
     product_type: fields.product_type,
     status: fields.status,
     is_featured: fields.is_featured ? 'true' : 'false',
+    sold: fields.sold ? 'true' : 'false',
   };
 }
 
