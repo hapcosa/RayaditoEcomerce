@@ -11,6 +11,13 @@ Desde el cutover a Next.js, **Django ya no sirve la tienda**. Son dos procesos:
 | Django (gunicorn) | `8010` | `/api/`, `/admin/`, `/ckeditor5/`, `/assets/` (estáticos del admin), `/public/` (media), y bajo `/auth/` solo `users`, `jwt` y `o` (djoser) |
 | Next.js (`next start`) | `3010` | Todo el resto: la tienda pública, incluidas las páginas `/auth/login`, `/auth/registro`, `/auth/reset` y `/auth/social/callback` |
 
+> **El panel de ventas (`/panel`) lo sirve Next**, en el mismo proceso del
+> `3010` y en el mismo dominio que la tienda: no hay subdominio ni regla de
+> túnel que agregar. El control de acceso es del backend — la página pide
+> `GET /api/admin/stats/`, que exige `IsAdminUser`, y a una cuenta que no es
+> staff le muestra un aviso en vez de métricas. La ruta está en `Disallow` de
+> `robots.txt` y marcada `noindex`.
+
 Ambos procesos escuchan **solo en `127.0.0.1`**: el único camino desde afuera
 es el túnel. `next start` sin `-H 127.0.0.1` se ata a `0.0.0.0` y queda
 expuesto en la LAN, así que el flag no es opcional.
