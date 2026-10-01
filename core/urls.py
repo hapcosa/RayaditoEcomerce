@@ -34,6 +34,7 @@ urlpatterns = [
     path('api/admin/', include('orders.admin_urls')),
     path('api/admin/', include('homepage.admin_urls')),
     path('api/admin/', include('notifications.admin_urls')),
+    path('api/admin/', include('social.admin_urls')),
     path("admin/", admin.site.urls),
     path("ckeditor5/", include('django_ckeditor_5.urls')),
     path("api/meta/", include('metaproduct.urls')),

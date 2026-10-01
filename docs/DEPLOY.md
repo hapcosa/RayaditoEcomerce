@@ -392,6 +392,12 @@ systemctl list-timers 'rayadito-*'   # confirma que quedó agendado
 > pasó eso, dejó de correr el 7 de septiembre de 2026 y nadie se enteró —
 > `journalctl -u rayadito-backup` dice por qué.
 
+### Publicaciones de Instagram
+
+`manage.py publish_instagram` publica lo que la app dejó programado. Corre cada
+5 minutos con su propio timer (`rayadito-instagram.timer`). Las unidades y la
+conexión con Meta están en [`INSTAGRAM.md`](INSTAGRAM.md).
+
 ## 8. Backups
 
 `scripts/backup-db.sh` vuelca Postgres comprimido, empaqueta la media y rota lo

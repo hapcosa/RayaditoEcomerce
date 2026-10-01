@@ -33,6 +33,7 @@ import {
 } from '@/api/products';
 import { setProductAttributes } from '@/api/attributes';
 import { ImageZoomViewer, type CropDest } from '@/components/image-zoom-viewer';
+import { InstagramPublisher } from '@/components/instagram-publisher';
 import {
   attributePayload,
   faltaAtributo,
@@ -402,6 +403,8 @@ export default function EditProductScreen() {
             Tocá una imagen para verla o recortarla; usá ✕ para quitarla.
           </ThemedText>
         </View>
+
+        <InstagramPublisher productId={productId} />
 
         <Pressable
           style={[styles.submit, { backgroundColor: theme.accent, opacity: saving ? 0.6 : 1 }]}
