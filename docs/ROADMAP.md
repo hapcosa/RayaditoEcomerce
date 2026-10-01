@@ -217,7 +217,7 @@ preferencia en MercadoPago) **no** está verificado contra el servicio real: no 
 ### Fase 6 — Automatización social (APIs oficiales de Meta)
 **Objetivo:** publicar y notificar sin arriesgar la cuenta.
 - [ ] Setup Meta Business: cuenta IG Business ligada a página FB; verificación.
-- [ ] **Instagram Graph API:** al crear producto, publicar foto + caption + hashtags (botón en la app Expo).
+- [x] **Instagram Graph API:** publicar foto/carrusel + caption + hashtags desde la app Expo, ahora o programado (`social/`, ver [`INSTAGRAM.md`](INSTAGRAM.md)).
 - [ ] **WhatsApp Cloud API:** confirmación de pedido, updates de envío, catálogo; con opt-in.
 - [ ] Manejo de tokens de larga duración + colas/reintentos.
 

@@ -45,6 +45,7 @@ PROJECT_APPS = [
     'suggestions',
     'wishlist',
     'homepage',
+    'social',
 ]
 
 THIRD_PARTY_APPS = [
@@ -394,6 +395,20 @@ BACKEND_BASE_URL = env('BACKEND_BASE_URL', default='')
 # security"; sin eso el envio no lleva credencial. No habilita ni deshabilita
 # el push: eso depende de que haya aparatos registrados.
 EXPO_ACCESS_TOKEN = env('EXPO_ACCESS_TOKEN', default='')
+
+# Dominio publico de la tienda (Next.js). Lo usa el texto de las publicaciones
+# de Instagram para apuntar al producto. Vacio = el texto va sin link.
+FRONTEND_BASE_URL = env('FRONTEND_BASE_URL', default='')
+
+# Instagram (API oficial de Meta, Content Publishing). Sin user id o sin token
+# la app no deja programar publicaciones. Ver docs/INSTAGRAM.md.
+INSTAGRAM_USER_ID = env('INSTAGRAM_USER_ID', default='')
+INSTAGRAM_ACCESS_TOKEN = env('INSTAGRAM_ACCESS_TOKEN', default='')
+INSTAGRAM_GRAPH_HOST = env('INSTAGRAM_GRAPH_HOST', default='graph.instagram.com')
+INSTAGRAM_GRAPH_VERSION = env('INSTAGRAM_GRAPH_VERSION', default='v23.0')
+# Hashtags que se agregan al texto sugerido. Van en el .env y no en el codigo:
+# cada fork del template tiene los suyos.
+INSTAGRAM_HASHTAGS = env.list('INSTAGRAM_HASHTAGS', default=[])
 
 # Plazo para despachar un pedido pagado, y cuanto antes avisar que se vence.
 # El reloj arranca en `Order.paid_at`, no en la creacion del pedido. Con 72 y
