@@ -17,7 +17,6 @@ django-cors-headers>=4.4,<5
 django-environ>=0.11,<1
 django-ckeditor-5>=0.2.13
 django-storages>=1.14,<2
-django-starken==1.0.7
 Pillow>=10.4,<12
 whitenoise>=6.6,<7
 
