@@ -10,6 +10,8 @@ import os
 from django.conf import settings
 from django.core.checks import Error, Warning, register
 
+from core.media_storage import S3_BACKEND
+
 CONSOLE_EMAIL = 'django.core.mail.backends.console.EmailBackend'
 
 
@@ -58,3 +60,41 @@ def check_media_storage(app_configs, **kwargs):
              'los backups.',
         id='rayadito.W001',
     )]
+
+
+S3_STORAGE = S3_BACKEND
+
+
+@register(deploy=True)
+def check_object_storage(app_configs, **kwargs):
+    """Un bucket mal configurado deja el catalogo sin fotos.
+
+    No es inerte con `DEBUG=True`: si alguien prueba el bucket en dev, el error
+    es el mismo que en produccion.
+    """
+    storage = settings.STORAGES['default']
+    if storage['BACKEND'] != S3_STORAGE:
+        return []
+    errors = []
+    try:
+        import boto3  # noqa: F401
+    except ImportError:
+        errors.append(Error(
+            'MEDIA_STORAGE=s3 pero boto3 no esta instalado.',
+            hint='Corre `pip install -r requirements.txt`: sin boto3 el primer '
+                 'upload de fotos responde 500.',
+            id='rayadito.E003',
+        ))
+    options = storage.get('OPTIONS', {})
+    # Con endpoint propio (R2 y compatibles) el endpoint S3 exige firma y las
+    # URLs sin querystring no se pueden abrir: hace falta el dominio publico.
+    if options.get('endpoint_url') and not options.get('custom_domain'):
+        errors.append(Error(
+            'El bucket usa un endpoint propio (R2) pero falta AWS_S3_CUSTOM_DOMAIN.',
+            hint='Conecta un dominio publico al bucket (p. ej. '
+                 'media.piedrasdelrayadito.cl) y ponlo en AWS_S3_CUSTOM_DOMAIN. '
+                 'Sin el, las URLs de las fotos apuntan al endpoint privado y '
+                 'responden 400.',
+            id='rayadito.E004',
+        ))
+    return errors

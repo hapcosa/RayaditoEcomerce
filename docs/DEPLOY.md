@@ -304,6 +304,8 @@ fallan si falta algo que **no rompe el arranque pero sí el negocio**:
 | `rayadito.E001` | `EMAIL_BACKEND` imprime en consola: activación de cuenta y reseteo de contraseña no llegan a nadie |
 | `rayadito.E002` | Falta `MERCADOPAGO_ACCESS_TOKEN`: el checkout devuelve 500 |
 | `rayadito.W001` | La media está en el disco del servidor y no en object storage |
+| `rayadito.E003` | `MEDIA_STORAGE=s3` sin `boto3` instalado: el primer upload de fotos da 500 |
+| `rayadito.E004` | Bucket con endpoint propio (R2) sin `AWS_S3_CUSTOM_DOMAIN`: las fotos no abren |
 
 Corrélos como paso previo al deploy:
 
@@ -316,20 +318,117 @@ Son inertes con `DEBUG=True`, así que no molestan en desarrollo.
 ## 7. Media en object storage
 
 Mientras `MEDIA_STORAGE=local` (el default), las fotos viven en `public/` del
-servidor y las sirve Django. Para moverlas a S3 o Cloudflare R2, sin tocar
-código:
+servidor y las sirve Django: si se pierde ese disco, se pierden. Con
+`MEDIA_STORAGE=s3` van a un bucket de Cloudflare R2 (o S3), sin tocar código.
+
+La migración tiene tres partes: crear el bucket y su dominio público en
+Cloudflare, copiar lo que ya existe y recién entonces cambiar la variable.
+Hasta el último paso el sitio sigue sirviendo desde el disco, así que se puede
+preparar con calma.
+
+### 7.1 Crear el bucket y el token en Cloudflare
+
+Todo en la **cuenta de Cloudflare de Rayadito**, la misma donde está la zona
+`piedrasdelrayadito.cl` y el túnel: R2 solo conecta dominios que sean una zona
+de la misma cuenta que el bucket.
+
+1. **Activar R2.** En el dashboard: *R2 object storage* → activarlo. Pide un
+   medio de pago aunque el uso quede dentro del plan gratuito, y sin eso no se
+   pueden crear tokens.
+2. **Crear el bucket** `rayadito-media` (*R2 object storage* → *Create bucket*).
+   Sin *jurisdiction*: un bucket con jurisdicción (EU, FedRAMP) usa otro
+   endpoint y la configuración de abajo no sirve tal cual.
+3. **Conectar el dominio público.** Bucket → *Settings* → *Custom Domains* →
+   *Add* → `media.piedrasdelrayadito.cl` → *Connect Domain*. Cloudflare crea el
+   registro DNS solo; el estado pasa de *Initializing* a *Active* en unos
+   minutos.
+4. **No activar el `r2.dev`.** Es la URL pública de desarrollo: tiene límite de
+   tasa y Cloudflare la declara no apta para producción.
+5. **Crear el token.** *R2 object storage* → *Account Details* → *API Tokens*
+   → *Manage* → *Create Account API token*, con permiso **Object Read & Write**
+   y limitado al bucket `rayadito-media`. Guarda el **Access Key ID** y el
+   **Secret Access Key** en ese momento: el secreto no se vuelve a mostrar.
+6. **Anotar el Account ID** (aparece en la misma página de R2). El endpoint es
+   `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`.
+
+Costo: el plan gratuito de R2 cubre 10 GB-mes de almacenamiento, 1 millón de
+operaciones de clase A y 10 millones de clase B al mes, y la salida de datos no
+se cobra. La media de Rayadito pesaba ~430 MB al 2026-10-02.
+
+Fuentes: [dominios públicos](https://developers.cloudflare.com/r2/buckets/public-buckets/),
+[tokens](https://developers.cloudflare.com/r2/api/tokens/),
+[boto3 con R2](https://developers.cloudflare.com/r2/examples/aws/boto3/),
+[precios](https://developers.cloudflare.com/r2/pricing/) y
+[django-storages con R2](https://django-storages.readthedocs.io/en/latest/backends/s3_compatible/cloudflare-r2.html).
+
+### 7.2 Configurar el servidor
+
+Agrega al `.env`, **todavía sin `MEDIA_STORAGE=s3`**:
 
 ```bash
-MEDIA_STORAGE=s3
 AWS_STORAGE_BUCKET_NAME=rayadito-media
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
-AWS_S3_ENDPOINT_URL=https://<cuenta>.r2.cloudflarestorage.com   # solo R2
+AWS_S3_ENDPOINT_URL=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+AWS_S3_REGION_NAME=auto
+AWS_S3_CUSTOM_DOMAIN=media.piedrasdelrayadito.cl   # sin https:// ni slash final
 ```
 
-Las fotos ya subidas hay que copiarlas al bucket a mano (`rclone`/`aws s3 sync`
-sobre `public/photos/`); las rutas guardadas en la base son relativas y siguen
-resolviendo.
+`AWS_S3_CUSTOM_DOMAIN` no es opcional en R2: el endpoint S3 exige firma, así
+que sin dominio propio las URLs de las fotos apuntan a un host que responde
+400. `manage.py check --deploy` lo detecta (`rayadito.E004`).
+
+Y en `web/.env.local`, para que `next/image` acepte las fotos del bucket:
+
+```bash
+NEXT_PUBLIC_MEDIA_URL=https://media.piedrasdelrayadito.cl
+```
+
+`remotePatterns` se fija en el build, así que esto exige `npm run build`.
+
+### 7.3 Copiar las fotos existentes
+
+Las rutas guardadas en la base son relativas (`photos/26/08/x.jpg`): basta con
+que cada archivo quede en el bucket con la misma clave.
+`copy_media_to_storage` sube `public/` usando el mismo storage que Django, con
+las credenciales del `.env`. Salta lo que ya está en el bucket, así que se
+puede cortar y volver a correr. `MEDIA_STORAGE=s3` va inline: el `.env` no pisa
+una variable que ya viene del entorno.
+
+```bash
+cd ~/servicios/RayaditoEcomerce
+.venv/bin/pip install -r requirements.txt          # trae boto3
+MEDIA_STORAGE=s3 .venv/bin/python manage.py check --deploy
+MEDIA_STORAGE=s3 .venv/bin/python manage.py copy_media_to_storage --dry-run
+MEDIA_STORAGE=s3 .venv/bin/python manage.py copy_media_to_storage
+curl -sI https://media.piedrasdelrayadito.cl/<una ruta de public/> | head -1   # 200
+```
+
+### 7.4 Cambiar el storage
+
+```bash
+echo 'MEDIA_STORAGE=s3' >> .env
+(cd web && npm run build)
+sudo systemctl restart rayadito-api rayadito-web
+# Las fotos que se hayan subido entre la copia y el reinicio quedaron en disco:
+.venv/bin/python manage.py copy_media_to_storage
+```
+
+Verifica que una ficha de producto muestre las fotos y que la API ya devuelva
+URLs del bucket:
+
+```bash
+curl -s https://piedrasdelrayadito.cl/api/products/ | grep -o 'https://media[^"]*' | head -3
+```
+
+`public/` se queda en el disco: las URLs viejas (`/public/...`) que estén
+cacheadas o indexadas siguen funcionando. **Vuelta atrás:** quitar
+`MEDIA_STORAGE=s3` y reiniciar; las fotos subidas mientras estuvo activo solo
+están en el bucket.
+
+> **Backups:** `scripts/backup-db.sh` empaqueta `public/`. Después de la
+> migración, las fotos nuevas ya no están ahí: el bucket pasa a ser la copia
+> principal de la media y el tar solo cubre las anteriores.
 
 ### Aviso de plazo de despacho
 
