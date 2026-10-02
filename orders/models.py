@@ -78,7 +78,7 @@ class WithdrawalRequest(models.Model):
     la compra. La tienda no sabe cuando llego el paquete (no hay estado
     "entregado"), asi que la solicitud nunca se rechaza por fecha en el
     formulario: se registra siempre, con su codigo de constancia, y el plazo lo
-    evalua la duena al revisarla.
+    evalua el admin al revisarla.
     """
 
     class Status(models.TextChoices):
