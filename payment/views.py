@@ -8,6 +8,7 @@ from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from billing import services as billing
 from carrito.models import Carrito, CarritoItem
 from orders.models import Order, OrderItem
 from product.models import Product
@@ -225,6 +226,12 @@ class ProcessPaymentView(APIView):
             return Response({'error': 'MercadoPago no está configurado'},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        invoice, invoice_errors = billing.parse_invoice_request(request.data.get('invoice'))
+        if invoice_errors:
+            return Response({'error': 'Revisa los datos de la factura.',
+                             'invoice': invoice_errors},
+                            status=status.HTTP_400_BAD_REQUEST)
+
         try:
             if 'orderId' in request.data:
                 order = get_object_or_404(Order, id=int(request.data['orderId']))
@@ -243,6 +250,9 @@ class ProcessPaymentView(APIView):
             return Response({'error': 'Datos de pago inválidos'},
                             status=status.HTTP_400_BAD_REQUEST)
 
+        # Tambien al reintentar el pago de una orden existente: es la ultima
+        # version de los datos que dio el cliente.
+        billing.attach_invoice_request(order, invoice)
         preference = _create_preference(request, order)
         return Response({'response': preference, 'order_id': order.id},
                         status=status.HTTP_200_OK)

@@ -46,6 +46,7 @@ PROJECT_APPS = [
     'wishlist',
     'homepage',
     'social',
+    'billing',
 ]
 
 THIRD_PARTY_APPS = [
@@ -399,6 +400,14 @@ EXPO_ACCESS_TOKEN = env('EXPO_ACCESS_TOKEN', default='')
 # Dominio publico de la tienda (Next.js). Lo usa el texto de las publicaciones
 # de Instagram para apuntar al producto. Vacio = el texto va sin link.
 FRONTEND_BASE_URL = env('FRONTEND_BASE_URL', default='')
+
+# Documentos tributarios (SII). 'off' hasta tener inicio de actividades;
+# 'voucher' si el comprobante de MercadoPago vale como boleta; 'provider' para
+# emitir con un proveedor externo (BILLING_PROVIDER). Ver docs/SII.md.
+BILLING_MODE = env('BILLING_MODE', default='off')
+BILLING_PROVIDER = env('BILLING_PROVIDER', default='')
+# Ofrecer "Necesito factura" en el checkout. Sin efecto con BILLING_MODE='off'.
+BILLING_INVOICES_ENABLED = env.bool('BILLING_INVOICES_ENABLED', default=False)
 
 # Instagram (API oficial de Meta, Content Publishing). Sin user id o sin token
 # la app no deja programar publicaciones. Ver docs/INSTAGRAM.md.
