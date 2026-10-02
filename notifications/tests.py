@@ -31,6 +31,11 @@ NOTIFY = override_settings(
 )
 
 
+def admin_mails():
+    """Correos al dueno. Desde la confirmacion al cliente, una venta manda dos."""
+    return [m for m in mail.outbox if m.to == ['duena@rayadito.cl']]
+
+
 class ClpFormatTests(APITestCase):
     def test_thousands_use_dots(self):
         self.assertEqual(clp(29500), '29.500')
@@ -75,9 +80,8 @@ class AdminSaleEmailTests(APITestCase):
     def test_an_approved_payment_emails_the_owner(self):
         self._approve()
 
-        self.assertEqual(len(mail.outbox), 1)
-        message = mail.outbox[0]
-        self.assertEqual(message.to, ['duena@rayadito.cl'])
+        self.assertEqual(len(admin_mails()), 1)
+        message = admin_mails()[0]
         self.assertIn(f'#{self.order.id}', message.subject)
         self.assertIn('54.500', message.body)
         self.assertIn('Ana Ríos', message.body)
@@ -93,7 +97,8 @@ class AdminSaleEmailTests(APITestCase):
         self._approve()
         self._approve()
 
-        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(len(admin_mails()), 1)
+        self.assertEqual(len(mail.outbox), 2)
 
     def test_a_rejected_payment_does_not_email(self):
         self._approve(status_value='rejected')
@@ -101,10 +106,10 @@ class AdminSaleEmailTests(APITestCase):
         self.assertEqual(len(mail.outbox), 0)
 
     @override_settings(ADMIN_NOTIFY_EMAILS=[])
-    def test_without_recipients_nothing_is_sent(self):
+    def test_without_recipients_only_the_customer_is_emailed(self):
         self._approve()
 
-        self.assertEqual(len(mail.outbox), 0)
+        self.assertEqual([m.to for m in mail.outbox], [['ana@cliente.cl']])
 
     def test_the_email_waits_for_the_transaction_to_commit(self):
         # `record_payment` corre dentro de `transaction.atomic()`. Si algo
@@ -133,8 +138,8 @@ class AdminSaleEmailTests(APITestCase):
     def test_without_a_domain_the_email_goes_without_a_link(self):
         self._approve()
 
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertNotIn('/admin/orders/order/', mail.outbox[0].body)
+        self.assertEqual(len(admin_mails()), 1)
+        self.assertNotIn('/admin/orders/order/', admin_mails()[0].body)
 
 
 @override_settings(ADMIN_NOTIFY_EMAILS=[], EXPO_ACCESS_TOKEN='')
@@ -342,14 +347,14 @@ class PaidOrderPushTests(APITestCase):
         self.assertIn('2 piezas', message['body'])
         self.assertEqual(message['data'],
                          {'type': 'paid_order', 'order_id': self.order.id})
-        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(len(admin_mails()), 1)
 
     def test_a_push_failure_does_not_block_the_email(self):
         with mock.patch('notifications.expo.requests.post',
                         side_effect=OSError('sin red')):
             self._approve()
 
-        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(len(admin_mails()), 1)
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, Order.OrderStatus.processed)
 
@@ -361,7 +366,7 @@ class PaidOrderPushTests(APITestCase):
             self._approve()
 
         post.assert_not_called()
-        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(len(admin_mails()), 1)
 
 
 @override_settings(

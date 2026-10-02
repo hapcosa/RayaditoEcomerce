@@ -1,0 +1,17 @@
+Un cliente pidió retractarse de una compra.
+
+Código: {{ withdrawal.code }}
+Pedido #{{ order.id }} (pago {{ order.transaction_id|default:"—" }})
+Cliente: {{ order.full_name|default:"—" }} · {{ withdrawal.email }}
+Pagado: {{ order.paid_at|date:"d-m-Y H:i"|default:"—" }}
+Despachado: {{ order.shipped_at|date:"d-m-Y H:i"|default:"todavía no" }}
+
+Motivo
+  {{ withdrawal.reason|default:"(no indicó motivo; la ley no lo exige)" }}
+
+El plazo es de 10 días desde que el cliente RECIBIÓ el producto (90 si no le
+llegó la confirmación escrita de la compra). Responde al cliente con las
+instrucciones de devolución y actualiza el estado de la solicitud en el admin.
+{% if admin_url %}
+{{ admin_url }}
+{% endif %}

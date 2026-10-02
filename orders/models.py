@@ -68,3 +68,43 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return str(self.product)
+
+
+class WithdrawalRequest(models.Model):
+    """Solicitud de retracto de una compra (Ley 19.496, art. 3 bis).
+
+    En compras a distancia el cliente puede arrepentirse dentro de los 10 dias
+    desde que recibe el producto, o 90 si no recibio la confirmacion escrita de
+    la compra. La tienda no sabe cuando llego el paquete (no hay estado
+    "entregado"), asi que la solicitud nunca se rechaza por fecha en el
+    formulario: se registra siempre, con su codigo de constancia, y el plazo lo
+    evalua la duena al revisarla.
+    """
+
+    class Status(models.TextChoices):
+        RECEIVED = 'received', 'Recibida'
+        ACCEPTED = 'accepted', 'Aceptada'
+        REFUNDED = 'refunded', 'Reembolsada'
+        REJECTED = 'rejected', 'Rechazada'
+
+    order = models.ForeignKey(
+        Order, on_delete=models.PROTECT, related_name='withdrawal_requests',
+    )
+    # Constancia para el cliente: es lo que cita si despues reclama en el SERNAC.
+    code = models.CharField(max_length=20, unique=True)
+    email = models.EmailField()
+    reason = models.TextField(max_length=2000, blank=True, default='')
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.RECEIVED, db_index=True,
+    )
+    staff_note = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'solicitud de retracto'
+        verbose_name_plural = 'solicitudes de retracto'
+
+    def __str__(self):
+        return f'{self.code} · pedido {self.order_id} · {self.get_status_display()}'

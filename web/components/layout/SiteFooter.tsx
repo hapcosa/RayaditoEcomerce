@@ -20,6 +20,7 @@ const NAV_LINKS = [
 const LEGAL_LINKS = [
   { href: '/terminos', label: 'Términos y condiciones' },
   { href: '/privacidad', label: 'Política de privacidad' },
+  { href: '/arrepentimiento', label: 'Arrepentimiento de compra' },
 ];
 
 export function SiteFooter() {
