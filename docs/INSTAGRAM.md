@@ -86,6 +86,9 @@ usuario del sistema de Business Manager), se usa
 
 ## Timer de systemd
 
+En prod se instala con `scripts/install-prod-timers.sh` (ver `docs/DEPLOY.md`,
+sección 8); las unidades de abajo son de referencia.
+
 `/etc/systemd/system/rayadito-instagram.service`:
 
 ```ini
