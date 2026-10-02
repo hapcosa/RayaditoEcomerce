@@ -47,15 +47,9 @@ export default function CheckoutPage() {
 
     Promise.all([
       syncCart(items),
-      fetchShippingOptions(),
       access ? fetchAddresses(access) : Promise.resolve([] as Address[]),
-    ]).then(([cart, opts, guardadas]) => {
+    ]).then(([cart, guardadas]) => {
       setHydrated(cart);
-      setShipping(opts);
-      // Lo elegido en el carrito llega ya marcado; si esa opcion ya no esta
-      // disponible se cae a la primera.
-      const elegido = opts.find((o) => o.id === shippingId) ?? opts[0];
-      if (elegido) setSelectedShipping(elegido.id);
 
       if (user) {
         setForm({ email: user.email, first_name: user.first_name, last_name: user.last_name });
@@ -85,6 +79,37 @@ export default function CheckoutPage() {
   function setCampoDireccion(campo: keyof AddressFields, valor: string | boolean) {
     setDireccion((d) => ({ ...d, [campo]: valor }));
   }
+
+  // Las opciones de envío dependen de la comuna (Starken cotiza por destino),
+  // así que se piden de nuevo cuando cambia, con una pausa porque la comuna
+  // se escribe a mano. El precio que se cobra lo recalcula el backend.
+  const comunaDestino = ((elegida !== ''
+    ? direcciones.find((d) => d.id === elegida)?.city
+    : direccion.city) ?? '').trim();
+
+  useEffect(() => {
+    if (!mounted || items.length === 0) return;
+    let vigente = true;
+    const timer = setTimeout(() => {
+      fetchShippingOptions(comunaDestino).then((opts) => {
+        if (!vigente) return;
+        setShipping(opts);
+        // Se mantiene lo elegido si sigue disponible; si no, lo que venía
+        // marcado del carrito, y si tampoco, la primera.
+        setSelectedShipping((actual) => {
+          const elegido = opts.find((o) => o.id === actual)
+            ?? opts.find((o) => o.id === shippingId)
+            ?? opts[0];
+          return elegido ? elegido.id : '';
+        });
+      });
+    }, comunaDestino ? 500 : 0);
+    return () => {
+      vigente = false;
+      clearTimeout(timer);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, comunaDestino]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

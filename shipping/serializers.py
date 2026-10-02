@@ -8,6 +8,16 @@ class ShippingSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+def serialize_priced(priced):
+    """Opciones con el precio ya calculado (cotizado o fijo) en `price`."""
+    data = []
+    for shipping, price in priced:
+        item = ShippingSerializer(shipping).data
+        item['price'] = price
+        data.append(item)
+    return data
+
+
 class ShippingQuoteRequestSerializer(serializers.Serializer):
     region = serializers.CharField(required=False, allow_blank=True, trim_whitespace=True)
     city = serializers.CharField(required=False, allow_blank=True, trim_whitespace=True)

@@ -416,6 +416,46 @@ INSTAGRAM_HASHTAGS = env.list('INSTAGRAM_HASHTAGS', default=[])
 DISPATCH_SLA_HOURS = env.int('DISPATCH_SLA_HOURS', default=72)
 DISPATCH_WARN_HOURS = env.int('DISPATCH_WARN_HOURS', default=24)
 
+# Starken (API oficial de developers.starken.cl). Apagado por defecto: sin
+# credenciales las opciones de envio son las de precio fijo de /admin/. Con
+# STARKEN_ENABLED=true, las opciones marcadas como Starken se cotizan por
+# comuna y peso, y el pedido pagado puede emitir su orden de flete. Ver
+# docs/STARKEN.md.
+STARKEN = {
+    'ENABLED': env.bool('STARKEN_ENABLED', default=False),
+    # Cotizador y seguimiento: credenciales por header (Rut / Clave).
+    'API_URL': env('STARKEN_API_URL',
+                   default='https://restservices-qa.starken.cl/apiqa/starkenservices/rest'),
+    'RUT': env('STARKEN_RUT', default=''),
+    'CLAVE': env('STARKEN_CLAVE', default=''),
+    # Codigo de ciudad de origen (listarCiudadesOrigen), p. ej. Castro = 388.
+    'ORIGIN_CITY': env.int('STARKEN_ORIGIN_CITY', default=0),
+    # Cuenta corriente: con ella la cotizacion usa la tarifa negociada.
+    'CTA_CTE': env('STARKEN_CTA_CTE', default=''),
+    'CTA_CTE_DV': env('STARKEN_CTA_CTE_DV', default=''),
+    'CENTRO_COSTO': env('STARKEN_CENTRO_COSTO', default='0'),
+    # Paquete por pedido. El catalogo no guarda peso ni medidas, asi que todo
+    # pedido se cotiza y se emite como un bulto de este tamaño.
+    'PARCEL_KG': env.float('STARKEN_PARCEL_KG', default=1.0),
+    'PARCEL_CM': env.list('STARKEN_PARCEL_CM', cast=float, default=[20.0, 15.0, 10.0]),
+    # Emision de ordenes de flete (Web Service EMISION Host 2 Host).
+    'EMISSION_URL': env('STARKEN_EMISSION_URL',
+                        default='https://emisionh2h-qa.starken.cl/starkenh2h/servlet/aemisionh2hremrest'),
+    'EMITTER_COMPANY_RUT': env('STARKEN_EMITTER_COMPANY_RUT', default=''),
+    'EMITTER_USER_RUT': env('STARKEN_EMITTER_USER_RUT', default=''),
+    'EMITTER_PASSWORD': env('STARKEN_EMITTER_PASSWORD', default=''),
+    # Remitente que aparece en la etiqueta. RUT con guion y DV (12345678-9).
+    'SENDER_RUT': env('STARKEN_SENDER_RUT', default=''),
+    'SENDER_NAME': env('STARKEN_SENDER_NAME', default=''),
+    'SENDER_STREET': env('STARKEN_SENDER_STREET', default=''),
+    'SENDER_NUMBER': env('STARKEN_SENDER_NUMBER', default=''),
+    'SENDER_COMMUNE': env('STARKEN_SENDER_COMMUNE', default=''),
+    'SENDER_PHONE': env('STARKEN_SENDER_PHONE', default=''),
+    'SENDER_EMAIL': env('STARKEN_SENDER_EMAIL', default=''),
+    'CONTENT': env('STARKEN_CONTENT', default='ARTESANIA'),
+    'TIMEOUT': env.int('STARKEN_TIMEOUT', default=10),
+}
+
 
 # Detrás del túnel de Cloudflare, `cloudflared` habla HTTP plano contra este
 # proceso y el TLS lo termina Cloudflare. Confiar en el Host reenviado hace que
