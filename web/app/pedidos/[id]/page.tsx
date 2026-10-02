@@ -179,6 +179,18 @@ export default function OrderDetailPage() {
           </dl>
         </div>
       </section>
+
+      {(order.status === 'procesado' || order.status === 'enviado') && (
+        <p className="mt-8 text-sm text-piedra-500">
+          ¿Te arrepentiste de esta compra? Tienes 10 días desde que la recibes.{' '}
+          <Link
+            href={`/arrepentimiento?pedido=${encodeURIComponent(order.transaction_id ?? String(order.id))}`}
+            className="text-tierra-600 hover:underline"
+          >
+            Solicitar el retracto
+          </Link>
+        </p>
+      )}
     </div>
   );
 }
