@@ -45,3 +45,46 @@ class DeployChecksTests(SimpleTestCase):
     def test_checks_are_inert_in_development(self):
         # En dev el backend de consola es lo correcto y no debe molestar.
         self.assertEqual(checks.check_email_backend(None), [])
+
+
+def _s3(**options):
+    return {'default': {'BACKEND': checks.S3_STORAGE, 'OPTIONS': options}}
+
+
+class ObjectStorageCheckTests(SimpleTestCase):
+    @override_settings(STORAGES=_s3(
+        endpoint_url='https://abc.r2.cloudflarestorage.com',
+        custom_domain='media.example.cl'))
+    def test_r2_with_public_domain_passes(self):
+        self.assertEqual(checks.check_object_storage(None), [])
+
+    @override_settings(STORAGES=_s3(
+        endpoint_url='https://abc.r2.cloudflarestorage.com', custom_domain=None))
+    def test_r2_without_public_domain_is_an_error(self):
+        found = checks.check_object_storage(None)
+
+        self.assertEqual([e.id for e in found], ['rayadito.E004'])
+
+    @override_settings(STORAGES=_s3(endpoint_url=None, custom_domain=None))
+    def test_plain_s3_does_not_need_custom_domain(self):
+        self.assertEqual(checks.check_object_storage(None), [])
+
+    @override_settings(DEBUG=True, STORAGES=_s3(
+        endpoint_url='https://abc.r2.cloudflarestorage.com', custom_domain=None))
+    def test_is_not_silenced_in_development(self):
+        self.assertEqual(
+            [e.id for e in checks.check_object_storage(None)], ['rayadito.E004'])
+
+    @override_settings(STORAGES=_s3(
+        endpoint_url='https://abc.r2.cloudflarestorage.com',
+        custom_domain='media.example.cl'))
+    def test_missing_boto3_is_an_error(self):
+        with mock.patch.dict('sys.modules', {'boto3': None}):
+            found = checks.check_object_storage(None)
+
+        self.assertEqual([e.id for e in found], ['rayadito.E003'])
+
+    @override_settings(STORAGES={
+        'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'}})
+    def test_local_storage_is_ignored(self):
+        self.assertEqual(checks.check_object_storage(None), [])

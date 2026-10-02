@@ -3,6 +3,8 @@ import os
 import environ
 from datetime import timedelta
 
+from core.media_storage import media_storage_config
+
 # django-environ: lee variables desde el entorno y desde un archivo .env (no versionado).
 env = environ.Env()
 environ.Env.read_env(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
@@ -77,25 +79,11 @@ MIDDLEWARE = [
 # quedo obsoleto). La media va al disco del servidor salvo que se configure un
 # bucket: hoy las fotos de producto viven en el PC, asi que si se pierde ese
 # disco se pierden. Poner MEDIA_STORAGE=s3 las manda a S3 / Cloudflare R2 sin
-# tocar codigo (django-storages ya esta en requirements).
+# tocar codigo (django-storages + boto3 estan en requirements). Ver
+# docs/DEPLOY.md, seccion "Media en object storage".
 MEDIA_STORAGE = env('MEDIA_STORAGE', default='local')
 
-if MEDIA_STORAGE == 's3':
-    _default_storage = {
-        'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
-        'OPTIONS': {
-            'bucket_name': env('AWS_STORAGE_BUCKET_NAME'),
-            'access_key': env('AWS_ACCESS_KEY_ID'),
-            'secret_key': env('AWS_SECRET_ACCESS_KEY'),
-            # R2 y compatibles necesitan endpoint propio; en S3 puro se omite.
-            'endpoint_url': env('AWS_S3_ENDPOINT_URL', default=None),
-            'region_name': env('AWS_S3_REGION_NAME', default='auto'),
-            'querystring_auth': False,
-            'file_overwrite': False,
-        },
-    }
-else:
-    _default_storage = {'BACKEND': 'django.core.files.storage.FileSystemStorage'}
+_default_storage = media_storage_config(MEDIA_STORAGE, env)
 
 STORAGES = {
     'default': _default_storage,

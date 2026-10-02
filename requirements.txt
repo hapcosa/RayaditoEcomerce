@@ -16,6 +16,9 @@ drf-spectacular>=0.27,<1
 django-cors-headers>=4.4,<5
 django-environ>=0.11,<1
 django-ckeditor-5>=0.2.13
+# Lo exige el backend S3 de django-storages (MEDIA_STORAGE=s3); sin el, el
+# primer upload o el primer `.url` revientan con ImportError.
+boto3>=1.35,<2
 django-storages>=1.14,<2
 django-starken==1.0.7
 Pillow>=10.4,<12
