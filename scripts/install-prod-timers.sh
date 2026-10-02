@@ -9,8 +9,12 @@
 #   rayadito-backup           diario      scripts/backup-db.sh
 #   rayadito-dispatch-notice  cada hora   manage.py notify_pending_dispatch
 #   rayadito-instagram        cada 5 min  manage.py publish_instagram
+#   rayadito-instagram-token  diario      manage.py instagram_token refresh
+#                             (si el checkout ya trae el comando)
 #   rayadito-billing          cada 10 min manage.py issue_tax_documents
 #                             (solo si el .env tiene BILLING_MODE=provider)
+#   rayadito-starken-tracking cada 2 h    manage.py starken_tracking
+#                             (solo si el .env tiene STARKEN_ENABLED=true)
 #
 # Uso:
 #   scripts/install-prod-timers.sh                 # imprime las unidades
@@ -98,12 +102,39 @@ UNITS[rayadito-instagram.service]="$(manage_service \
 UNITS[rayadito-instagram.timer]="$(timer 'Revision de publicaciones de Instagram cada 5 minutos' '*:0/5')"
 
 TIMERS=(rayadito-backup.timer rayadito-dispatch-notice.timer rayadito-instagram.timer)
+SKIPPED=()
+
+has_command() {
+  [[ -f "$PROJECT_DIR/$1/management/commands/$2.py" ]]
+}
+
+# Los que dependen de un comando se instalan recien cuando el checkout lo
+# trae: asi el orden en que se mergean los PR no deja un timer fallando.
+if has_command social instagram_token; then
+  UNITS[rayadito-instagram-token.service]="$(manage_service \
+    'Renovacion del token de Instagram de Piedras Rayadito' 'instagram_token refresh')"
+  UNITS[rayadito-instagram-token.timer]="$(timer 'Revision diaria del token de Instagram' '*-*-* 04:10:00')"
+  TIMERS+=(rayadito-instagram-token.timer)
+else
+  SKIPPED+=("rayadito-instagram-token: este checkout no trae instagram_token")
+fi
 
 if [[ "$(env_get BILLING_MODE)" == provider ]]; then
   UNITS[rayadito-billing.service]="$(manage_service \
     'Emision y reintento de boletas/facturas de Piedras Rayadito' issue_tax_documents)"
   UNITS[rayadito-billing.timer]="$(timer 'Reintento de documentos tributarios cada 10 minutos' '*:0/10')"
   TIMERS+=(rayadito-billing.timer)
+else
+  SKIPPED+=("rayadito-billing: BILLING_MODE no es 'provider'")
+fi
+
+if [[ "$(env_get STARKEN_ENABLED)" == true ]] && has_command shipping starken_tracking; then
+  UNITS[rayadito-starken-tracking.service]="$(manage_service \
+    'Seguimiento de envios Starken de Piedras Rayadito' starken_tracking)"
+  UNITS[rayadito-starken-tracking.timer]="$(timer 'Seguimiento de envios Starken cada 2 horas' '0/2:15')"
+  TIMERS+=(rayadito-starken-tracking.timer)
+else
+  SKIPPED+=("rayadito-starken-tracking: STARKEN_ENABLED no es 'true' o falta el comando")
 fi
 
 case "$MODE" in
@@ -111,9 +142,9 @@ case "$MODE" in
     for name in $(printf '%s\n' "${!UNITS[@]}" | sort); do
       printf '### %s/%s\n%s\n\n' "$UNIT_DIR" "$name" "${UNITS[$name]}"
     done
-    if [[ ! " ${TIMERS[*]} " == *rayadito-billing* ]]; then
-      echo "# rayadito-billing omitido: BILLING_MODE no es 'provider'."
-    fi
+    for reason in "${SKIPPED[@]}"; do
+      echo "# omitido: $reason"
+    done
     ;;
   --install)
     [[ $EUID -eq 0 ]] || { echo "ERROR: --install necesita sudo" >&2; exit 1; }

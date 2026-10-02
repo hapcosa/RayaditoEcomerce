@@ -414,7 +414,9 @@ periódicos con las rutas del checkout donde vive el script:
 | `rayadito-backup` | diario, 03:30 | `scripts/backup-db.sh ~/backups-rayadito` |
 | `rayadito-dispatch-notice` | cada hora | `manage.py notify_pending_dispatch` |
 | `rayadito-instagram` | cada 5 min | `manage.py publish_instagram` |
+| `rayadito-instagram-token` | diario, 04:10 | `manage.py instagram_token refresh`, si el checkout ya trae el comando |
 | `rayadito-billing` | cada 10 min | `manage.py issue_tax_documents`, **solo si** el `.env` tiene `BILLING_MODE=provider` |
+| `rayadito-starken-tracking` | cada 2 h | `manage.py starken_tracking`, **solo si** el `.env` tiene `STARKEN_ENABLED=true` |
 
 ```bash
 cd ~/servicios/RayaditoEcomerce
@@ -429,8 +431,11 @@ journalctl -u rayadito-backup -n 20 --no-pager
 Las unidades no llevan `EnvironmentFile=`: `settings.py` ya lee el `.env`, y el
 parser de systemd trata distinto los valores con caracteres especiales (ver el
 comentario en `rayadito-api.service`). El timer de Instagram es inocuo sin
-credenciales: deja los posts esperando. Si después se activa
-`BILLING_MODE=provider`, vuelve a correr el `--install`.
+credenciales: deja los posts esperando. Los timers condicionales se agregan
+solos la próxima vez: si se activa `BILLING_MODE=provider` o
+`STARKEN_ENABLED=true`, o se despliega una versión que trae un comando nuevo,
+vuelve a correr el `--install`. Sin argumentos, el script lista lo que omitió
+y por qué.
 
 Volver a correrlo es seguro: reescribe las unidades y reinicia los timers.
 
