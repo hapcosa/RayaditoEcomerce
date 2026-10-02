@@ -62,7 +62,8 @@ export type ProductFormValue = {
   status: ProductStatus;
   isFeatured: boolean;
   categoryId: number | null;
-  sold: boolean;
+  /** Unidades disponibles, como texto mientras se edita (solo dígitos). */
+  stock: string;
 };
 
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -82,9 +83,9 @@ type Props = {
   categories: Category[];
   loadingCats: boolean;
   /**
-   * Muestra el interruptor "Vendida". Solo en edición: un producto que recién
-   * se está dando de alta no puede estar vendido, y marcarlo lo sacaría del
-   * catálogo apenas creado.
+   * Muestra el interruptor "Vendida" (atajo a stock 0). Solo en edición: un
+   * producto que recién se está dando de alta no puede estar vendido, y
+   * marcarlo lo sacaría del catálogo apenas creado.
    */
   showSold?: boolean;
 };
@@ -234,16 +235,32 @@ export function ProductFormFields({
         <Switch value={value.isFeatured} onValueChange={(v) => onChange({ isFeatured: v })} />
       </View>
 
+      <Field label="Stock (unidades)">
+        <TextInput
+          style={inputStyle}
+          value={value.stock}
+          onChangeText={(t) => onChange({ stock: digitsOnly(t) })}
+          keyboardType="number-pad"
+          placeholder="1"
+          placeholderTextColor={theme.textSecondary}
+        />
+      </Field>
+
       {showSold && (
         <View style={styles.field}>
           <View style={styles.switchRow}>
             <ThemedText type="smallBold">Vendida</ThemedText>
-            <Switch value={value.sold} onValueChange={(v) => onChange({ sold: v })} />
+            <Switch
+              value={value.stock === '0'}
+              // Atajo para la pieza única: encender deja el stock en 0, apagar
+              // lo repone a 1.
+              onValueChange={(v) => onChange({ stock: v ? '0' : '1' })}
+            />
           </View>
           <ThemedText type="small" themeColor="textSecondary">
-            {value.sold
-              ? 'No aparece en la tienda ni se puede comprar. Apágalo si vuelve a estar disponible.'
-              : 'Márcala si la vendiste fuera de la tienda (en persona, por redes): deja de aparecer en el catálogo.'}
+            {value.stock === '0'
+              ? 'No aparece en la tienda ni se puede comprar. Apágalo o sube el stock si vuelve a estar disponible.'
+              : 'Márcala si la vendiste fuera de la tienda (en persona, por redes): deja el stock en 0 y sale del catálogo.'}
           </ThemedText>
         </View>
       )}

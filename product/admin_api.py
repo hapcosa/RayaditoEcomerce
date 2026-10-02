@@ -210,6 +210,11 @@ class AdminProductSerializer(serializers.ModelSerializer):
         ],
     )
     available_stock = serializers.IntegerField(read_only=True)
+    stock = serializers.IntegerField(min_value=0, required=False)
+    # `sold` ya no es un campo: se deriva del stock. Se sigue aceptando al
+    # escribir porque el APK ya instalado manda el interruptor "Vendida":
+    # true deja el stock en 0 y false repone 1 si estaba agotado.
+    sold = serializers.BooleanField(required=False)
     gallery = AdminGalleryImageSerializer(
         source='galleryproduct_set', many=True, read_only=True,
     )
@@ -219,9 +224,19 @@ class AdminProductSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'slug', 'product_type', 'photo', 'description',
             'price', 'compare_price', 'category', 'status', 'is_featured',
-            'sold', 'available_stock', 'date_created', 'gallery',
+            'stock', 'sold', 'available_stock', 'date_created', 'gallery',
         ]
         read_only_fields = ['id', 'slug', 'available_stock', 'date_created']
+
+    def validate(self, attrs):
+        sold = attrs.pop('sold', None)
+        if sold is not None and 'stock' not in attrs:
+            if sold:
+                attrs['stock'] = 0
+            else:
+                current = self.instance.stock if self.instance else 0
+                attrs['stock'] = current or 1
+        return attrs
 
     def validate_price(self, value):
         # Dinero en entero CLP, sin decimales ni negativos.

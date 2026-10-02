@@ -55,9 +55,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   const hasDiscount = product.compare_price > product.price;
   // Una pieza vendida conserva su ficha (el enlace compartido en redes sigue
-  // vivo), pero no se puede comprar. `sold` manda sobre el stock: sin variantes
-  // cargadas `available_stock` sale de él, y si las hubiera, marcarla vendida
-  // igual la saca de la venta.
+  // vivo), pero no se puede comprar. `sold` lo deriva el backend del stock
+  // (`available_stock === 0`), así que las dos condiciones dicen lo mismo.
   const vendida = product.sold;
   const outOfStock = vendida || product.available_stock === 0;
   const avgRating =

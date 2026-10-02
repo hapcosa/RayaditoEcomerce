@@ -27,14 +27,14 @@ class ListAllSearchView(APIView):
         # Chequear si algo input ocurrio en la busqueda
         if len(search) == 0:
             # mostrar todos los productos si no hay input en la busqueda
-            search_results = Product.objects.order_by('-date_created').filter(sold=False)
+            search_results = Product.objects.available().order_by('-date_created')
             
         else:
             # Si hay criterio de busqueda, filtramos con dicho criterio usando Q
             results = Product.objects.filter(
                 Q(description__icontains=search) | Q(name__icontains=search)
                 )
-            search_results=results.filter(sold=False)
+            search_results=results.available()
 
         if category_id == 0:
             search_results = ProductSerializer(search_results, many=True)
@@ -114,7 +114,7 @@ class ListALlBySearchView(APIView):
             sortBy= 'date_created'
         order = data['order']
         if category_id == 0:
-            products_results = Product.objects.filter(sold=False)
+            products_results = Product.objects.available()
         elif not Category.objects.filter(id=category_id).exists():
             return Response(
                 {'error': 'La categoria no existe'},
@@ -123,17 +123,17 @@ class ListALlBySearchView(APIView):
         else:
             category = Category.objects.get(id=category_id)
             if category.parent:
-                products_results = Product.objects.filter(sold=False, category=category)
+                products_results = Product.objects.available().filter(category=category)
             else:
                 if not Category.objects.filter(parent=category).exists():
-                    products_results = Product.objects.filter(sold=False, category=category)
+                    products_results = Product.objects.available().filter(category=category)
                 else:
                     categories = Category.objects.filter(parent=category)
                     filtered_categories = [category]
                     for cat in categories:
                         filtered_categories.append(cat)
                     filtered_categories = tuple(filtered_categories)
-                    products_results = Product.objects.filter(sold=False, category__in=filtered_categories)
+                    products_results = Product.objects.available().filter(category__in=filtered_categories)
         # filtrar por precio
         if price_range == '0 - 19999':
             products_results = products_results.filter(price__gte=0000)

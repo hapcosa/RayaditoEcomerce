@@ -33,6 +33,9 @@ export type Product = {
   category: number;
   status: ProductStatus;
   is_featured: boolean;
+  /** Unidades disponibles (sin variantes). 1 = pieza única, 0 = vendida. */
+  stock: number;
+  /** Derivado: `available_stock === 0`. Solo lectura. */
   sold: boolean;
   available_stock: number;
   date_created: string;
@@ -77,11 +80,10 @@ export type ProductFields = {
   status: ProductStatus;
   is_featured: boolean;
   /**
-   * Pieza ya vendida. Hoy es el unico control de inventario real: sin
-   * variantes cargadas, `available_stock` sale de aca (0 si esta vendida, 1 si
-   * no). Una pieza vendida desaparece del catalogo publico.
+   * Unidades disponibles. Sin variantes, `available_stock` sale de acá; en 0
+   * la pieza queda vendida y desaparece del catálogo público.
    */
-  sold: boolean;
+  stock: number;
 };
 
 export type NewProduct = ProductFields & { photo: LocalImage };
@@ -140,7 +142,7 @@ function fieldsToParams(fields: ProductFields): Record<string, string> {
     product_type: fields.product_type,
     status: fields.status,
     is_featured: fields.is_featured ? 'true' : 'false',
-    sold: fields.sold ? 'true' : 'false',
+    stock: String(fields.stock),
   };
 }
 
