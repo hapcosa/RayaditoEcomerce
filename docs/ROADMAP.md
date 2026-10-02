@@ -3,7 +3,8 @@
 > Plan de trabajo para retomar y terminar el ecommerce de joyería y lapidación de piedras
 > de Chiloé, y convertir el repo en **template** para forks de otros rubros artesanales.
 >
-> **Última actualización:** 2026-07-16
+> **Última actualización:** 2026-10-02. Las casillas se revisaron contra el código ese
+> día. "PR #N" = abierto, esperando merge; la casilla se marca cuando entra a `master`.
 
 ---
 
@@ -139,47 +140,47 @@ Cada fase lista **objetivo → tareas → entregable → criterio de aceptación
 
 ### Fase 0 — Rescate y estabilización  ⏱️ base para todo
 **Objetivo:** que el proyecto vuelva a correr localmente, seguro y reproducible.
-- [ ] venv con **Python 3.12**; `requirements.txt` limpio (eliminar deps muertas de §2).
-- [ ] Subir Django 5.2 LTS + psycopg3; correr `makemigrations`/`migrate`.
-- [ ] Crear `.env.example` + `.env`; sacar **todos** los secretos de `settings.py` y `docker-compose.yml`; **rotar** contraseñas filtradas.
-- [ ] `settings.py`: parsear `DEBUG` como bool, split dev/prod, CORS sin `ALLOW_ALL`+credentials, whitelist explícita.
-- [ ] Limpiar repo: borrar `get-pip.py`, `vite.config.js.timestamp-*.mjs`, MySQL del compose.
-- [ ] `docker-compose` solo Postgres + pgAdmin; script de seed (categorías, productos demo, envíos).
-- [ ] Frontend actual: `npm install` + `build` funcionando como **referencia** antes de migrar.
-- [ ] **Verificación E2E:** levantar back+front, cargar catálogo, login OK.
+- [x] venv con **Python 3.12**; `requirements.txt` limpio (eliminar deps muertas de §2).
+- [x] Subir Django 5.2 LTS + psycopg3; correr `makemigrations`/`migrate`.
+- [ ] Crear `.env.example` + `.env`; sacar **todos** los secretos de `settings.py` y `docker-compose.yml`; **rotar** contraseñas filtradas. *Hecho salvo la rotación:* la contraseña de la base que quedó en el historial de git sigue pendiente (dueño).
+- [x] `settings.py`: parsear `DEBUG` como bool, split dev/prod, CORS sin `ALLOW_ALL`+credentials, whitelist explícita.
+- [x] Limpiar repo: borrar `get-pip.py`, `vite.config.js.timestamp-*.mjs`, MySQL del compose.
+- [x] `docker-compose` solo Postgres + pgAdmin; script de seed (categorías, productos demo, envíos). → `seed_demo`, `seed_shipping`.
+- [x] Frontend actual: `npm install` + `build` funcionando como **referencia** antes de migrar. *(Obsoleto: el SPA de Vite se retiró en el cutover.)*
+- [x] **Verificación E2E:** levantar back+front, cargar catálogo, login OK.
 
 **DoD:** `python manage.py runserver` y `npm run dev` corren sin errores; catálogo y login funcionan; no hay secretos en git.
 
 ### Fase 1 — Saneamiento de backend / API genérica
 **Objetivo:** API limpia, documentada y lista para Next.js + Expo.
-- [ ] Refactor modelo a **variantes + atributos** (§3); migraciones de datos de Joyas/Piedras a presets.
-- [ ] Arreglar `CarritoItem.quantity`; normalizar dinero CLP entero.
-- [ ] Inventario/stock por variante (reemplazar `sold`).
-- [ ] App **reviews** real (modelo + endpoints `/api/reviews/...` que el front ya espera) + rating agregado por producto + moderación.
-- [ ] App/endpoint **buzón de sugerencias**.
-- [ ] Slugs + endpoints REST consistentes; paginación; filtros/búsqueda.
-- [ ] **drf-spectacular**: OpenAPI en `/api/schema` + Swagger UI.
-- [ ] Tests de rutas críticas (carrito, orden, stock).
+- [x] Refactor modelo a **variantes + atributos** (§3); migraciones de datos de Joyas/Piedras a presets. → PRs #77–#81 (atributos por categoría; subclases borradas).
+- [x] Arreglar `CarritoItem.quantity`; normalizar dinero CLP entero.
+- [ ] Inventario/stock por variante (reemplazar `sold`). → PR #99: `Product.stock` entero, `sold` derivado, variantes siguen mandando si existen.
+- [x] App **reviews** real (modelo + endpoints `/api/reviews/...` que el front ya espera) + rating agregado por producto + moderación (`Review.approved`).
+- [x] App/endpoint **buzón de sugerencias**. → `suggestions/`.
+- [x] Slugs + endpoints REST consistentes; paginación; filtros/búsqueda.
+- [x] **drf-spectacular**: OpenAPI en `/api/schema` + Swagger UI.
+- [x] Tests de rutas críticas (carrito, orden, stock).
 
 **DoD:** OpenAPI publicado; tests verdes; un fork textil podría cargar tallas/colores solo con seed.
 
 ### Fase 2 — Pagos (MercadoPago) robusto
 **Objetivo:** cobrar de forma confiable en CLP.
-- [ ] Subir `mercadopago` (py) y SDK React; elegir **Checkout Pro** o **Bricks** (hoy hay Bricks a medias).
-- [ ] **Webhook seguro**: validar firma, idempotencia, máquina de estados de `Order` (no procesado→procesado→enviado / cancelado / rechazado).
-- [ ] Manejar approved/pending/rejected/refunded; URLs success/failure/pending.
-- [ ] Descontar stock al aprobar; evitar doble descuento (idempotencia).
-- [ ] Cuotas; vista admin de pagos + conciliación.
-- [ ] Pruebas en **sandbox** + checklist de go-live.
+- [x] Subir `mercadopago` (py) y SDK React; elegir **Checkout Pro** o **Bricks** (hoy hay Bricks a medias). → Checkout Pro (preferencia + redirect).
+- [x] **Webhook seguro**: validar firma, idempotencia, máquina de estados de `Order` (no procesado→procesado→enviado / cancelado / rechazado).
+- [x] Manejar approved/pending/rejected/refunded; URLs success/failure/pending.
+- [x] Descontar stock al aprobar; evitar doble descuento (idempotencia).
+- [x] Cuotas; vista admin de pagos + conciliación. → `reconcile_mercadopago_payments`.
+- [x] Pruebas en **sandbox** + checklist de go-live. *Go-live hecho:* webhook y token productivo cargados en prod.
 
 **DoD:** pago sandbox aprobado crea orden pagada + descuenta stock; webhook idempotente; estados correctos.
 
 ### Fase 3 — Envíos (Starken)
 **Objetivo:** cotizar y despachar.
-- [ ] Integrar `django-starken`: **cotizador** por comuna/región + peso/dimensiones.
-- [ ] Regiones/comunas de Chile; sumar costo de envío al total del checkout.
-- [ ] Generar orden de envío + guardar `deliveryNumber` (tracking).
-- [ ] Opción de envío **manual** de respaldo; retiro en taller.
+- [ ] Integrar `django-starken`: **cotizador** por comuna/región + peso/dimensiones. → PR #98, con la API oficial y sin `django-starken` (no cotiza y su versión 1.0.7 no importa). Apagado hasta tener credenciales; ver `docs/STARKEN.md`.
+- [x] Regiones/comunas de Chile; sumar costo de envío al total del checkout.
+- [ ] Generar orden de envío + guardar `deliveryNumber` (tracking). → PR #98 (`starken_emit`, `starken_tracking`). Hoy el número se carga a mano desde la app.
+- [x] Opción de envío **manual** de respaldo; retiro en taller.
 - [ ] (Dependencia externa: credenciales/API de Starken.)
 
 **DoD:** el checkout muestra costo real por destino y guarda tracking al despachar.
@@ -195,7 +196,7 @@ Cada fase lista **objetivo → tareas → entregable → criterio de aceptación
 - [x] UI de **estrellas**, **buzón**, **wishlist**.
 - [x] Accesibilidad (a11y) — PR #35 (reduced-motion, focus-visible, skip link).
 - [ ] **Performance / Core Web Vitals:** sin medir todavía.
-- [ ] **Corte del SPA:** `core/urls.py` sigue sirviendo el `dist/` de Vite con un catch-all. Next.js existe pero todavía no es la tienda pública. Va junto con la Fase 7 (servidor local + túnel de Cloudflare): dos procesos (Django + `next start`) detrás de un proxy que mande `/api/`, `/admin/` y `/media/` a Django y el resto a Next.
+- [x] **Corte del SPA:** *(hecho; ver Fase 7.)* `core/urls.py` seguía sirviendo el `dist/` de Vite con un catch-all. Next.js existe pero todavía no es la tienda pública. Va junto con la Fase 7 (servidor local + túnel de Cloudflare): dos procesos (Django + `next start`) detrás de un proxy que mande `/api/`, `/admin/` y `/media/` a Django y el resto a Next.
 
 **DoD:** Lighthouse SEO/Perf/A11y altos; catálogo, detalle y checkout funcionando; footer y buzón activos.
 
@@ -207,10 +208,10 @@ preferencia en MercadoPago) **no** está verificado contra el servicio real: no 
 
 ### Fase 5 — App admin nativa (Expo)
 **Objetivo:** subir productos y gestionar pedidos desde el celular.
-- [ ] Proyecto Expo (TS) que consume la API DRF (endpoints staff + permisos por rol).
-- [ ] Login staff; CRUD de productos con **cámara/galería** + compresión de imágenes.
-- [ ] Gestión de pedidos y cambio de estado; ver ventas.
-- [ ] Captura offline-friendly; manejo de tokens seguro.
+- [x] Proyecto Expo (TS) que consume la API DRF (endpoints staff + permisos por rol). → PRs #36–#45.
+- [x] Login staff; CRUD de productos con **cámara/galería** + compresión de imágenes.
+- [x] Gestión de pedidos y cambio de estado; ver ventas. (Retractos en la app: PR #101.)
+- [ ] Captura offline-friendly; manejo de tokens seguro. *Tokens seguros hechos* (`expo-secure-store`); offline no.
 
 **DoD:** desde el teléfono se crea un producto con fotos y se cambia el estado de un pedido.
 
@@ -219,22 +220,22 @@ preferencia en MercadoPago) **no** está verificado contra el servicio real: no 
 - [ ] Setup Meta Business: cuenta IG Business ligada a página FB; verificación.
 - [x] **Instagram Graph API:** publicar foto/carrusel + caption + hashtags desde la app Expo, ahora o programado (`social/`, ver [`INSTAGRAM.md`](INSTAGRAM.md)).
 - [ ] **WhatsApp Cloud API:** confirmación de pedido, updates de envío, catálogo; con opt-in.
-- [ ] Manejo de tokens de larga duración + colas/reintentos.
+- [ ] Manejo de tokens de larga duración + colas/reintentos. Reintentos hechos (`publish_instagram`); renovación automática del token en PR #100.
 
 **DoD:** crear producto puede publicarlo en IG; un pedido dispara notificación WhatsApp.
 
 ### Fase 7 — Dominio, infra, deploy y hardening
 **Objetivo:** producción seria.
-- [ ] Comprar dominio → **email del dominio** (Zoho/Google Workspace) → SMTP real (hoy es `console.EmailBackend`).
-- [ ] Media en **object storage** (S3 / Cloudflare R2 / Cloudinary — `cloudinary` ya está) vía django-storages.
-- [x] **Corte del SPA:** Django dejó de servir la tienda (se retiró el catch-all y el SPA de Vite). Dos procesos: Django `:8000` y Next `:3000`.
-- [ ] Deploy definitivo. **Decidido:** servidor local (PC propio) + **túnel de Cloudflare** con dominio propio, ruteo por path en `cloudflared` (sin nginx). Procedimiento completo en [`DEPLOY.md`](DEPLOY.md). Falta ejecutarlo: dominio y `cloudflared` todavía no existen.
-- [ ] Postgres administrado. El script de backup ya existe; falta ejecutarlo en el servidor y **copiar los backups fuera de ese disco**.
+- [x] Comprar dominio → **email del dominio** (Zoho/Google Workspace) → SMTP real (hoy es `console.EmailBackend`). → `piedrasdelrayadito.cl`, envío por Resend y recepción por Cloudflare Email Routing. Falta subir DMARC a `pct=100` (dueño).
+- [ ] Media en **object storage** (S3 / Cloudflare R2 / Cloudinary — `cloudinary` ya está) vía django-storages. → PR #96 (faltaban `boto3` y el dominio público); después hay que crear el bucket y copiar `public/`.
+- [x] **Corte del SPA:** Django dejó de servir la tienda (se retiró el catch-all y el SPA de Vite). Dos procesos: Django y Next (en prod, `:8010` y `:3010`).
+- [x] Deploy definitivo. **Decidido:** servidor local (PC propio) + **túnel de Cloudflare** con dominio propio, ruteo por path en `cloudflared` (sin nginx). Procedimiento completo en [`DEPLOY.md`](DEPLOY.md). En producción en `piedrasdelrayadito.cl`.
+- [ ] Postgres administrado. El script de backup ya existe; falta ejecutarlo en el servidor y **copiar los backups fuera de ese disco**. Copia manual al PC de desarrollo hecha el 2026-10-02; `scripts/pull-prod-backups.sh` en PR #97.
 - [x] **Sentry** (opt-in por `SENTRY_DSN`), **rate limiting** (DRF por scope), security headers y HTTPS/HSTS detrás del túnel.
-- [x] **Chequeos de despliegue propios** (`rayadito.E001/E002/W001`): fallan si el correo imprime en consola, si falta el token de MercadoPago o si la media no está en object storage.
-- [x] **Backups**: `scripts/backup-db.sh` + timer de systemd (ver [`DEPLOY.md`](DEPLOY.md)).
-- [x] **Media en object storage**: configurable por env (`MEDIA_STORAGE=s3`), falta ejecutar la migración de archivos al bucket.
-- [ ] Legal Chile: términos, privacidad, Ley del Consumidor (botón de arrepentimiento), boleta/factura.
+- [x] **Chequeos de despliegue propios** (`rayadito.E001/E002/W001`; `E003/E004` de object storage en PR #96): fallan si el correo imprime en consola, si falta el token de MercadoPago o si la media no está en object storage.
+- [ ] **Backups**: `scripts/backup-db.sh` + timer de systemd (ver [`DEPLOY.md`](DEPLOY.md)). *Corregido el 2026-10-02:* estaba marcada, pero **prod no tiene ningún timer activo** (ni backup, ni aviso de despacho, ni Instagram). Instalador en PR #97; falta correrlo con sudo.
+- [ ] **Media en object storage**: configurable por env (`MEDIA_STORAGE=s3`), falta ejecutar la migración de archivos al bucket. *Corregido el 2026-10-02:* activarlo rompía el sitio (sin `boto3` ni dominio público); arreglo en PR #96.
+- [ ] Legal Chile: términos, privacidad, Ley del Consumidor (botón de arrepentimiento), boleta/factura. `/terminos` y `/privacidad` existen; arrepentimiento en PR #94 y boleta/factura en PR #95 (apagada hasta el inicio de actividades en el SII).
 
 **DoD:** dominio con mail propio, media en storage, backups y monitoreo activos.
 
