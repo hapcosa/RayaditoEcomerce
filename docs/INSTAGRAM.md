@@ -55,13 +55,13 @@ Pasos:
 
    ```env
    INSTAGRAM_USER_ID=1784...
-   INSTAGRAM_ACCESS_TOKEN=IGAA...
    BACKEND_BASE_URL=https://piedrasdelrayadito.cl
    FRONTEND_BASE_URL=https://piedrasdelrayadito.cl
    INSTAGRAM_HASHTAGS=#PiedrasRayadito,#Chiloe,#JoyeriaArtesanal,#HechoAMano
    ```
 
-4. Reinicia `rayadito-api` y activa el timer (ver abajo).
+4. Carga el token en la base (ver "El token vive en la base" abajo), reinicia
+   `rayadito-api` y activa los timers.
 
 Mientras la app de Meta esté en modo desarrollo, solo puede publicar en las
 cuentas agregadas como testers o administradores de esa app. Para publicar en
@@ -71,18 +71,73 @@ Con una cuenta conectada por Facebook Login (página de Facebook más token de
 usuario del sistema de Business Manager), se usa
 `INSTAGRAM_GRAPH_HOST=graph.facebook.com`. El resto queda igual.
 
-### Renovar el token
+### El token vive en la base y se renueva solo
 
-> **Pendiente de automatizar.** El token de Instagram Login vence a los 60 días.
-> Hay que renovarlo antes del vencimiento y reemplazarlo en el `.env`:
->
-> ```bash
-> curl -s "https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=$INSTAGRAM_ACCESS_TOKEN"
-> ```
->
-> Después hay que reiniciar `rayadito-api`. Si vence, las publicaciones fallan
-> con `code 190` y llega el push de error. El token de un usuario del sistema
-> (opción Facebook Login) no vence.
+El token de Instagram Login vence a los 60 días. Por eso no va en el `.env`:
+se guarda **cifrado en la base** (clave derivada de `SECRET_KEY`) y
+`manage.py instagram_token refresh` lo renueva, una vez al día desde su timer,
+cuando le quedan 15 días o menos. Así un dump de la base —los backups se copian
+fuera del servidor— no lleva un token usable.
+
+Cargarlo por primera vez (se lee por stdin para que no quede en el historial
+del shell ni a la vista en `ps`):
+
+```bash
+cd ~/servicios/RayaditoEcomerce
+.venv/bin/python manage.py instagram_token set --expires-in-days 60   # pega el token y Ctrl-D
+# o, si ya estaba en el .env:
+.venv/bin/python manage.py instagram_token set --from-env
+.venv/bin/python manage.py instagram_token status
+```
+
+Después se puede borrar `INSTAGRAM_ACCESS_TOKEN` del `.env`: mientras haya
+token en la base, ese no se usa. No hace falta reiniciar `rayadito-api`, porque
+el token se lee de la base en cada publicación.
+
+Reglas de Meta ([referencia](https://developers.facebook.com/docs/instagram-platform/reference/refresh_access_token/)):
+solo se renueva un token con **al menos 24 horas** de antigüedad que **no haya
+vencido**, y cada renovación da 60 días desde ese momento. **Un token vencido ya
+no se puede renovar**: hay que generar otro en el panel de Meta y volver a
+cargarlo con `set`. Por eso el comando renueva con 15 días de margen. Si falla,
+el error queda en `/admin/social/instagramtoken/`, llega un push al staff y el
+timer queda en estado *failed* en `systemctl list-timers`. Al día siguiente lo
+reintenta.
+
+Si cambia `SECRET_KEY`, el token guardado ya no se puede descifrar: `status`
+lo avisa y hay que volver a cargarlo.
+
+El token de un usuario del sistema (opción Facebook Login,
+`INSTAGRAM_GRAPH_HOST=graph.facebook.com`) no vence, y `refresh` no lo toca.
+
+`/etc/systemd/system/rayadito-instagram-token.service`:
+
+```ini
+[Unit]
+Description=Renovacion del token de Instagram de Piedras Rayadito
+
+[Service]
+Type=oneshot
+User=donaldchavez
+WorkingDirectory=/home/donaldchavez/servicios/RayaditoEcomerce
+ExecStart=/home/donaldchavez/servicios/RayaditoEcomerce/.venv/bin/python manage.py instagram_token refresh
+```
+
+`/etc/systemd/system/rayadito-instagram-token.timer`:
+
+```ini
+[Unit]
+Description=Revision diaria del vencimiento del token de Instagram
+
+[Timer]
+OnCalendar=*-*-* 04:10:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+Sin token en la base el comando no hace nada y termina bien, así que el timer
+se puede instalar antes de conectar Instagram.
 
 ## Timer de systemd
 

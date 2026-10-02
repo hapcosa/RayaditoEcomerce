@@ -17,6 +17,8 @@ import time
 import requests
 from django.conf import settings
 
+from . import tokens
+
 logger = logging.getLogger(__name__)
 
 TIMEOUT_SECONDS = 20
@@ -34,7 +36,7 @@ class InstagramError(Exception):
 
 
 def is_configured():
-    return bool(settings.INSTAGRAM_USER_ID and settings.INSTAGRAM_ACCESS_TOKEN)
+    return bool(settings.INSTAGRAM_USER_ID and tokens.access_token())
 
 
 def _url(path):
@@ -45,12 +47,12 @@ def _url(path):
 def _scrub(text):
     # El token viaja como parametro y `requests` lo incluye en los mensajes de
     # error de red. Nunca debe terminar en un log ni en la base.
-    token = settings.INSTAGRAM_ACCESS_TOKEN
+    token = tokens.access_token()
     return text.replace(token, '***') if token else text
 
 
 def _request(method, path, params):
-    params = {**params, 'access_token': settings.INSTAGRAM_ACCESS_TOKEN}
+    params = {**params, 'access_token': tokens.access_token()}
     try:
         if method == 'GET':
             response = requests.get(_url(path), params=params, timeout=TIMEOUT_SECONDS)

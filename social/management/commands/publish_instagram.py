@@ -43,7 +43,7 @@ class Command(BaseCommand):
         if not instagram.is_configured():
             # Se dejan programadas: apenas se carguen las credenciales salen.
             self.stderr.write(
-                'INSTAGRAM_USER_ID / INSTAGRAM_ACCESS_TOKEN are not set; '
+                'INSTAGRAM_USER_ID or the access token (instagram_token set) is missing; '
                 f'{len(pending)} post(s) left waiting.')
             return
 

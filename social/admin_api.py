@@ -96,7 +96,7 @@ class InstagramPostViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
         if not instagram.is_configured():
             return Response(
                 {'error': 'Instagram no está conectado todavía '
-                          '(faltan INSTAGRAM_USER_ID e INSTAGRAM_ACCESS_TOKEN).'},
+                          '(falta INSTAGRAM_USER_ID o el token: manage.py instagram_token set).'},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         return super().create(request, *args, **kwargs)

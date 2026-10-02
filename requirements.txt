@@ -24,6 +24,8 @@ whitenoise>=6.6,<7
 # --- Pagos / HTTP ---
 mercadopago>=2.2,<3
 requests>=2.32,<3
+# Cifra el token de Instagram guardado en la base (social/tokens.py).
+cryptography>=42,<50
 
 # --- Servidor ---
 gunicorn>=23,<24
