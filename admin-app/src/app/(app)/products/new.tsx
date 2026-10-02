@@ -46,7 +46,7 @@ const EMPTY_FORM: ProductFormValue = {
   productType: null,
   status: 'published',
   isFeatured: false,
-  sold: false,
+  stock: '1',
   categoryId: null,
 };
 
@@ -142,6 +142,7 @@ export default function NewProductScreen() {
     if (!form.name.trim()) return 'El nombre es obligatorio.';
     if (!form.description.trim()) return 'La descripción es obligatoria.';
     if (!form.price) return 'El precio es obligatorio.';
+    if (!form.stock) return 'Indica el stock (1 si es una pieza única).';
     if (form.categoryId == null) return 'Elegí una categoría.';
     if (form.productType == null) return 'Elegí el tipo: joya o piedra.';
     if (!photo) return 'Agregá una foto del producto.';
@@ -165,7 +166,7 @@ export default function NewProductScreen() {
         product_type: form.productType!,
         status: form.status,
         is_featured: form.isFeatured,
-        sold: form.sold,
+        stock: Number(form.stock),
         photo: photo!,
       });
       if (atributos.fields.length > 0) {

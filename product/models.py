@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from django.db import models
-from django.db.models import Q, Sum
+from django.db.models import OuterRef, Q, Subquery, Sum
 from category.models import Category
 from metaproduct.models import *
 from django.conf import settings
@@ -15,6 +15,36 @@ class AttributeKind(models.TextChoices):
     TEXT = 'text', 'Texto'
     INTEGER = 'integer', 'Entero'
     DECIMAL = 'decimal', 'Decimal'
+
+
+class ProductQuerySet(models.QuerySet):
+    """Filtros de inventario que se resuelven en la base.
+
+    Mismo criterio que `Product.available_stock`: si el producto tiene
+    variantes activas manda la suma de su stock; si no, `Product.stock`.
+    """
+
+    def with_available_stock(self):
+        # Subquery y no Sum sobre el JOIN: el catalogo encadena filtros por
+        # atributos y `distinct()`, y un GROUP BY en la consulta principal se
+        # mezclaria con ellos.
+        variant_stock = (
+            ProductVariant.objects
+            .filter(product=OuterRef('pk'), is_active=True)
+            .order_by()
+            .values('product')
+            .annotate(total=Sum('stock'))
+            .values('total')
+        )
+        return self.annotate(_variant_stock=Subquery(variant_stock))
+
+    def available(self):
+        return self.with_available_stock().filter(
+            Q(_variant_stock__isnull=True, stock__gt=0) | Q(_variant_stock__gt=0))
+
+    def sold_out(self):
+        return self.with_available_stock().filter(
+            Q(_variant_stock__isnull=True, stock=0) | Q(_variant_stock=0))
 
 
 class Product(models.Model):
@@ -43,13 +73,18 @@ class Product(models.Model):
     price = models.PositiveIntegerField()
     compare_price = models.PositiveIntegerField(default=0)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
-    sold = models.BooleanField(default=False)
+    # Unidades disponibles. En joyeria casi siempre es 1 (pieza unica) o 0
+    # (vendida). Si el producto tiene variantes activas, manda la suma de las
+    # variantes y este campo no se usa (ver `available_stock`).
+    stock = models.PositiveIntegerField(default=1)
     status = models.CharField(
         max_length=20, choices=ProductStatus.choices, default=ProductStatus.PUBLISHED,
         db_index=True,
     )
     is_featured = models.BooleanField(default=False)
     date_created = models.DateTimeField(auto_now_add=datetime.now)
+
+    objects = ProductQuerySet.as_manager()
 
     def __str__(self):
         return self.name
@@ -59,7 +94,12 @@ class Product(models.Model):
         stock = self.variants.filter(is_active=True).aggregate(total=Sum('stock'))['total']
         if stock is not None:
             return stock
-        return 0 if self.sold else 1
+        return self.stock
+
+    @property
+    def sold(self):
+        """Agotado. Derivado del stock; ya no es un campo que se escriba."""
+        return self.available_stock == 0
 
     def save(self, *args, **kwargs):
         if not self.slug:

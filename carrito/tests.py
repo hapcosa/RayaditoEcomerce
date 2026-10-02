@@ -25,11 +25,11 @@ class CartMoneyTests(APITestCase):
         # compare_price=80000 era IMPOSIBLE con el DecimalField(6,2) anterior (máx 9999.99).
         self.p1 = Product.objects.create(
             name='Anillo', description='x', price=25000, compare_price=80000,
-            category=cat, product_type=Product.ProductType.JOYA, photo='',
+            category=cat, product_type=Product.ProductType.JOYA, photo='', stock=10,
         )
         self.p2 = Product.objects.create(
             name='Aros', description='x', price=12000, compare_price=0,
-            category=cat, product_type=Product.ProductType.JOYA, photo='',
+            category=cat, product_type=Product.ProductType.JOYA, photo='', stock=10,
         )
 
     def test_money_fields_are_integers(self):
@@ -72,11 +72,11 @@ class CartQuantityTests(APITestCase):
         cat = Category.objects.create(name='Anillos', ProductType='Joya')
         self.p1 = Product.objects.create(
             name='Anillo', description='x', price=25000, compare_price=0,
-            category=cat, product_type=Product.ProductType.JOYA, photo='',
+            category=cat, product_type=Product.ProductType.JOYA, photo='', stock=10,
         )
         self.p2 = Product.objects.create(
             name='Aros', description='x', price=12000, compare_price=0,
-            category=cat, product_type=Product.ProductType.JOYA, photo='',
+            category=cat, product_type=Product.ProductType.JOYA, photo='', stock=10,
         )
         self.client.force_authenticate(self.user)
 
@@ -176,11 +176,11 @@ class ReplaceCartTests(APITestCase):
         cat = Category.objects.create(name='Anillos', ProductType='Joya')
         self.p1 = Product.objects.create(
             name='Anillo', description='x', price=25000, compare_price=0,
-            category=cat, product_type=Product.ProductType.JOYA, photo='',
+            category=cat, product_type=Product.ProductType.JOYA, photo='', stock=10,
         )
         self.p2 = Product.objects.create(
             name='Aros', description='x', price=12000, compare_price=0,
-            category=cat, product_type=Product.ProductType.JOYA, photo='',
+            category=cat, product_type=Product.ProductType.JOYA, photo='', stock=10,
         )
         self.client.force_authenticate(self.user)
 
