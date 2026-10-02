@@ -403,6 +403,8 @@ FRONTEND_BASE_URL = env('FRONTEND_BASE_URL', default='')
 # Instagram (API oficial de Meta, Content Publishing). Sin user id o sin token
 # la app no deja programar publicaciones. Ver docs/INSTAGRAM.md.
 INSTAGRAM_USER_ID = env('INSTAGRAM_USER_ID', default='')
+# Solo respaldo para la transicion: el token va cifrado en la base y se renueva
+# solo (social/tokens.py, `manage.py instagram_token`).
 INSTAGRAM_ACCESS_TOKEN = env('INSTAGRAM_ACCESS_TOKEN', default='')
 INSTAGRAM_GRAPH_HOST = env('INSTAGRAM_GRAPH_HOST', default='graph.instagram.com')
 INSTAGRAM_GRAPH_VERSION = env('INSTAGRAM_GRAPH_VERSION', default='v23.0')
