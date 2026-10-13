@@ -182,15 +182,15 @@ class SoldProductVisibilityTests(APITestCase):
         self.vendida = Product.objects.create(
             name='Colgante jaspe', description='y', price=30000, compare_price=0,
             category=self.category, product_type=Product.ProductType.JOYA, photo='',
-            sold=True,
+            stock=0,
         )
 
     def test_detail_of_sold_product_still_resolves(self):
         res = self.client.get(f'/api/products/{self.vendida.slug}')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertTrue(res.data['product']['sold'])
-        # Sin variantes el stock sale de `sold`: el front lo usa para bloquear
-        # el botón de comprar.
+        # Sin variantes el stock sale de `Product.stock`: el front lo usa para
+        # bloquear el botón de comprar.
         self.assertEqual(res.data['product']['available_stock'], 0)
 
     def test_sold_product_is_hidden_from_the_catalog(self):

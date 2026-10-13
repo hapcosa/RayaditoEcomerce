@@ -31,13 +31,9 @@ def _sync_total_items(cart):
 
 
 def _has_available_stock(product, count):
-    if product.sold:
-        return False
-    variant_stock = product.variants.filter(is_active=True).aggregate(
-        total=Sum('stock'))['total']
-    if variant_stock is None:
-        return True
-    return variant_stock >= count
+    # Mismo criterio que el pago (`payment.services.has_stock`): variantes
+    # activas si las hay, `Product.stock` si no.
+    return product.available_stock >= count
 
 
 class GetItemsView(APIView):

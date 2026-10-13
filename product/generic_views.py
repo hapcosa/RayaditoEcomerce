@@ -30,8 +30,8 @@ def _published_products():
 
 
 def _base_products():
-    """Lo que se puede comprar: publicado y sin vender."""
-    return _published_products().filter(sold=False)
+    """Lo que se puede comprar: publicado y con stock."""
+    return _published_products().available()
 
 
 def _category_filter(queryset, category_id):
