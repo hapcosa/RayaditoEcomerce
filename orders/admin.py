@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Order, OrderItem
+from .models import Order, OrderItem, WithdrawalRequest
 # Register your models here.
 
 
@@ -21,3 +21,11 @@ class OrderItemAdmin(admin.ModelAdmin):
 
 
 admin.site.register(OrderItem, OrderItemAdmin)
+
+
+@admin.register(WithdrawalRequest)
+class WithdrawalRequestAdmin(admin.ModelAdmin):
+    list_display = ('code', 'order', 'email', 'status', 'created_at', 'resolved_at')
+    list_filter = ('status',)
+    search_fields = ('code', 'email', 'order__id', 'order__transaction_id')
+    readonly_fields = ('code', 'order', 'email', 'reason', 'created_at')

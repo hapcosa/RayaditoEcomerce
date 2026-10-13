@@ -1,0 +1,16 @@
+Hola:
+
+Recibimos tu solicitud de retracto del pedido #{{ reference }}.
+
+Código de la solicitud: {{ withdrawal.code }}
+Fecha: {{ withdrawal.created_at|date:"d-m-Y H:i" }}
+
+Guarda este código: es tu constancia de que ejerciste el derecho a retracto.
+
+Te escribiremos a este correo con las instrucciones para devolver el producto.
+Recuerda que debe estar sin uso y con su embalaje original. Una vez que lo
+recibamos, te devolveremos lo pagado.
+
+Si tienes dudas, responde este correo.
+
+Piedras Rayadito — joyería artesanal de Chiloé

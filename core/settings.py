@@ -259,6 +259,8 @@ REST_FRAMEWORK = {
         # Formularios publicos sin auth: el buzon y las reseñas.
         'suggestions': env('THROTTLE_SUGGESTIONS', default='5/min'),
         'reviews': env('THROTTLE_REVIEWS', default='20/min'),
+        # Retracto: publico y valida numero de pedido + correo.
+        'withdrawal': env('THROTTLE_WITHDRAWAL', default='5/min'),
     },
     # Detras del tunel la IP del cliente llega en X-Forwarded-For. Sin esto DRF
     # usaria REMOTE_ADDR —el proxy— y todos los visitantes compartirian cuota.

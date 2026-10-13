@@ -58,6 +58,67 @@ def send_admin_mail(subject, template, context):
     return True
 
 
+def shop_url(path=''):
+    """URL publica de la tienda, o '' si no hay dominio configurado."""
+    base = (settings.FRONTEND_BASE_URL or '').rstrip('/')
+    return f'{base}{path}' if base else ''
+
+
+def order_reference(order):
+    """El numero de pedido que ve el cliente en la web (ver web/app/pedidos)."""
+    return order.transaction_id or str(order.id)
+
+
+def customer_email(order):
+    return order.email or (order.user.email if order.user_id else '')
+
+
+def send_customer_mail(to, subject, template, context):
+    """Correo al cliente. Igual que el del admin, un fallo se registra y se traga.
+
+    Las respuestas van al dueno (`reply_to`), no a la casilla no-reply.
+    """
+    if not to:
+        logger.info('correo al cliente omitido (sin direccion): %s', subject)
+        return False
+    try:
+        EmailMessage(
+            subject=subject,
+            body=render_to_string(template, context),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[to],
+            reply_to=admin_recipients()[:1] or None,
+        ).send(fail_silently=False)
+    except Exception:
+        logger.exception('no se pudo enviar el correo al cliente: %s', subject)
+        return False
+    return True
+
+
+def notify_customer_paid_order(order):
+    """Confirmacion escrita de la compra al cliente.
+
+    No es cortesia: en una compra a distancia, si el cliente no recibe la
+    confirmacion escrita de las condiciones, el plazo de retracto pasa de 10 a
+    90 dias (Ley 19.496, art. 3 bis). Por eso el correo incluye el aviso del
+    derecho a retracto y como ejercerlo.
+    """
+    items = list(OrderItem.objects.select_related('product').filter(order=order))
+    return send_customer_mail(
+        to=customer_email(order),
+        subject=f'Confirmación de tu compra — pedido #{order_reference(order)}',
+        template='notifications/customer_paid_order.txt',
+        context={
+            'order': order,
+            'items': items,
+            'reference': order_reference(order),
+            'subtotal': sum(item.price * item.count for item in items),
+            'withdrawal_url': shop_url('/arrepentimiento'),
+            'terms_url': shop_url('/terminos'),
+        },
+    )
+
+
 def push_admins(title, body, data=None):
     """Push a los aparatos del staff. Devuelve a cuantos les llego.
 
@@ -131,7 +192,7 @@ def notify_paid_order(order):
         'order': order,
         'items': items,
         'admin_url': order_admin_url(order),
-        'customer_email': order.email or (order.user.email if order.user_id else ''),
+        'customer_email': customer_email(order),
     }
     sent = send_admin_mail(
         subject=f'Venta aprobada — pedido #{order.id}',
@@ -155,6 +216,7 @@ def notify_paid_order_on_commit(order):
     volver todo atras; el correo, en cambio, no se puede des-enviar.
     """
     transaction.on_commit(lambda: notify_paid_order(order))
+    transaction.on_commit(lambda: notify_customer_paid_order(order))
 
 
 def dispatch_deadline(order):
@@ -232,7 +294,7 @@ def notify_pending_dispatch(order, now=None):
                 else f'Para despachar este pedido {left}.'
             ),
             'admin_url': order_admin_url(order),
-            'customer_email': order.email or (order.user.email if order.user_id else ''),
+            'customer_email': customer_email(order),
         },
     )
     try:
