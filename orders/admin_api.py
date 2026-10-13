@@ -12,6 +12,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
+from notifications import whatsapp_notices
+
 from .models import Order, OrderItem
 
 # Transiciones válidas de la máquina de estados de un pedido.
@@ -116,4 +118,6 @@ class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
 
         order.status = new_status
         order.save(update_fields=update_fields)
+        if new_status == S.shipping:
+            whatsapp_notices.notify_shipped_on_commit(order)
         return Response(AdminOrderSerializer(order).data, status=status.HTTP_200_OK)
