@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Términos y condiciones',
@@ -47,7 +48,23 @@ export default function TerminosPage() {
           </p>
         </section>
         <section>
-          <h2 className="font-serif text-xl text-piedra-900">5. Contacto</h2>
+          <h2 className="font-serif text-xl text-piedra-900">5. Derecho a retracto</h2>
+          <p className="mt-2">
+            En las compras hechas en esta tienda en línea puedes ejercer el
+            derecho a retracto dentro de los 10 días siguientes a la recepción
+            del producto, sin expresión de causa, siempre que el producto esté
+            sin uso y con su embalaje original. Las piezas confeccionadas según
+            tus especificaciones (encargos a medida) no tienen derecho a
+            retracto. Si no recibiste la confirmación escrita de tu compra, el
+            plazo es de 90 días. Puedes solicitarlo en la página{' '}
+            <Link href="/arrepentimiento" className="text-tierra-600 hover:underline">
+              Arrepentimiento de compra
+            </Link>
+            .
+          </p>
+        </section>
+        <section>
+          <h2 className="font-serif text-xl text-piedra-900">6. Contacto</h2>
           <p className="mt-2">
             Ante cualquier duda escríbenos a través del buzón de sugerencias o al
             correo de contacto del pie de página.

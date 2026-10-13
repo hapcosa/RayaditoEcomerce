@@ -3,6 +3,8 @@ import os
 import environ
 from datetime import timedelta
 
+from core.media_storage import media_storage_config
+
 # django-environ: lee variables desde el entorno y desde un archivo .env (no versionado).
 env = environ.Env()
 environ.Env.read_env(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
@@ -46,6 +48,7 @@ PROJECT_APPS = [
     'wishlist',
     'homepage',
     'social',
+    'billing',
 ]
 
 THIRD_PARTY_APPS = [
@@ -77,25 +80,11 @@ MIDDLEWARE = [
 # quedo obsoleto). La media va al disco del servidor salvo que se configure un
 # bucket: hoy las fotos de producto viven en el PC, asi que si se pierde ese
 # disco se pierden. Poner MEDIA_STORAGE=s3 las manda a S3 / Cloudflare R2 sin
-# tocar codigo (django-storages ya esta en requirements).
+# tocar codigo (django-storages + boto3 estan en requirements). Ver
+# docs/DEPLOY.md, seccion "Media en object storage".
 MEDIA_STORAGE = env('MEDIA_STORAGE', default='local')
 
-if MEDIA_STORAGE == 's3':
-    _default_storage = {
-        'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
-        'OPTIONS': {
-            'bucket_name': env('AWS_STORAGE_BUCKET_NAME'),
-            'access_key': env('AWS_ACCESS_KEY_ID'),
-            'secret_key': env('AWS_SECRET_ACCESS_KEY'),
-            # R2 y compatibles necesitan endpoint propio; en S3 puro se omite.
-            'endpoint_url': env('AWS_S3_ENDPOINT_URL', default=None),
-            'region_name': env('AWS_S3_REGION_NAME', default='auto'),
-            'querystring_auth': False,
-            'file_overwrite': False,
-        },
-    }
-else:
-    _default_storage = {'BACKEND': 'django.core.files.storage.FileSystemStorage'}
+_default_storage = media_storage_config(MEDIA_STORAGE, env)
 
 STORAGES = {
     'default': _default_storage,
@@ -259,6 +248,8 @@ REST_FRAMEWORK = {
         # Formularios publicos sin auth: el buzon y las reseñas.
         'suggestions': env('THROTTLE_SUGGESTIONS', default='5/min'),
         'reviews': env('THROTTLE_REVIEWS', default='20/min'),
+        # Retracto: publico y valida numero de pedido + correo.
+        'withdrawal': env('THROTTLE_WITHDRAWAL', default='5/min'),
     },
     # Detras del tunel la IP del cliente llega en X-Forwarded-For. Sin esto DRF
     # usaria REMOTE_ADDR —el proxy— y todos los visitantes compartirian cuota.
@@ -400,9 +391,19 @@ EXPO_ACCESS_TOKEN = env('EXPO_ACCESS_TOKEN', default='')
 # de Instagram para apuntar al producto. Vacio = el texto va sin link.
 FRONTEND_BASE_URL = env('FRONTEND_BASE_URL', default='')
 
+# Documentos tributarios (SII). 'off' hasta tener inicio de actividades;
+# 'voucher' si el comprobante de MercadoPago vale como boleta; 'provider' para
+# emitir con un proveedor externo (BILLING_PROVIDER). Ver docs/SII.md.
+BILLING_MODE = env('BILLING_MODE', default='off')
+BILLING_PROVIDER = env('BILLING_PROVIDER', default='')
+# Ofrecer "Necesito factura" en el checkout. Sin efecto con BILLING_MODE='off'.
+BILLING_INVOICES_ENABLED = env.bool('BILLING_INVOICES_ENABLED', default=False)
+
 # Instagram (API oficial de Meta, Content Publishing). Sin user id o sin token
 # la app no deja programar publicaciones. Ver docs/INSTAGRAM.md.
 INSTAGRAM_USER_ID = env('INSTAGRAM_USER_ID', default='')
+# Solo respaldo para la transicion: el token va cifrado en la base y se renueva
+# solo (social/tokens.py, `manage.py instagram_token`).
 INSTAGRAM_ACCESS_TOKEN = env('INSTAGRAM_ACCESS_TOKEN', default='')
 INSTAGRAM_GRAPH_HOST = env('INSTAGRAM_GRAPH_HOST', default='graph.instagram.com')
 INSTAGRAM_GRAPH_VERSION = env('INSTAGRAM_GRAPH_VERSION', default='v23.0')
@@ -415,6 +416,46 @@ INSTAGRAM_HASHTAGS = env.list('INSTAGRAM_HASHTAGS', default=[])
 # 24, el aviso sale a las 48 h de pagado y el plazo vence a las 72 h.
 DISPATCH_SLA_HOURS = env.int('DISPATCH_SLA_HOURS', default=72)
 DISPATCH_WARN_HOURS = env.int('DISPATCH_WARN_HOURS', default=24)
+
+# Starken (API oficial de developers.starken.cl). Apagado por defecto: sin
+# credenciales las opciones de envio son las de precio fijo de /admin/. Con
+# STARKEN_ENABLED=true, las opciones marcadas como Starken se cotizan por
+# comuna y peso, y el pedido pagado puede emitir su orden de flete. Ver
+# docs/STARKEN.md.
+STARKEN = {
+    'ENABLED': env.bool('STARKEN_ENABLED', default=False),
+    # Cotizador y seguimiento: credenciales por header (Rut / Clave).
+    'API_URL': env('STARKEN_API_URL',
+                   default='https://restservices-qa.starken.cl/apiqa/starkenservices/rest'),
+    'RUT': env('STARKEN_RUT', default=''),
+    'CLAVE': env('STARKEN_CLAVE', default=''),
+    # Codigo de ciudad de origen (listarCiudadesOrigen), p. ej. Castro = 388.
+    'ORIGIN_CITY': env.int('STARKEN_ORIGIN_CITY', default=0),
+    # Cuenta corriente: con ella la cotizacion usa la tarifa negociada.
+    'CTA_CTE': env('STARKEN_CTA_CTE', default=''),
+    'CTA_CTE_DV': env('STARKEN_CTA_CTE_DV', default=''),
+    'CENTRO_COSTO': env('STARKEN_CENTRO_COSTO', default='0'),
+    # Paquete por pedido. El catalogo no guarda peso ni medidas, asi que todo
+    # pedido se cotiza y se emite como un bulto de este tamaño.
+    'PARCEL_KG': env.float('STARKEN_PARCEL_KG', default=1.0),
+    'PARCEL_CM': env.list('STARKEN_PARCEL_CM', cast=float, default=[20.0, 15.0, 10.0]),
+    # Emision de ordenes de flete (Web Service EMISION Host 2 Host).
+    'EMISSION_URL': env('STARKEN_EMISSION_URL',
+                        default='https://emisionh2h-qa.starken.cl/starkenh2h/servlet/aemisionh2hremrest'),
+    'EMITTER_COMPANY_RUT': env('STARKEN_EMITTER_COMPANY_RUT', default=''),
+    'EMITTER_USER_RUT': env('STARKEN_EMITTER_USER_RUT', default=''),
+    'EMITTER_PASSWORD': env('STARKEN_EMITTER_PASSWORD', default=''),
+    # Remitente que aparece en la etiqueta. RUT con guion y DV (12345678-9).
+    'SENDER_RUT': env('STARKEN_SENDER_RUT', default=''),
+    'SENDER_NAME': env('STARKEN_SENDER_NAME', default=''),
+    'SENDER_STREET': env('STARKEN_SENDER_STREET', default=''),
+    'SENDER_NUMBER': env('STARKEN_SENDER_NUMBER', default=''),
+    'SENDER_COMMUNE': env('STARKEN_SENDER_COMMUNE', default=''),
+    'SENDER_PHONE': env('STARKEN_SENDER_PHONE', default=''),
+    'SENDER_EMAIL': env('STARKEN_SENDER_EMAIL', default=''),
+    'CONTENT': env('STARKEN_CONTENT', default='ARTESANIA'),
+    'TIMEOUT': env.int('STARKEN_TIMEOUT', default=10),
+}
 
 
 # Detrás del túnel de Cloudflare, `cloudflared` habla HTTP plano contra este

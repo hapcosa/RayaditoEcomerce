@@ -1,0 +1,18 @@
+{% load money %}Un cliente pidió factura. Hay que emitirla.
+
+Pedido #{{ order.id }} (pago {{ order.transaction_id|default:"—" }})
+Total: ${{ order.amount|clp }} CLP, IVA incluido (envío ${{ order.shipping_price|clp }})
+
+Datos para la factura
+  RUT: {{ rut }}
+  Razón social: {{ invoice.business_name }}
+  Giro: {{ invoice.activity }}
+  Dirección: {{ invoice.address }}, {{ invoice.commune }}
+  Correo: {{ invoice.email|default:"—" }}
+
+Emítela en el portal del SII (Servicios online > Factura electrónica >
+Sistema de facturación gratuito del SII) y después carga el folio en el admin,
+en "Documentos tributarios", para que quede registrada.
+{% if admin_url %}
+{{ admin_url }}
+{% endif %}

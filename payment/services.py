@@ -2,13 +2,16 @@ import os
 
 import mercadopago
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import F, Sum, Value
+from django.db.models.functions import Greatest
 from django.utils import timezone
 from django.utils.text import slugify
 
 from carrito.models import Carrito, CarritoItem
+from billing.services import on_order_paid_on_commit
 from notifications.services import notify_paid_order_on_commit
 from orders.models import Order, OrderItem
+from product.models import Product
 from .models import Payments
 
 
@@ -50,17 +53,21 @@ def sync_cart_total(cart):
 
 
 def has_stock(product, count):
-    variant_stock = product.variants.filter(is_active=True).aggregate(total=Sum('stock'))['total']
-    if variant_stock is None:
-        return not product.sold
-    return variant_stock >= count
+    return product.available_stock >= count
 
 
 def deduct_product_stock(product, count):
+    """Descuenta `count` unidades del producto aprobado.
+
+    Con variantes activas se descuenta de ellas, en orden; sin variantes, de
+    `Product.stock`. El descuento se hace en la base (`F`) y nunca baja de
+    cero: si dos pagos aprueban la ultima pieza, el producto queda agotado y
+    no con stock negativo.
+    """
     variants = product.variants.filter(is_active=True).order_by('id')
     if not variants.exists():
-        product.sold = True
-        product.save(update_fields=['sold'])
+        Product.objects.filter(pk=product.pk).update(
+            stock=Greatest(F('stock') - count, Value(0)))
         return
 
     remaining = count
@@ -111,6 +118,8 @@ def apply_approved_payment(payment):
     # Un solo aviso por venta: si `stock_deducted` ya estaba puesto salimos
     # arriba, y MercadoPago reenvia la misma aprobacion varias veces.
     notify_paid_order_on_commit(payment.order)
+    # Mismo criterio: una sola vez por venta, y nunca puede tumbar el pago.
+    on_order_paid_on_commit(payment.order)
 
 
 def record_payment(payment_data):

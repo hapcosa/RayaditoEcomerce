@@ -105,7 +105,7 @@ export default function EditProductScreen() {
           status: product.status,
           isFeatured: product.is_featured,
           categoryId: product.category,
-          sold: product.sold,
+          stock: String(product.stock),
         });
         setCurrentPhoto(photoUrl(product.photo));
         setGallery(product.gallery);
@@ -211,6 +211,7 @@ export default function EditProductScreen() {
     if (!f.name.trim()) return 'El nombre es obligatorio.';
     if (!f.description.trim()) return 'La descripción es obligatoria.';
     if (!f.price) return 'El precio es obligatorio.';
+    if (!f.stock) return 'Indica el stock (0 si ya se vendió).';
     if (f.categoryId == null) return 'Elegí una categoría.';
     if (f.productType == null) return 'Elegí el tipo: joya o piedra.';
     return faltaAtributo(atributos.fields, atributos.draft);
@@ -236,7 +237,7 @@ export default function EditProductScreen() {
           product_type: form.productType!,
           status: form.status,
           is_featured: form.isFeatured,
-          sold: form.sold,
+          stock: Number(form.stock),
         },
         newPhoto,
       );

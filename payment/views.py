@@ -8,9 +8,11 @@ from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from billing import services as billing
 from carrito.models import Carrito, CarritoItem
 from orders.models import Order, OrderItem
 from product.models import Product
+from shipping import pricing
 from shipping.models import Shipping
 from user_profile.models import UserProfile
 from .models import Payments
@@ -57,8 +59,20 @@ def _order_items_payload(order):
     return items
 
 
-def _shipping_price(shipping):
-    return int(shipping.price or 0)
+def _shipping_price(shipping, commune):
+    """(precio, None) o (None, Response de error).
+
+    Lo calcula el servidor con la misma funcion que arma las opciones del
+    checkout: una opcion de Starken se cotiza de nuevo para la comuna del
+    pedido, nunca se toma un precio del navegador.
+    """
+    try:
+        return pricing.price_for(shipping, commune), None
+    except pricing.ShippingUnavailable:
+        return None, Response(
+            {'error': 'No pudimos cotizar el envío a tu comuna. Elige otra opción '
+                      'de envío o inténtalo en unos minutos.'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 
 def _preference_data(request, order):
@@ -102,7 +116,9 @@ def _create_authenticated_order(request):
             return None, Response({'error': f'Stock insuficiente para {item.product.name}'},
                                   status=status.HTTP_409_CONFLICT)
 
-    shipping_price = _shipping_price(shipping)
+    shipping_price, error = _shipping_price(shipping, profile.city)
+    if error:
+        return None, error
     amount = sum(int(item.product.price) * item.count for item in cart_items) + shipping_price
     order = Order.objects.create(
         user=request.user,
@@ -139,7 +155,9 @@ def _create_guest_order(request):
                                   status=status.HTTP_409_CONFLICT)
         normalized_items.append((product, count))
 
-    shipping_price = _shipping_price(shipping)
+    shipping_price, error = _shipping_price(shipping, request.data.get('city', ''))
+    if error:
+        return None, error
     amount = sum(int(product.price) * count for product, count in normalized_items) + shipping_price
     order = Order.objects.create(
         email=request.data.get('email', ''),
@@ -225,6 +243,12 @@ class ProcessPaymentView(APIView):
             return Response({'error': 'MercadoPago no está configurado'},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        invoice, invoice_errors = billing.parse_invoice_request(request.data.get('invoice'))
+        if invoice_errors:
+            return Response({'error': 'Revisa los datos de la factura.',
+                             'invoice': invoice_errors},
+                            status=status.HTTP_400_BAD_REQUEST)
+
         try:
             if 'orderId' in request.data:
                 order = get_object_or_404(Order, id=int(request.data['orderId']))
@@ -243,6 +267,9 @@ class ProcessPaymentView(APIView):
             return Response({'error': 'Datos de pago inválidos'},
                             status=status.HTTP_400_BAD_REQUEST)
 
+        # Tambien al reintentar el pago de una orden existente: es la ultima
+        # version de los datos que dio el cliente.
+        billing.attach_invoice_request(order, invoice)
         preference = _create_preference(request, order)
         return Response({'response': preference, 'order_id': order.id},
                         status=status.HTTP_200_OK)

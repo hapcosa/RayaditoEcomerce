@@ -203,9 +203,9 @@ class AdminStatsApiTests(APITestCase):
         self.assertIsNone(pending['oldest_paid_at'])
 
     # --- catalogo y estados ---
-    def test_catalog_counts_published_pieces_by_sold_flag(self):
-        self.anillo.sold = True
-        self.anillo.save(update_fields=['sold'])
+    def test_catalog_counts_published_pieces_by_stock(self):
+        self.anillo.stock = 0
+        self.anillo.save(update_fields=['stock'])
         Product.objects.create(
             name='Borrador', product_type='joya', description='No publicado',
             price=1000, compare_price=0, category=self.category, photo='',

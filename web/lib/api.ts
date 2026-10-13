@@ -100,12 +100,17 @@ export async function syncCart(
   return data.cart;
 }
 
-// ---------- Envíos (opciones manuales, sin auth) ----------------------------
+// ---------- Envíos (sin auth) ----------------------------------------------
 
-export async function fetchShippingOptions(): Promise<ShippingOption[]> {
+/**
+ * Opciones de envío con su precio. Con `comuna`, el backend suma las de
+ * Starken cotizadas para ese destino; sin ella solo vienen las de precio fijo.
+ */
+export async function fetchShippingOptions(comuna = ''): Promise<ShippingOption[]> {
+  const query = comuna ? `?comuna=${encodeURIComponent(comuna)}` : '';
   try {
     const data = await apiFetch<{ shipping_options: ShippingOption[] }>(
-      '/shipp/get-shipping-options',
+      `/shipp/get-shipping-options${query}`,
     );
     return data.shipping_options;
   } catch {

@@ -304,6 +304,8 @@ fallan si falta algo que **no rompe el arranque pero sí el negocio**:
 | `rayadito.E001` | `EMAIL_BACKEND` imprime en consola: activación de cuenta y reseteo de contraseña no llegan a nadie |
 | `rayadito.E002` | Falta `MERCADOPAGO_ACCESS_TOKEN`: el checkout devuelve 500 |
 | `rayadito.W001` | La media está en el disco del servidor y no en object storage |
+| `rayadito.E003` | `MEDIA_STORAGE=s3` sin `boto3` instalado: el primer upload de fotos da 500 |
+| `rayadito.E004` | Bucket con endpoint propio (R2) sin `AWS_S3_CUSTOM_DOMAIN`: las fotos no abren |
 
 Corrélos como paso previo al deploy:
 
@@ -316,20 +318,117 @@ Son inertes con `DEBUG=True`, así que no molestan en desarrollo.
 ## 7. Media en object storage
 
 Mientras `MEDIA_STORAGE=local` (el default), las fotos viven en `public/` del
-servidor y las sirve Django. Para moverlas a S3 o Cloudflare R2, sin tocar
-código:
+servidor y las sirve Django: si se pierde ese disco, se pierden. Con
+`MEDIA_STORAGE=s3` van a un bucket de Cloudflare R2 (o S3), sin tocar código.
+
+La migración tiene tres partes: crear el bucket y su dominio público en
+Cloudflare, copiar lo que ya existe y recién entonces cambiar la variable.
+Hasta el último paso el sitio sigue sirviendo desde el disco, así que se puede
+preparar con calma.
+
+### 7.1 Crear el bucket y el token en Cloudflare
+
+Todo en la **cuenta de Cloudflare de Rayadito**, la misma donde está la zona
+`piedrasdelrayadito.cl` y el túnel: R2 solo conecta dominios que sean una zona
+de la misma cuenta que el bucket.
+
+1. **Activar R2.** En el dashboard: *R2 object storage* → activarlo. Pide un
+   medio de pago aunque el uso quede dentro del plan gratuito, y sin eso no se
+   pueden crear tokens.
+2. **Crear el bucket** `rayadito-media` (*R2 object storage* → *Create bucket*).
+   Sin *jurisdiction*: un bucket con jurisdicción (EU, FedRAMP) usa otro
+   endpoint y la configuración de abajo no sirve tal cual.
+3. **Conectar el dominio público.** Bucket → *Settings* → *Custom Domains* →
+   *Add* → `media.piedrasdelrayadito.cl` → *Connect Domain*. Cloudflare crea el
+   registro DNS solo; el estado pasa de *Initializing* a *Active* en unos
+   minutos.
+4. **No activar el `r2.dev`.** Es la URL pública de desarrollo: tiene límite de
+   tasa y Cloudflare la declara no apta para producción.
+5. **Crear el token.** *R2 object storage* → *Account Details* → *API Tokens*
+   → *Manage* → *Create Account API token*, con permiso **Object Read & Write**
+   y limitado al bucket `rayadito-media`. Guarda el **Access Key ID** y el
+   **Secret Access Key** en ese momento: el secreto no se vuelve a mostrar.
+6. **Anotar el Account ID** (aparece en la misma página de R2). El endpoint es
+   `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`.
+
+Costo: el plan gratuito de R2 cubre 10 GB-mes de almacenamiento, 1 millón de
+operaciones de clase A y 10 millones de clase B al mes, y la salida de datos no
+se cobra. La media de Rayadito pesaba ~430 MB al 2026-10-02.
+
+Fuentes: [dominios públicos](https://developers.cloudflare.com/r2/buckets/public-buckets/),
+[tokens](https://developers.cloudflare.com/r2/api/tokens/),
+[boto3 con R2](https://developers.cloudflare.com/r2/examples/aws/boto3/),
+[precios](https://developers.cloudflare.com/r2/pricing/) y
+[django-storages con R2](https://django-storages.readthedocs.io/en/latest/backends/s3_compatible/cloudflare-r2.html).
+
+### 7.2 Configurar el servidor
+
+Agrega al `.env`, **todavía sin `MEDIA_STORAGE=s3`**:
 
 ```bash
-MEDIA_STORAGE=s3
 AWS_STORAGE_BUCKET_NAME=rayadito-media
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
-AWS_S3_ENDPOINT_URL=https://<cuenta>.r2.cloudflarestorage.com   # solo R2
+AWS_S3_ENDPOINT_URL=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+AWS_S3_REGION_NAME=auto
+AWS_S3_CUSTOM_DOMAIN=media.piedrasdelrayadito.cl   # sin https:// ni slash final
 ```
 
-Las fotos ya subidas hay que copiarlas al bucket a mano (`rclone`/`aws s3 sync`
-sobre `public/photos/`); las rutas guardadas en la base son relativas y siguen
-resolviendo.
+`AWS_S3_CUSTOM_DOMAIN` no es opcional en R2: el endpoint S3 exige firma, así
+que sin dominio propio las URLs de las fotos apuntan a un host que responde
+400. `manage.py check --deploy` lo detecta (`rayadito.E004`).
+
+Y en `web/.env.local`, para que `next/image` acepte las fotos del bucket:
+
+```bash
+NEXT_PUBLIC_MEDIA_URL=https://media.piedrasdelrayadito.cl
+```
+
+`remotePatterns` se fija en el build, así que esto exige `npm run build`.
+
+### 7.3 Copiar las fotos existentes
+
+Las rutas guardadas en la base son relativas (`photos/26/08/x.jpg`): basta con
+que cada archivo quede en el bucket con la misma clave.
+`copy_media_to_storage` sube `public/` usando el mismo storage que Django, con
+las credenciales del `.env`. Salta lo que ya está en el bucket, así que se
+puede cortar y volver a correr. `MEDIA_STORAGE=s3` va inline: el `.env` no pisa
+una variable que ya viene del entorno.
+
+```bash
+cd ~/servicios/RayaditoEcomerce
+.venv/bin/pip install -r requirements.txt          # trae boto3
+MEDIA_STORAGE=s3 .venv/bin/python manage.py check --deploy
+MEDIA_STORAGE=s3 .venv/bin/python manage.py copy_media_to_storage --dry-run
+MEDIA_STORAGE=s3 .venv/bin/python manage.py copy_media_to_storage
+curl -sI https://media.piedrasdelrayadito.cl/<una ruta de public/> | head -1   # 200
+```
+
+### 7.4 Cambiar el storage
+
+```bash
+echo 'MEDIA_STORAGE=s3' >> .env
+(cd web && npm run build)
+sudo systemctl restart rayadito-api rayadito-web
+# Las fotos que se hayan subido entre la copia y el reinicio quedaron en disco:
+.venv/bin/python manage.py copy_media_to_storage
+```
+
+Verifica que una ficha de producto muestre las fotos y que la API ya devuelva
+URLs del bucket:
+
+```bash
+curl -s https://piedrasdelrayadito.cl/api/products/ | grep -o 'https://media[^"]*' | head -3
+```
+
+`public/` se queda en el disco: las URLs viejas (`/public/...`) que estén
+cacheadas o indexadas siguen funcionando. **Vuelta atrás:** quitar
+`MEDIA_STORAGE=s3` y reiniciar; las fotos subidas mientras estuvo activo solo
+están en el bucket.
+
+> **Backups:** `scripts/backup-db.sh` empaqueta `public/`. Después de la
+> migración, las fotos nuevas ya no están ahí: el bucket pasa a ser la copia
+> principal de la media y el tar solo cubre las anteriores.
 
 ### Aviso de plazo de despacho
 
@@ -349,6 +448,10 @@ Para ver qué haría sin mandar nada:
 ```bash
 .venv/bin/python manage.py notify_pending_dispatch --dry-run
 ```
+
+> Las unidades de abajo son de referencia. Para instalarlas en prod usa
+> `scripts/install-prod-timers.sh` (sección 8): genera las rutas reales y no
+> usa `EnvironmentFile=`, igual que `rayadito-api.service`.
 
 `/etc/systemd/system/rayadito-dispatch-notice.service`:
 
@@ -398,7 +501,42 @@ systemctl list-timers 'rayadito-*'   # confirma que quedó agendado
 5 minutos con su propio timer (`rayadito-instagram.timer`). Las unidades y la
 conexión con Meta están en [`INSTAGRAM.md`](INSTAGRAM.md).
 
-## 8. Backups
+## 8. Timers de producción y backups
+
+### Instalar los timers
+
+`scripts/install-prod-timers.sh` genera e instala las unidades de los trabajos
+periódicos con las rutas del checkout donde vive el script:
+
+| Timer | Frecuencia | Qué corre |
+|---|---|---|
+| `rayadito-backup` | diario, 03:30 | `scripts/backup-db.sh ~/backups-rayadito` |
+| `rayadito-dispatch-notice` | cada hora | `manage.py notify_pending_dispatch` |
+| `rayadito-instagram` | cada 5 min | `manage.py publish_instagram` |
+| `rayadito-instagram-token` | diario, 04:10 | `manage.py instagram_token refresh`, si el checkout ya trae el comando |
+| `rayadito-billing` | cada 10 min | `manage.py issue_tax_documents`, **solo si** el `.env` tiene `BILLING_MODE=provider` |
+| `rayadito-starken-tracking` | cada 2 h | `manage.py starken_tracking`, **solo si** el `.env` tiene `STARKEN_ENABLED=true` |
+
+```bash
+cd ~/servicios/RayaditoEcomerce
+git pull
+scripts/install-prod-timers.sh                # solo imprime las unidades: revísalas
+sudo scripts/install-prod-timers.sh --install # las instala y habilita
+systemctl list-timers 'rayadito-*'
+sudo systemctl start rayadito-backup.service  # primera corrida a mano
+journalctl -u rayadito-backup -n 20 --no-pager
+```
+
+Las unidades no llevan `EnvironmentFile=`: `settings.py` ya lee el `.env`, y el
+parser de systemd trata distinto los valores con caracteres especiales (ver el
+comentario en `rayadito-api.service`). El timer de Instagram es inocuo sin
+credenciales: deja los posts esperando. Los timers condicionales se agregan
+solos la próxima vez: si se activa `BILLING_MODE=provider` o
+`STARKEN_ENABLED=true`, o se despliega una versión que trae un comando nuevo,
+vuelve a correr el `--install`. Sin argumentos, el script lista lo que omitió
+y por qué.
+
+Volver a correrlo es seguro: reescribe las unidades y reinicia los timers.
 
 `scripts/backup-db.sh` vuelca Postgres comprimido, empaqueta la media y rota lo
 viejo (14 días por defecto, `RETENTION_DAYS` lo cambia).
@@ -445,6 +583,27 @@ sudo systemctl enable --now rayadito-backup.timer
 
 **El backup vive en el mismo disco que la base.** Copiá `/var/backups/rayadito`
 a otro lado (otro disco, R2, un NAS) o un solo fallo se lleva las dos cosas.
+
+### Copia fuera del servidor
+
+`scripts/pull-prod-backups.sh` corre **en el PC de desarrollo**, no en prod:
+trae por rsync los backups de `rayadito-prod:backups-rayadito/` a
+`~/respaldos/rayadito-prod/`, verifica cada gzip nuevo con `gzip -t` (si uno
+llega truncado lo borra y termina con error) y rota la copia local: conserva
+90 días de dumps de base y solo los 3 tar de media más nuevos, porque cada uno
+pesa ~430 MB. Nunca borra nada en el servidor.
+
+```bash
+scripts/pull-prod-backups.sh                  # una corrida
+scripts/pull-prod-backups.sh --install-timer  # opcional: timer de usuario diario a las 05:00
+scripts/pull-prod-backups.sh --remove-timer
+```
+
+El timer de usuario necesita que `ssh rayadito-prod` entre sin pedir nada
+(clave sin passphrase o agente disponible para systemd) y que la red privada hacia el
+servidor esté arriba; si no, la corrida falla y se ve en
+`journalctl --user -u rayadito-pull-backups`. Con `Persistent=true`, si el PC
+estaba apagado a las 05:00, corre al encenderlo.
 
 ## 9. Rate limiting
 

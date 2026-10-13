@@ -94,6 +94,8 @@ class ProductSerializer(serializers.ModelSerializer):
         source='galleryproduct_set', many=True, read_only=True,
     )
     available_stock = serializers.IntegerField(read_only=True)
+    # Derivado del stock (propiedad del modelo); la tienda lo sigue leyendo.
+    sold = serializers.BooleanField(read_only=True)
 
     class Meta:
         model=Product

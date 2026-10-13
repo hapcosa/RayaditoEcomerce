@@ -1,0 +1,33 @@
+{% load money %}Hola{% if order.full_name %} {{ order.full_name }}{% endif %}:
+
+Gracias por tu compra en Piedras Rayadito. Recibimos tu pago y ya estamos
+preparando tu pedido.
+
+Pedido #{{ reference }}
+
+Lo que compraste
+{% for item in items %}  - {{ item.count }} x {{ item.name }} — ${{ item.price|clp }} c/u
+{% endfor %}
+Subtotal: ${{ subtotal|clp }}
+Envío: ${{ order.shipping_price|clp }}{% if order.shipping_id %} ({{ order.shipping_id.name }}){% endif %}
+Total pagado: ${{ order.amount|clp }} CLP
+
+Dirección de envío
+  {{ order.full_name|default:"—" }}
+  {{ order.address_line_1|default:"—" }}
+  {{ order.city|default:"—" }}, {{ order.get_region_display }}
+  {{ order.telephone_number|default:"" }}
+
+Te avisaremos cuando despachemos tu pedido.
+
+Derecho a retracto
+Tienes derecho a retractarte de esta compra dentro de los 10 días siguientes
+a la recepción del producto, sin expresar causa. El producto debe estar sin
+uso y con su embalaje original. Las piezas hechas a medida según tus
+especificaciones no tienen derecho a retracto.
+{% if withdrawal_url %}Para ejercerlo: {{ withdrawal_url }}
+{% else %}Para ejercerlo, responde este correo indicando tu número de pedido.
+{% endif %}{% if terms_url %}
+Términos y condiciones: {{ terms_url }}
+{% endif %}
+Piedras Rayadito — joyería artesanal de Chiloé

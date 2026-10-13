@@ -185,16 +185,11 @@ def _by_status():
 
 
 def _catalog():
-    """Piezas publicadas disponibles vs. vendidas.
-
-    Se mira `sold` y no `available_stock`: hoy no hay variantes cargadas y la
-    propiedad termina cayendo igual en ese booleano, pero a nivel de queryset
-    `sold` es lo unico que se puede filtrar en la base.
-    """
+    """Piezas publicadas disponibles vs. agotadas (mismo criterio que la tienda)."""
     published = Product.objects.filter(status=Product.ProductStatus.PUBLISHED)
     return {
-        'available': published.filter(sold=False).count(),
-        'sold': published.filter(sold=True).count(),
+        'available': published.available().count(),
+        'sold': published.sold_out().count(),
     }
 
 

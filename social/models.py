@@ -52,3 +52,30 @@ class InstagramPost(models.Model):
 
     def __str__(self):
         return f'{self.product} · {self.get_status_display()}'
+
+
+class InstagramToken(models.Model):
+    """Token de larga duracion de Instagram Login. Una sola fila (pk=1).
+
+    Vive en la base y no en el `.env` para que `manage.py instagram_token
+    refresh` lo pueda renovar solo: el token vence a los 60 dias y editar el
+    `.env` exige reiniciar el servicio. Se guarda cifrado con una clave
+    derivada de SECRET_KEY (ver social/tokens.py), asi que un dump de la base
+    —los backups se copian fuera del servidor— no lleva un token usable.
+    """
+
+    encrypted_token = models.TextField()
+    # Cuando se obtuvo o se renovo. Meta solo renueva tokens con 24 h o mas.
+    issued_at = models.DateTimeField()
+    expires_at = models.DateTimeField(null=True, blank=True)
+    last_refresh_attempt = models.DateTimeField(null=True, blank=True)
+    last_error = models.TextField(blank=True, default='')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'token de Instagram'
+        verbose_name_plural = 'token de Instagram'
+
+    def __str__(self):
+        return f'Token de Instagram (vence {self.expires_at:%Y-%m-%d})' if self.expires_at \
+            else 'Token de Instagram'
