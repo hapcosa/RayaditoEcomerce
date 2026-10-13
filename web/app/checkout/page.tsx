@@ -12,6 +12,8 @@ import { processAuthPayment, processGuestPayment, pushCart } from '@/lib/checkou
 import { createAddress, fetchAddresses, resumirDireccion } from '@/lib/addresses';
 import { formatCLP } from '@/lib/format';
 import { inputCls, Field } from '@/components/ui/AuthFormWrapper';
+import { InvoiceFieldsForm } from '@/components/checkout/InvoiceFieldsForm';
+import { fetchInvoicesEnabled, INVOICE_VACIA, type InvoiceFields } from '@/lib/billing';
 import { AddressForm, DIRECCION_VACIA } from '@/components/account/AddressForm';
 import type { HydratedCartItem, ShippingOption } from '@/types/cart';
 import type { Address, AddressFields, CheckoutForm } from '@/types/checkout';
@@ -37,6 +39,14 @@ export default function CheckoutPage() {
   const [selectedShipping, setSelectedShipping] = useState<number | ''>('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // "Necesito factura" solo aparece si el backend emite documentos (SII).
+  const [invoicesEnabled, setInvoicesEnabled] = useState(false);
+  const [wantsInvoice, setWantsInvoice] = useState(false);
+  const [invoice, setInvoice] = useState<InvoiceFields>(INVOICE_VACIA);
+
+  useEffect(() => {
+    fetchInvoicesEnabled().then(setInvoicesEnabled);
+  }, []);
 
   useEffect(() => setMounted(true), []);
 
@@ -94,6 +104,7 @@ export default function CheckoutPage() {
 
     try {
       let preference, orderId;
+      const invoiceData = invoicesEnabled && wantsInvoice ? invoice : null;
 
       if (access) {
         // El pago autenticado arma la orden con el carrito del backend, así que
@@ -109,7 +120,7 @@ export default function CheckoutPage() {
               first_name: direccion.first_name || form.first_name,
               last_name: direccion.last_name || form.last_name,
             })).id;
-        ({ preference, orderId } = await processAuthPayment(access, profileId, selectedShipping));
+        ({ preference, orderId } = await processAuthPayment(access, profileId, selectedShipping, invoiceData));
       } else {
         // Invitado: envía items y datos directamente, sin guardar nada.
         const guestItems = hydrated.map((item) => ({
@@ -127,6 +138,7 @@ export default function CheckoutPage() {
             shipping_id: String(selectedShipping),
           },
           guestItems,
+          invoiceData,
         ));
       }
 
@@ -318,6 +330,15 @@ export default function CheckoutPage() {
                 </ul>
               )}
             </section>
+
+            {invoicesEnabled && (
+              <InvoiceFieldsForm
+                wanted={wantsInvoice}
+                onWantedChange={setWantsInvoice}
+                value={invoice}
+                onChange={setInvoice}
+              />
+            )}
           </div>
 
           {/* ── Columna derecha (2/5): resumen + pagar ── */}

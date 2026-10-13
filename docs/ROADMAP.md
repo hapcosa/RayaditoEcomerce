@@ -235,6 +235,7 @@ preferencia en MercadoPago) **no** está verificado contra el servicio real: no 
 - [x] **Backups**: `scripts/backup-db.sh` + timer de systemd (ver [`DEPLOY.md`](DEPLOY.md)).
 - [x] **Media en object storage**: configurable por env (`MEDIA_STORAGE=s3`), falta ejecutar la migración de archivos al bucket.
 - [ ] Legal Chile: términos, privacidad, Ley del Consumidor (botón de arrepentimiento), boleta/factura.
+  - Boleta/factura: preparado y apagado hasta el inicio de actividades (`billing/`, ver [`SII.md`](SII.md)).
 
 **DoD:** dominio con mail propio, media en storage, backups y monitoreo activos.
 
