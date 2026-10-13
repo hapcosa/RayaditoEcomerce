@@ -5,7 +5,8 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from .locations import CHILE_REGIONS, TOTAL_COMMUNES
 from .models import Shipping
-from .serializers import ShippingQuoteRequestSerializer, ShippingSerializer
+from .pricing import options_for
+from .serializers import ShippingQuoteRequestSerializer, ShippingSerializer, serialize_priced
 
 
 def _normalize_location(value):
@@ -68,9 +69,11 @@ class GetShippingView(APIView):
         # Sin opciones cargadas la respuesta es una lista vacía, no un 404: que
         # el catálogo de envíos esté vacío no es un error del cliente, y el 404
         # hacía que el checkout no pudiera distinguirlo de una ruta caída.
-        shipping_options = Shipping.objects.order_by('price', 'name')
+        # Con `?comuna=` se suman las opciones de Starken cotizadas para ese
+        # destino; sin comuna solo salen las de precio fijo.
+        commune = request.query_params.get('comuna', '')
         return Response(
-            {'shipping_options': ShippingSerializer(shipping_options, many=True).data},
+            {'shipping_options': serialize_priced(options_for(commune))},
             status=status.HTTP_200_OK
         )
 
@@ -82,8 +85,8 @@ class QuoteShippingView(APIView):
         serializer = ShippingQuoteRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        shipping_options = Shipping.objects.order_by('price', 'id')
-        if not shipping_options.exists():
+        priced = options_for(serializer.validated_data.get('comuna'))
+        if not priced:
             return Response(
                 {'error': 'No shipping options available'},
                 status=status.HTTP_404_NOT_FOUND
@@ -97,9 +100,9 @@ class QuoteShippingView(APIView):
 
         return Response(
             {
-                'source': 'manual',
+                'source': 'starken' if any(s.is_starken for s, _ in priced) else 'manual',
                 'destination': destination,
-                'shipping_options': ShippingSerializer(shipping_options, many=True).data,
+                'shipping_options': serialize_priced(priced),
             },
             status=status.HTTP_200_OK
         )
