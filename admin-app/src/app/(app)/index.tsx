@@ -96,6 +96,14 @@ export default function DashboardScreen() {
               </ThemedText>
             </Pressable>
           </Link>
+          <Link href="/(app)/withdrawals" asChild>
+            <Pressable style={StyleSheet.flatten([styles.card, { backgroundColor: theme.backgroundElement }])}>
+              <ThemedText type="default">Retractos</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                Solicitudes de arrepentimiento de compra
+              </ThemedText>
+            </Pressable>
+          </Link>
         </View>
       </ScrollView>
     </SafeAreaView>
