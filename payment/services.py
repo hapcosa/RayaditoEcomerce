@@ -13,6 +13,7 @@ from notifications.services import notify_paid_order_on_commit
 from orders.models import Order, OrderItem
 from product.models import Product
 from .models import Payments
+from notifications import whatsapp_notices
 
 
 PAYMENT_TO_ORDER_STATUS = {
@@ -114,6 +115,7 @@ def apply_approved_payment(payment):
 
     payment.stock_deducted = True
     payment.save(update_fields=['stock_deducted', 'updated_at'])
+    whatsapp_notices.notify_paid_order_on_commit(payment.order)
 
     # Un solo aviso por venta: si `stock_deducted` ya estaba puesto salimos
     # arriba, y MercadoPago reenvia la misma aprobacion varias veces.

@@ -14,6 +14,8 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from notifications import whatsapp_notices
+
 from .models import Order
 from .serializers import OrderDetailSerializer, OrderListSerializer
 
@@ -44,6 +46,8 @@ class DispatchOrderView(APIView):
         order.deliveryNumber = delivery_number
         order.status = Order.OrderStatus.shipping
         order.save(update_fields=update_fields)
+        # Al corregir el numero no se reenvia: el aviso sale una vez por pedido.
+        whatsapp_notices.notify_shipped_on_commit(order)
 
         return Response(
             {

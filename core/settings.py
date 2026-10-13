@@ -411,6 +411,16 @@ INSTAGRAM_GRAPH_VERSION = env('INSTAGRAM_GRAPH_VERSION', default='v23.0')
 # cada fork del template tiene los suyos.
 INSTAGRAM_HASHTAGS = env.list('INSTAGRAM_HASHTAGS', default=[])
 
+# WhatsApp Cloud API (API oficial de Meta): avisos al cliente que lo acepto en
+# el checkout. Apagado por defecto; ademas del flag hacen falta el id del
+# numero y un token de usuario del sistema. Ver docs/WHATSAPP.md.
+WHATSAPP_ENABLED = env.bool('WHATSAPP_ENABLED', default=False)
+WHATSAPP_PHONE_NUMBER_ID = env('WHATSAPP_PHONE_NUMBER_ID', default='')
+WHATSAPP_ACCESS_TOKEN = env('WHATSAPP_ACCESS_TOKEN', default='')
+WHATSAPP_GRAPH_VERSION = env('WHATSAPP_GRAPH_VERSION', default='v23.0')
+# Idioma con el que se aprobaron las plantillas en Meta.
+WHATSAPP_TEMPLATE_LANGUAGE = env('WHATSAPP_TEMPLATE_LANGUAGE', default='es_CL')
+
 # Plazo para despachar un pedido pagado, y cuanto antes avisar que se vence.
 # El reloj arranca en `Order.paid_at`, no en la creacion del pedido. Con 72 y
 # 24, el aviso sale a las 48 h de pagado y el plazo vence a las 72 h.
