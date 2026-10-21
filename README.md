@@ -1,14 +1,24 @@
 # Piedras Rayadito — Ecommerce
 
 Ecommerce artesanal de **joyería y lapidación de piedras de Chiloé**.
-Monorepo: **Django + DRF + PostgreSQL** (backend) y **React + Vite** (frontend, en
-migración a Next.js).
+Monorepo con tres partes:
+
+| Carpeta | Qué es | Stack |
+|---|---|---|
+| raíz | API y admin de Django | Django + DRF + PostgreSQL |
+| [`web/`](web/) | Tienda pública | Next.js 15 (App Router, TS, Tailwind) |
+| [`admin-app/`](admin-app/) | App de administración | Expo / React Native |
 
 - Guía para agentes/humanos y convenciones: **[`AGENTS.md`](AGENTS.md)**
 - Plan de trabajo por fases: **[`docs/ROADMAP.md`](docs/ROADMAP.md)**
+- Producción (Cloudflare Tunnel, systemd, backups): **[`docs/DEPLOY.md`](docs/DEPLOY.md)**
+- Integraciones: [`STARKEN`](docs/STARKEN.md) · [`SII`](docs/SII.md) ·
+  [`INSTAGRAM`](docs/INSTAGRAM.md) · [`WHATSAPP`](docs/WHATSAPP.md)
 
 ## Requisitos
-- **Python 3.12** (las dependencias no soportan 3.13/3.14 aún)
+- **Python 3.12** (igual que CI; las dependencias aún no soportan 3.13/3.14).
+  Si tu sistema trae otra versión, [`uv`](https://docs.astral.sh/uv/) la instala
+  sin tocar el Python del sistema.
 - **Node 20+**
 - **Docker** (para PostgreSQL local)
 
@@ -16,33 +26,45 @@ migración a Next.js).
 
 ```bash
 # 1) Variables de entorno
-cp .env.example .env          # ajusta si hace falta
+cp .env.example .env                       # backend: ajusta si hace falta
+cp web/.env.local.example web/.env.local   # tienda Next.js
 
 # 2) Base de datos (PostgreSQL vía Docker)
-docker compose up -d db       # expone Postgres en el puerto 15432
+docker compose up -d db       # expone Postgres en 127.0.0.1:15432
 
 # 3) Backend (Django)
-python3.12 -m venv .venv
+python3.12 -m venv .venv      # o: uv venv --python 3.12 .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt   # o: uv pip install -r requirements.txt
 python manage.py migrate
-python manage.py seed_demo     # datos demo (opcional)
+python manage.py seed_demo     # catálogo demo (opcional, idempotente)
 python manage.py createsuperuser
 python manage.py runserver     # http://127.0.0.1:8000
 
-# 4) Frontend (Vite) — en otra terminal
-npm install
-npm run dev                    # http://127.0.0.1:5173
+# 4) Tienda (Next.js) — en otra terminal
+cd web
+npm ci
+npm run dev                    # http://localhost:3000
 ```
 
+- Tienda: `http://localhost:3000`
 - Admin de Django: `http://127.0.0.1:8000/admin/`
+- Documentación de la API: `http://127.0.0.1:8000/api/docs`
 - pgAdmin (opcional): `docker compose up -d pgadmin` → `http://127.0.0.1:8888`
+
+La app admin (Expo) se configura aparte: ver [`admin-app/.env.example`](admin-app/.env.example).
+Desde el teléfono no sirve `localhost`; usa la IP LAN de la máquina que corre Django.
 
 ## Comandos útiles
 ```bash
-python manage.py test          # tests backend
-npm run build                  # build del front (Django sirve dist/)
-npm run lint                   # lint del front
+# Backend
+python manage.py collectstatic --noinput   # una vez, antes de los tests (el admin lo necesita)
+python manage.py test                      # tests backend
+
+# Tienda (en web/)
+npm run lint
+npm run typecheck
+npm run build
 ```
 
 ## Reglas de Git
