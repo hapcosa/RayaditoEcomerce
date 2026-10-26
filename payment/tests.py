@@ -6,6 +6,7 @@ from unittest import mock
 
 from django.core.management import call_command
 from django.contrib.auth import get_user_model
+from django.test import SimpleTestCase
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -13,7 +14,7 @@ from rest_framework.test import APITestCase
 from carrito.models import Carrito, CarritoItem
 from category.models import Category
 from orders.models import Order, OrderItem
-from payment import services
+from payment import services, views
 from payment.models import Payments
 from product.models import Product, ProductVariant
 from shipping.models import Shipping
@@ -101,7 +102,7 @@ class MercadoPagoFlowTests(APITestCase):
 
     @mock.patch.dict(os.environ, {
         'MERCADOPAGO_ACCESS_TOKEN': 'test-token',
-        'FRONTEND_BASE_URL': 'http://127.0.0.1:5173',
+        'FRONTEND_BASE_URL': 'http://localhost:3000',
     }, clear=False)
     def test_make_payment_creates_preference_with_cart_counts(self):
         CarritoItem.objects.create(carrito=self.cart, product=self.product, count=2)
@@ -133,9 +134,9 @@ class MercadoPagoFlowTests(APITestCase):
         self.assertEqual(
             fake_sdk.preference_client.created_payload['back_urls'],
             {
-                'success': 'http://127.0.0.1:5173/success',
-                'failure': 'http://127.0.0.1:5173/success',
-                'pending': 'http://127.0.0.1:5173/success',
+                'success': 'http://localhost:3000/success',
+                'failure': 'http://localhost:3000/success',
+                'pending': 'http://localhost:3000/success',
             },
         )
 
@@ -437,6 +438,20 @@ class MercadoPagoFlowTests(APITestCase):
         self.assertEqual(order.status, Order.OrderStatus.refused)
         self.assertEqual(payment.status, Payments.PaymentStatus.REJECTED)
         self.assertFalse(payment.stock_deducted)
+
+
+class FrontendUrlTests(SimpleTestCase):
+    """Base de las back_urls de MercadoPago."""
+
+    def test_defaults_to_the_nextjs_dev_server(self):
+        with mock.patch.dict(os.environ, clear=False):
+            os.environ.pop('FRONTEND_BASE_URL', None)
+            self.assertEqual(views._frontend_url(), 'http://localhost:3000')
+
+    @mock.patch.dict(os.environ, {'FRONTEND_BASE_URL': 'https://piedrasdelrayadito.cl/'})
+    def test_drops_trailing_slash(self):
+        # Con la barra final las back_urls quedaban como `//success`.
+        self.assertEqual(views._frontend_url(), 'https://piedrasdelrayadito.cl')
 
 
 class PaidAtTests(APITestCase):

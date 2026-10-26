@@ -329,7 +329,6 @@ DJOSER = {
     'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': env.list(
         'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS',
         default=[
-            'http://127.0.0.1:5173/',
             'http://localhost:8000/facebook',
             # Callback del front Next.js (login social → intercambio de code).
             'http://localhost:3000/auth/social/callback',

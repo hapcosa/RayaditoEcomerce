@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 
 
 def _frontend_url():
-    return os.environ.get('FRONTEND_BASE_URL', 'http://127.0.0.1:5173')
+    # Sin variable, el front Next.js de desarrollo. En prod se define siempre.
+    return os.environ.get('FRONTEND_BASE_URL', 'http://localhost:3000').rstrip('/')
 
 
 def _notification_url(request):
