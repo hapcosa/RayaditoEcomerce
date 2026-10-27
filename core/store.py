@@ -62,6 +62,9 @@ def validate_store(data, path='store.json'):
         seen_paths.add(catalog['path'])
         catalog.setdefault('description', '')
 
+    if 'rubro' in data and not (isinstance(data['rubro'], str) and SLUG_RE.match(data['rubro'])):
+        _fail(path, '"rubro" (opcional) es un slug, ej. "joyeria" o "textil"')
+
     data.setdefault('tagline', '')
     data.setdefault('email_signature', data['name'])
     data.setdefault('email_from_name', data['name'])
