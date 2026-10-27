@@ -25,7 +25,7 @@ class ReviewApiTests(APITestCase):
         cat = Category.objects.create(name='Anillos', ProductType='Joya')
         self.product = Product.objects.create(
             name='Anillo', description='x', price=10000, compare_price=0,
-            category=cat, product_type=Product.ProductType.JOYA, photo='',
+            category=cat, product_type='joya', photo='',
         )
 
     def _url(self, action):
@@ -177,11 +177,11 @@ class SoldProductVisibilityTests(APITestCase):
         self.category = Category.objects.create(name='Anillos', ProductType='Joya')
         self.disponible = Product.objects.create(
             name='Anillo ágata', description='x', price=25000, compare_price=0,
-            category=self.category, product_type=Product.ProductType.JOYA, photo='',
+            category=self.category, product_type='joya', photo='',
         )
         self.vendida = Product.objects.create(
             name='Colgante jaspe', description='y', price=30000, compare_price=0,
-            category=self.category, product_type=Product.ProductType.JOYA, photo='',
+            category=self.category, product_type='joya', photo='',
             stock=0,
         )
 
@@ -218,7 +218,7 @@ class SoldProductVisibilityTests(APITestCase):
         # El cambio abre la ficha a las vendidas, no a los borradores.
         borrador = Product.objects.create(
             name='Borrador', description='z', price=1000, compare_price=0,
-            category=self.category, product_type=Product.ProductType.JOYA, photo='',
+            category=self.category, product_type='joya', photo='',
             status=Product.ProductStatus.DRAFT,
         )
         res = self.client.get(f'/api/products/{borrador.slug}')

@@ -4,10 +4,10 @@ Todo requiere `IsAdminUser` (== `is_staff`). El modelo de producto se maneja a
 nivel de `Product` base (no las subclases Joyas/Piedras); las variantes quedan
 fuera de scope. Dinero en entero CLP (ver AGENTS.md).
 
-Como esta API no crea las subclases, `product_type` es lo unico que decide en
-que catalogo publico aparece el producto: por eso aca es obligatorio y solo
-acepta 'joya' o 'piedra'. Sin el, el producto queda 'general' e invisible en la
-tienda.
+`product_type` es lo unico que decide en que catalogo publico aparece el
+producto: por eso aca es obligatorio y solo acepta los catalogos de store.json
+(en Rayadito 'joya' o 'piedra'). Sin el, el producto queda 'general' e
+invisible en la tienda.
 """
 from decimal import Decimal, InvalidOperation
 
@@ -19,6 +19,7 @@ from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
 from category.models import Category, CategoryAttribute
+from core import store
 
 from .admin_attributes_api import AdminAttributeSerializer
 from .models import (
@@ -203,12 +204,7 @@ class AdminProductSerializer(serializers.ModelSerializer):
     slug = serializers.SlugField(read_only=True)
     # Obligatorio y sin 'general': un producto creado desde la app tiene que
     # caer en un catalogo publico.
-    product_type = serializers.ChoiceField(
-        choices=[
-            (Product.ProductType.JOYA, Product.ProductType.JOYA.label),
-            (Product.ProductType.PIEDRA, Product.ProductType.PIEDRA.label),
-        ],
-    )
+    product_type = serializers.ChoiceField(choices=[])
     available_stock = serializers.IntegerField(read_only=True)
     stock = serializers.IntegerField(min_value=0, required=False)
     # `sold` ya no es un campo: se deriva del stock. Se sigue aceptando al
@@ -227,6 +223,12 @@ class AdminProductSerializer(serializers.ModelSerializer):
             'stock', 'sold', 'available_stock', 'date_created', 'gallery',
         ]
         read_only_fields = ['id', 'slug', 'available_stock', 'date_created']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Se resuelve al instanciar y no al importar: asi sigue a settings.STORE
+        # (y a `override_settings` en los tests).
+        self.fields['product_type'].choices = store.catalog_choices()
 
     def validate(self, attrs):
         sold = attrs.pop('sold', None)

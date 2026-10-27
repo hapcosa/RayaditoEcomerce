@@ -13,4 +13,4 @@ recibamos, te devolveremos lo pagado.
 
 Si tienes dudas, responde este correo.
 
-Piedras Rayadito — joyería artesanal de Chiloé
+{{ store.email_signature }}

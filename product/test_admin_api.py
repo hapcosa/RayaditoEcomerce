@@ -357,7 +357,7 @@ class AdminCategoryCrudTests(APITestCase):
         cat = Category.objects.create(name='Aros', ProductType='Joya')
         Product.objects.create(
             name='Aro ágata', description='x', price=10000, compare_price=0,
-            category=cat, product_type=Product.ProductType.JOYA,
+            category=cat, product_type='joya',
         )
         self.client.force_authenticate(self.staff)
         res = self.client.delete(f'/api/admin/categories/{cat.id}/')
@@ -376,7 +376,7 @@ class AdminCategoryCrudTests(APITestCase):
         cat = Category.objects.create(name='Aros', ProductType='Joya')
         Product.objects.create(
             name='Aro ágata', description='x', price=10000, compare_price=0,
-            category=cat, product_type=Product.ProductType.JOYA,
+            category=cat, product_type='joya',
         )
         self.client.force_authenticate(self.staff)
         res = self.client.get('/api/admin/categories/')

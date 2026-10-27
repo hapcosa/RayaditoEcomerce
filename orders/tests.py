@@ -18,7 +18,7 @@ class OrderMoneyTests(TestCase):
         cat = Category.objects.create(name='Anillos', ProductType='Joya')
         self.product = Product.objects.create(
             name='Anillo', description='x', price=25000, compare_price=0,
-            category=cat, product_type=Product.ProductType.JOYA, photo='',
+            category=cat, product_type='joya', photo='',
         )
 
     def test_order_amount_is_integer(self):
@@ -122,7 +122,7 @@ class CustomerOrderApiTests(APITestCase):
         self.product = Product.objects.create(
             name='Colgante rayado', description='x', price=19000,
             compare_price=0, category=cat,
-            product_type=Product.ProductType.JOYA, photo='',
+            product_type='joya', photo='',
         )
         self.shipping = Shipping.objects.create(
             name='Starken por pagar',

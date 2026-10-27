@@ -7,6 +7,9 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
+
+from core.views import StoreConfigView
+
 urlpatterns = [
     # OpenAPI: esquema crudo + Swagger UI + ReDoc.
     path('api/schema', SpectacularAPIView.as_view(), name='schema'),
@@ -16,6 +19,7 @@ urlpatterns = [
     path("auth/", include('djoser.urls.jwt')),
     path("auth/", include('djoser.social.urls')),
     path('', include('social_django.urls')),
+    path('api/store/', StoreConfigView.as_view(), name='store-config'),
     path('api/category/', include('category.urls')),
     path('api/product/', include('product.urls')),
     path('api/products/', include('product.generic_urls')),

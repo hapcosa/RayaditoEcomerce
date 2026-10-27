@@ -46,7 +46,7 @@ def send_admin_mail(subject, template, context):
     try:
         EmailMessage(
             subject=subject,
-            body=render_to_string(template, context),
+            body=render_to_string(template, {'store': settings.STORE, **context}),
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=recipients,
         ).send(fail_silently=False)
@@ -84,7 +84,7 @@ def send_customer_mail(to, subject, template, context):
     try:
         EmailMessage(
             subject=subject,
-            body=render_to_string(template, context),
+            body=render_to_string(template, {'store': settings.STORE, **context}),
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=[to],
             reply_to=admin_recipients()[:1] or None,

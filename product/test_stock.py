@@ -28,7 +28,7 @@ User = get_user_model()
 def make_product(category, name='Anillo', **extra):
     return Product.objects.create(
         name=name, description='x', price=25000, compare_price=0, category=category,
-        product_type=Product.ProductType.JOYA, photo='', **extra)
+        product_type='joya', photo='', **extra)
 
 
 class StockModelTests(TestCase):

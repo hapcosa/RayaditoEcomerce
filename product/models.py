@@ -9,6 +9,8 @@ from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.text import slugify
 
+from core.store import GENERAL_PRODUCT_TYPE
+
 
 class AttributeKind(models.TextChoices):
     SELECT = 'select', 'Selección'
@@ -53,19 +55,14 @@ class Product(models.Model):
         PUBLISHED = 'published', 'Publicado'
         ARCHIVED = 'archived', 'Archivado'
 
-    class ProductType(models.TextChoices):
-        # Define en que catalogo publico aparece el producto. `GENERAL` es el
-        # estado heredado: productos sin clasificar, que no se listan en /joyas
-        # ni en /piedras hasta que el staff les asigne un tipo.
-        JOYA = 'joya', 'Joya'
-        PIEDRA = 'piedra', 'Piedra'
-        GENERAL = 'general', 'Sin clasificar'
-
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True)
+    # Slug del catalogo publico donde aparece (`catalogs` de store.json: en
+    # Rayadito 'joya' o 'piedra'). Sin `choices` a proposito: los catalogos
+    # cambian por tienda y un enum aca obligaria a cada fork a migrar. Lo valida
+    # la API admin. 'general' = sin clasificar, no se lista en la tienda.
     product_type = models.SlugField(
-        max_length=55, choices=ProductType.choices,
-        default=ProductType.GENERAL, db_index=True,
+        max_length=55, default=GENERAL_PRODUCT_TYPE, db_index=True,
     )
     photo = models.ImageField(upload_to='photos/%y/%m')
     description = models.TextField()

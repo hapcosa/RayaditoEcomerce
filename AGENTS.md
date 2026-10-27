@@ -58,6 +58,7 @@ npm run typecheck
 ```
 
 ## Convenciones
+- **Marca y catálogos:** salen de [`store.json`](store.json) (nombre, dominio, textos, catálogos públicos). El backend lo lee en `settings.STORE` (ver `core/store.py`) y lo expone en `/api/store/`. Nunca escribas la marca ni los catálogos (`joya`/`piedra`) directo en el código: un fork solo cambia ese archivo. Los tests usan una tienda fija (`core/test_store.json`).
 - **Dinero:** entero **CLP** (peso chileno, sin decimales) en toda la cadena. Nunca floats.
 - **Secretos:** solo en `.env` (nunca en el código ni en git). Ver `.env.example`.
 - **Idioma:** UI y contenido en `es-CL`. Código y nombres técnicos en inglés.

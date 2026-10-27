@@ -1,0 +1,28 @@
+{
+  "slug": "tienda-de-prueba",
+  "name": "Tienda de Prueba",
+  "short_name": "Prueba",
+  "tagline": "Taller de prueba",
+  "description": "Tienda ficticia de los tests.",
+  "email_signature": "Tienda de Prueba — firma de los tests",
+  "email_from_name": "Tienda de Prueba",
+  "domain": "tienda.test",
+  "catalogs": [
+    {
+      "slug": "joya",
+      "path": "joyas",
+      "label": "Joyas",
+      "singular": "Joya",
+      "category_type": "Joya",
+      "description": "Joyas artesanales de piedras de Chiloé — pulseras, collares, aros y más, hechos a mano."
+    },
+    {
+      "slug": "piedra",
+      "path": "piedras",
+      "label": "Piedras",
+      "singular": "Piedra",
+      "category_type": "Piedra",
+      "description": "Piedras lapidadas de Chiloé — ágatas, cuarzos y minerales del sur de Chile."
+    }
+  ]
+}
