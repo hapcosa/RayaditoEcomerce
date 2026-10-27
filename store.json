@@ -7,6 +7,7 @@
   "email_signature": "Piedras Rayadito — joyería artesanal de Chiloé",
   "email_from_name": "Piedras Rayadito - Taller de joyeria y lapidacion",
   "domain": "piedrasdelrayadito.cl",
+  "rubro": "joyeria",
   "catalogs": [
     {
       "slug": "joya",

@@ -240,12 +240,13 @@ preferencia en MercadoPago) **no** está verificado contra el servicio real: no 
 **DoD:** dominio con mail propio, media en storage, backups y monitoreo activos.
 
 ### Fase 8 — Template-ización para forks
-**Objetivo:** que crear "el fork textil" tome horas, no semanas.
-- [ ] Marcar el repo como **GitHub template repository**.
-- [ ] Extraer TODO lo de marca/rubro a **config**: nombre, logo, paleta/tema, moneda, textos, redes (env + `branding.py` + theme tokens).
-- [ ] **Seed fixtures por rubro**: joyería (material, Mohs) y textil (talla, color, medida cm).
-- [ ] Doc "**Cómo crear un fork**": clonar template → cambiar branding → cargar atributos → seed → deploy.
-- [ ] Script/checklist `create-fork`.
+**Objetivo:** que crear "el fork textil" tome horas, no semanas. Guía: [`FORK.md`](FORK.md).
+- [x] ~~Marcar el repo como GitHub template repository.~~ Descartado: un repo creado desde template no comparte historia y no puede traer arreglos con `git merge upstream/master`. Los forks se clonan y dejan Rayadito como remoto `upstream` (ver `FORK.md`).
+- [x] Extraer lo de marca/rubro a **config**: `store.json` (nombre, dominio, textos, catálogos, contacto) leído por Django (`settings.STORE`, `/api/store/`), la tienda Next.js y la app admin (`app.config.js`); paleta en `web/app/theme.css`; textos largos en `web/content/`. `product_type` sin enum. PRs #110, #111, #112.
+- [x] **Seed fixtures por rubro**: `seed_demo --rubro joyeria|textil` (`product/seeds.py`).
+- [x] Doc "**Cómo crear un fork**": [`FORK.md`](FORK.md), con la lista de archivos propios de cada tienda.
+- [x] Checklist de fork en `FORK.md` (en vez de un script `create-fork`: son pocos pasos y casi todos son decisiones de marca).
+- [ ] **Variantes comprables**: carrito y pedidos compran `Product`, no `ProductVariant`. Necesario para ropa en varias tallas con stock propio; las piezas únicas ya funcionan.
 
 **DoD:** un fork textil nuevo queda operativo cambiando solo branding + seed, sin tocar modelos.
 
