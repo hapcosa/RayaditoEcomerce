@@ -9,7 +9,7 @@ psycopg[binary]>=3.2,<4
 djangorestframework>=3.16,<4
 djangorestframework-simplejwt>=5.4,<6
 djoser>=2.3,<3
-social-auth-app-django>=5.4,<6
+social-auth-app-django>=7.2,<8
 drf-spectacular>=0.27,<1
 
 # --- Utilidades Django ---
@@ -20,14 +20,14 @@ django-ckeditor-5>=0.2.13
 # primer upload o el primer `.url` revientan con ImportError.
 boto3>=1.35,<2
 django-storages>=1.14,<2
-Pillow>=10.4,<12
+Pillow>=13.0,<14
 whitenoise>=6.6,<7
 
 # --- Pagos / HTTP ---
 mercadopago>=2.2,<3
 requests>=2.32,<3
 # Cifra el token de Instagram guardado en la base (social/tokens.py).
-cryptography>=42,<50
+cryptography>=50,<51
 
 # --- Servidor ---
 gunicorn>=23,<24

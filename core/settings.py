@@ -340,6 +340,7 @@ DJOSER = {
         'user': 'user.serializer.CurrentUserSerializer',
         'current_user': 'user.serializer.CurrentUserSerializer',
         'user_delete': 'djoser.serializers.UserDeleteSerializer',
+        'provider_auth': 'user.serializer.ProviderAuthSerializer',
     },
 }
 
