@@ -19,6 +19,7 @@ import {
 import type { Category, ProductStatus, ProductType } from '@/api/products';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
+import { catalogPathsText, catalogs } from '@/constants/store';
 
 export const STATUS_OPTIONS: { value: ProductStatus; label: string }[] = [
   { value: 'published', label: 'Publicado' },
@@ -27,24 +28,23 @@ export const STATUS_OPTIONS: { value: ProductStatus; label: string }[] = [
 ];
 
 /**
- * El tipo decide en que catalogo publico aparece el producto (/joyas o
- * /piedras). Antes era texto libre y quedaba en 'general', con lo que el
- * producto no se listaba en ninguno; ahora la API solo acepta estos dos.
+ * El tipo decide en que catalogo publico aparece el producto: uno por cada
+ * catalogo de store.json (Rayadito: /joyas y /piedras). La API solo acepta
+ * esos; sin tipo el producto quedaria 'general' y no se listaria.
  */
-export const PRODUCT_TYPE_OPTIONS: { value: ProductType; label: string }[] = [
-  { value: 'joya', label: 'Joya' },
-  { value: 'piedra', label: 'Piedra' },
-];
+export const PRODUCT_TYPE_OPTIONS: { value: ProductType; label: string }[] = catalogs.map(
+  (c) => ({ value: c.slug, label: c.singular }),
+);
 
 /**
- * Mapea `Category.ProductType` ("Joya"/"Piedra") al slug de `product_type`,
- * para preseleccionar la vitrina al elegir la categoria. Devuelve `null` si la
- * categoria no declara un tipo que la API acepte.
+ * Mapea `Category.ProductType` ("Joya") al catalogo cuyo `category_type`
+ * coincide, para preseleccionar la vitrina al elegir la categoria. Devuelve
+ * `null` si la categoria no calza con ningun catalogo.
  */
 export function productTypeForCategory(category: Category | undefined): ProductType | null {
   const raw = category?.ProductType?.trim().toLowerCase();
-  const match = PRODUCT_TYPE_OPTIONS.find((o) => o.value === raw);
-  return match ? match.value : null;
+  const match = catalogs.find((c) => c.category_type.toLowerCase() === raw);
+  return match ? match.slug : null;
 }
 
 /** Solo dígitos: el precio es entero CLP. */
@@ -166,7 +166,7 @@ export function ProductFormFields({
           })}
         </View>
         <ThemedText type="small" themeColor="textSecondary">
-          Define en qué vitrina del sitio aparece: /joyas o /piedras.
+          Define en qué vitrina del sitio aparece: {catalogPathsText()}.
         </ThemedText>
       </Field>
 

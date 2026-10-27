@@ -16,12 +16,13 @@ import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/auth/auth-context';
+import { store } from '@/constants/store';
 
 /**
  * El logo viene en tinta clara: la app va siempre en el esquema oscuro
  * (ver `hooks/use-theme`). El PNG de marca original es negro sobre blanco.
  */
-const logo = require('../../assets/images/logo-rayadito-ondark.png');
+const logo = require('../../assets/images/brand-logo-ondark.png');
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
@@ -76,7 +77,7 @@ export default function LoginScreen() {
           style={styles.logo}
           resizeMode="contain"
           accessibilityRole="image"
-          accessibilityLabel="Piedras Rayadito"
+          accessibilityLabel={store.name}
         />
         <ThemedText type="small" themeColor="textSecondary" style={styles.tagline}>
           Panel de administración
@@ -131,7 +132,7 @@ export default function LoginScreen() {
                 styles.input,
                 { color: theme.text, backgroundColor: theme.backgroundElement },
               ]}
-              placeholder="https://piedrasdelrayadito.cl"
+              placeholder={`https://${store.domain}`}
               placeholderTextColor={theme.textSecondary}
               autoCapitalize="none"
               autoCorrect={false}

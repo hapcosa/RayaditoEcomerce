@@ -1,5 +1,5 @@
 /**
- * URL base de la API DRF de Piedras Rayadito.
+ * URL base de la API DRF de la tienda.
  *
  * Es configurable **en la app** (pantalla de login) y queda guardada en el
  * dispositivo: cambiar de servidor no exige recompilar. Eso importa porque la
@@ -7,13 +7,15 @@
  * contra producción.
  *
  * El default sale de `EXPO_PUBLIC_API_URL` cuando el build la trae (dev), y si
- * no del dominio de producción, para que un APK recién instalado sirva sin
+ * no del dominio de producción (`domain` de store.json), para que un APK recién instalado sirva sin
  * tener el PC al lado.
  */
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-const STORAGE_KEY = 'rayadito.api.url';
+import { store } from '@/constants/store';
+
+const STORAGE_KEY = `${store.slug}.api.url`;
 
 /** Quita espacios y la barra final: todas las rutas empiezan con `/`. */
 export function normalizeApiUrl(url: string): string {
@@ -25,7 +27,7 @@ export function isValidApiUrl(url: string): boolean {
 }
 
 export const DEFAULT_API_URL = normalizeApiUrl(
-  process.env.EXPO_PUBLIC_API_URL ?? 'https://piedrasdelrayadito.cl',
+  process.env.EXPO_PUBLIC_API_URL ?? `https://${store.domain}`,
 );
 
 let current = DEFAULT_API_URL;

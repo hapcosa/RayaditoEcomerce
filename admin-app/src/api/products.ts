@@ -15,17 +15,17 @@ export type GalleryImage = {
 };
 
 /**
- * Catalogo publico en el que cae el producto. La API admin solo acepta estos
- * dos; 'general' existe en el backend como estado heredado (sin clasificar) y
- * no se puede elegir desde la app.
+ * Catalogo publico en el que cae el producto: el `slug` de un catalogo de
+ * store.json (ver constants/store.ts). 'general' existe en el backend como
+ * estado heredado (sin clasificar) y no se puede elegir desde la app.
  */
-export type ProductType = 'joya' | 'piedra';
+export type ProductType = string;
 
 export type Product = {
   id: number;
   name: string;
   slug: string;
-  product_type: ProductType | 'general';
+  product_type: ProductType;
   photo: string | null;
   description: string;
   price: number;
@@ -47,8 +47,8 @@ export type Category = {
   name: string;
   parent: number | null;
   /**
-   * Rubro de la categoría ("Joya", "Piedra", …). Texto libre a propósito: el
-   * repo es template multi-rubro (ver AGENTS.md), un fork textil usa "Polera".
+   * Rubro de la categoría ("Joya", "Piedra", …). Calza con el `category_type`
+   * de un catálogo de store.json; texto libre a propósito (repo template).
    */
   ProductType: string;
   /** Productos que cuelgan de la categoría; el backend impide borrarla si no es 0. */

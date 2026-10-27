@@ -45,6 +45,7 @@ import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { cropFromViewer, type ViewerTransform } from '@/utils/crop-image';
 import { pickFromLibrary, takePhoto } from '@/utils/pick-image';
+import { catalogSingularsText } from '@/constants/store';
 
 /** Óxido de la paleta tierra (mismo tono que el estado "rechazado"). */
 
@@ -213,7 +214,7 @@ export default function EditProductScreen() {
     if (!f.price) return 'El precio es obligatorio.';
     if (!f.stock) return 'Indica el stock (0 si ya se vendió).';
     if (f.categoryId == null) return 'Elegí una categoría.';
-    if (f.productType == null) return 'Elegí el tipo: joya o piedra.';
+    if (f.productType == null) return `Elegí el tipo: ${catalogSingularsText()}.`;
     return faltaAtributo(atributos.fields, atributos.draft);
   }
 

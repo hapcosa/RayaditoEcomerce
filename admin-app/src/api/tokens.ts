@@ -5,8 +5,12 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-const ACCESS_KEY = 'rayadito.jwt.access';
-const REFRESH_KEY = 'rayadito.jwt.refresh';
+import { store } from '@/constants/store';
+
+// Con el slug de la tienda: en Rayadito siguen siendo 'rayadito.jwt.*', así que
+// actualizar el APK no cierra la sesión.
+const ACCESS_KEY = `${store.slug}.jwt.access`;
+const REFRESH_KEY = `${store.slug}.jwt.refresh`;
 
 async function setItem(key: string, value: string): Promise<void> {
   if (Platform.OS === 'web') {
