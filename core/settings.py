@@ -4,6 +4,7 @@ import environ
 from datetime import timedelta
 
 from core.media_storage import media_storage_config
+from core.store import load_store
 
 # django-environ: lee variables desde el entorno y desde un archivo .env (no versionado).
 env = environ.Env()
@@ -11,6 +12,12 @@ environ.Env.read_env(os.path.join(os.path.dirname(os.path.dirname(os.path.abspat
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Identidad de la tienda y catálogos públicos (ver core/store.py). Un fork solo
+# cambia store.json; el código lee siempre `settings.STORE`.
+STORE = load_store(os.path.join(BASE_DIR, 'store.json'))
+# Los tests usan una tienda fija (core/test_store.json): ver core/test_runner.py.
+TEST_RUNNER = 'core.test_runner.StoreTestRunner'
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # En producción define SECRET_KEY en el entorno; el default es solo para desarrollo.
@@ -268,9 +275,8 @@ CACHES = {
 
 # OpenAPI (drf-spectacular). Esquema en /api/schema, docs en /api/docs.
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Piedras Rayadito API',
-    'DESCRIPTION': 'API del ecommerce artesanal de joyería y lapidación de '
-                   'piedras de Chiloé. Dinero en entero CLP.',
+    'TITLE': f"{STORE['name']} API",
+    'DESCRIPTION': f"API de {STORE['name']}. {STORE['description']} Dinero en entero CLP.",
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
@@ -372,7 +378,7 @@ EMAIL_PORT = env.int('EMAIL_PORT', default=587)
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
 DEFAULT_FROM_EMAIL = env(
     'DEFAULT_FROM_EMAIL',
-    default='Piedras Rayadito - Taller de joyeria y lapidacion <no-reply@piedrasdelrayadito.cl>',
+    default=f"{STORE['email_from_name']} <no-reply@{STORE['domain']}>",
 )
 
 # Avisos al dueno (venta aprobada, plazo de despacho por vencer). Lista vacia =

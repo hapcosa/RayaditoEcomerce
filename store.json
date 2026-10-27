@@ -1,0 +1,28 @@
+{
+  "slug": "rayadito",
+  "name": "Piedras Rayadito",
+  "short_name": "Rayadito",
+  "tagline": "Taller de joyería y lapidación",
+  "description": "Ecommerce artesanal de joyería y lapidación de piedras de Chiloé.",
+  "email_signature": "Piedras Rayadito — joyería artesanal de Chiloé",
+  "email_from_name": "Piedras Rayadito - Taller de joyeria y lapidacion",
+  "domain": "piedrasdelrayadito.cl",
+  "catalogs": [
+    {
+      "slug": "joya",
+      "path": "joyas",
+      "label": "Joyas",
+      "singular": "Joya",
+      "category_type": "Joya",
+      "description": "Joyas artesanales de piedras de Chiloé — pulseras, collares, aros y más, hechos a mano."
+    },
+    {
+      "slug": "piedra",
+      "path": "piedras",
+      "label": "Piedras",
+      "singular": "Piedra",
+      "category_type": "Piedra",
+      "description": "Piedras lapidadas de Chiloé — ágatas, cuarzos y minerales del sur de Chile."
+    }
+  ]
+}

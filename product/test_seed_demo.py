@@ -18,8 +18,8 @@ class SeedDemoTests(TestCase):
 
         anillo = Product.objects.get(name='Anillo de plata con ágata')
         agata = Product.objects.get(name='Ágata lapidada')
-        self.assertEqual(anillo.product_type, Product.ProductType.JOYA)
-        self.assertEqual(agata.product_type, Product.ProductType.PIEDRA)
+        self.assertEqual(anillo.product_type, 'joya')
+        self.assertEqual(agata.product_type, 'piedra')
         self.assertEqual(anillo.price, 25000)
         self.assertEqual(Shipping.objects.count(), 2)
 

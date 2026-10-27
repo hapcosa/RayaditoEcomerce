@@ -64,7 +64,7 @@ class Command(BaseCommand):
         anillo, _ = Product.objects.get_or_create(
             name="Anillo de plata con ágata",
             defaults={
-                "product_type": Product.ProductType.JOYA,
+                "product_type": 'joya',
                 "description": "Anillo artesanal de plata 950 con ágata de Chiloé.",
                 "price": 25000,
                 "category": anillos,
@@ -76,7 +76,7 @@ class Command(BaseCommand):
         agata, _ = Product.objects.get_or_create(
             name="Ágata lapidada",
             defaults={
-                "product_type": Product.ProductType.PIEDRA,
+                "product_type": 'piedra',
                 "description": "Ágata local lapidada a mano.",
                 "price": 12000,
                 "category": agatas,

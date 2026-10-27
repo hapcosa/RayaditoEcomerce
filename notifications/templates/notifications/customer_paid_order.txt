@@ -1,6 +1,6 @@
 {% load money %}Hola{% if order.full_name %} {{ order.full_name }}{% endif %}:
 
-Gracias por tu compra en Piedras Rayadito. Recibimos tu pago y ya estamos
+Gracias por tu compra en {{ store.name }}. Recibimos tu pago y ya estamos
 preparando tu pedido.
 
 Pedido #{{ reference }}
@@ -30,4 +30,4 @@ especificaciones no tienen derecho a retracto.
 {% endif %}{% if terms_url %}
 Términos y condiciones: {{ terms_url }}
 {% endif %}
-Piedras Rayadito — joyería artesanal de Chiloé
+{{ store.email_signature }}
