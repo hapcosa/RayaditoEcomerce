@@ -14,7 +14,8 @@
       "label": "Joyas",
       "singular": "Joya",
       "category_type": "Joya",
-      "description": "Joyas artesanales de piedras de Chiloé — pulseras, collares, aros y más, hechos a mano."
+      "description": "Joyas artesanales de piedras de Chiloé — pulseras, collares, aros y más, hechos a mano.",
+      "item_label": "Joya artesanal"
     },
     {
       "slug": "piedra",
@@ -22,7 +23,22 @@
       "label": "Piedras",
       "singular": "Piedra",
       "category_type": "Piedra",
-      "description": "Piedras lapidadas de Chiloé — ágatas, cuarzos y minerales del sur de Chile."
+      "description": "Piedras lapidadas de Chiloé — ágatas, cuarzos y minerales del sur de Chile.",
+      "item_label": "Piedra lapidada"
     }
-  ]
+  ],
+  "web": {
+    "title": "Tienda de Prueba",
+    "description": "Tienda ficticia.",
+    "location": "Chiloé, Chile",
+    "logo": "/logo-rayadito.png",
+    "logo_width": 800,
+    "logo_height": 294,
+    "og_footer": "Joyería y lapidación · Chiloé",
+    "contact": {
+      "email": "hola@tienda.test",
+      "instagram_url": "",
+      "whatsapp_url": ""
+    }
+  }
 }

@@ -1,14 +1,19 @@
 import type { MetadataRoute } from 'next';
 import { fetchProducts } from '@/lib/api';
 import { absoluteUrl } from '@/lib/site';
+import { catalogHref, catalogs } from '@/lib/store-config';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   const staticEntries: MetadataRoute.Sitemap = [
     { url: absoluteUrl('/'), lastModified: now, changeFrequency: 'weekly', priority: 1 },
-    { url: absoluteUrl('/joyas'), lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
-    { url: absoluteUrl('/piedras'), lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
+    ...catalogs.map((c) => ({
+      url: absoluteUrl(catalogHref(c)),
+      lastModified: now,
+      changeFrequency: 'weekly' as const,
+      priority: 0.9,
+    })),
     { url: absoluteUrl('/nosotros'), lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: absoluteUrl('/faq'), lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: absoluteUrl('/contacto'), lastModified: now, changeFrequency: 'yearly', priority: 0.4 },

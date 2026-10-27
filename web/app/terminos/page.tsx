@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { legal } from '@/content/legal';
+import { store } from '@/lib/store-config';
 
 export const metadata: Metadata = {
   title: 'Términos y condiciones',
   description:
-    'Términos y condiciones de uso y compra en la tienda Piedras Rayadito.',
+    `Términos y condiciones de uso y compra en la tienda ${store.name}.`,
 };
 
 export default function TerminosPage() {
@@ -21,8 +23,7 @@ export default function TerminosPage() {
         <section>
           <h2 className="font-serif text-xl text-piedra-900">1. Sobre la tienda</h2>
           <p className="mt-2">
-            Piedras Rayadito comercializa joyería artesanal y piedras lapidadas de
-            Chiloé. Al realizar una compra aceptas estos términos.
+            {legal.businessDescription} Al realizar una compra aceptas estos términos.
           </p>
         </section>
         <section>

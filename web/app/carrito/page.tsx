@@ -8,6 +8,8 @@ import { useCartStore } from '@/lib/store/cart';
 import { syncCart, fetchShippingOptions } from '@/lib/api';
 import { formatCLP } from '@/lib/format';
 import type { HydratedCartItem, ShippingOption } from '@/types/cart';
+import { home } from '@/content/home';
+import { catalogHref, catalogs, primaryCatalog } from '@/lib/store-config';
 
 export default function CarritoPage() {
   const { items, removeItem, updateCount, clear, shippingId, setShippingId } =
@@ -60,21 +62,24 @@ export default function CarritoPage() {
         <span className="font-manuscrita text-6xl text-piedra-300">✦</span>
         <h1 className="font-serif text-3xl text-piedra-900">Tu carrito está vacío</h1>
         <p className="text-piedra-600">
-          Descubre nuestras joyas y piedras artesanales de Chiloé.
+          {home.browseInvite}
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <Link
-            href="/joyas"
+            href={catalogHref(primaryCatalog)}
             className="rounded-full bg-tierra-500 px-6 py-2.5 text-sm font-medium text-white hover:bg-tierra-600"
           >
-            Ver joyas
+            Ver {primaryCatalog.label.toLowerCase()}
           </Link>
-          <Link
-            href="/piedras"
-            className="rounded-full border border-piedra-300 px-6 py-2.5 text-sm font-medium text-piedra-800 hover:border-agata-500"
-          >
-            Piedras
-          </Link>
+          {catalogs.slice(1).map((c) => (
+            <Link
+              key={c.path}
+              href={catalogHref(c)}
+              className="rounded-full border border-piedra-300 px-6 py-2.5 text-sm font-medium text-piedra-800 hover:border-agata-500"
+            >
+              {c.label}
+            </Link>
+          ))}
         </div>
       </div>
     );

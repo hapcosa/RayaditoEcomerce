@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { store } from '@/lib/store-config';
 
 interface AuthFormWrapperProps {
   title: string;
@@ -11,7 +12,7 @@ export function AuthFormWrapper({ title, subtitle, children }: AuthFormWrapperPr
     <div className="mx-auto max-w-md px-6 py-16">
       <div className="mb-8 text-center">
         <Link href="/" className="font-manuscrita text-2xl text-tierra-600 hover:text-tierra-700">
-          Piedras Rayadito
+          {store.name}
         </Link>
         <h1 className="mt-4 font-serif text-3xl font-medium text-piedra-900">{title}</h1>
         {subtitle && <div className="mt-2 text-sm text-piedra-500">{subtitle}</div>}

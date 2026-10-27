@@ -17,6 +17,7 @@ import { fetchInvoicesEnabled, INVOICE_VACIA, type InvoiceFields } from '@/lib/b
 import { AddressForm, DIRECCION_VACIA } from '@/components/account/AddressForm';
 import type { HydratedCartItem, ShippingOption } from '@/types/cart';
 import type { Address, AddressFields, CheckoutForm } from '@/types/checkout';
+import { catalogHref, primaryCatalog } from '@/lib/store-config';
 
 /** Datos de contacto; la dirección vive aparte, en `direccion`. */
 type Contacto = Pick<CheckoutForm, 'email' | 'first_name' | 'last_name'>;
@@ -188,8 +189,8 @@ export default function CheckoutPage() {
     return (
       <div className="mx-auto flex max-w-md flex-col items-center gap-6 px-6 py-24 text-center">
         <h1 className="font-serif text-3xl text-piedra-900">Carrito vacío</h1>
-        <Link href="/joyas" className="rounded-full bg-tierra-500 px-6 py-2.5 text-sm font-medium text-white hover:bg-tierra-600">
-          Ver joyas
+        <Link href={catalogHref(primaryCatalog)} className="rounded-full bg-tierra-500 px-6 py-2.5 text-sm font-medium text-white hover:bg-tierra-600">
+          Ver {primaryCatalog.label.toLowerCase()}
         </Link>
       </div>
     );

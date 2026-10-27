@@ -10,6 +10,7 @@ import { WishlistButton } from '@/components/ui/WishlistButton';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { formatCLP } from '@/lib/format';
 import { absoluteUrl } from '@/lib/site';
+import { catalogBySlug, catalogHref, primaryCatalog } from '@/lib/store-config';
 
 interface PageProps {
   // Next 15 entrega los parámetros de ruta como promesa.
@@ -64,10 +65,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
       ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
       : 0;
 
-  const catalogHref =
-    product.product_type === 'piedra' ? '/piedras' : '/joyas';
-  const catalogLabel =
-    product.product_type === 'piedra' ? 'Piedras' : 'Joyas';
+  // Sin catálogo (`general`) la miga de pan vuelve al catálogo principal.
+  const catalog = catalogBySlug(product.product_type) ?? primaryCatalog;
+  const backHref = catalogHref(catalog);
+  const catalogLabel = catalog.label;
 
   const productUrl = absoluteUrl(`/productos/${product.slug ?? product.id}`);
   const productJsonLd: Record<string, unknown> = {
@@ -107,7 +108,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
       <nav className="mb-8 flex items-center gap-2 text-sm text-piedra-500" aria-label="Breadcrumb">
         <Link href="/" className="hover:text-tierra-600">Inicio</Link>
         <span>/</span>
-        <Link href={catalogHref} className="hover:text-tierra-600">{catalogLabel}</Link>
+        <Link href={backHref} className="hover:text-tierra-600">{catalogLabel}</Link>
         <span>/</span>
         <span className="text-piedra-800">{product.name}</span>
       </nav>

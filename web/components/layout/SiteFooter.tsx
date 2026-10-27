@@ -1,16 +1,14 @@
 import Link from 'next/link';
 import { SuggestionForm } from './SuggestionForm';
+import { catalogHref, catalogs, contact, store } from '@/lib/store-config';
 
-// Contacto y redes son configurables por entorno. Dominio/email definitivos
-// llegan en Fase 7; los defaults son placeholders hasta entonces.
-const CONTACT_EMAIL =
-  process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'contacto@piedrasdelrayadito.cl';
-const INSTAGRAM_URL = process.env.NEXT_PUBLIC_INSTAGRAM_URL ?? '';
-const WHATSAPP_URL = process.env.NEXT_PUBLIC_WHATSAPP_URL ?? '';
+// Contacto y redes: store.json, con override por entorno (ver lib/store.ts).
+const CONTACT_EMAIL = contact.email;
+const INSTAGRAM_URL = contact.instagramUrl;
+const WHATSAPP_URL = contact.whatsappUrl;
 
 const NAV_LINKS = [
-  { href: '/joyas', label: 'Joyas' },
-  { href: '/piedras', label: 'Piedras' },
+  ...catalogs.map((c) => ({ href: catalogHref(c), label: c.label })),
   { href: '/nosotros', label: 'Nosotros' },
   { href: '/faq', label: 'Preguntas frecuentes' },
   { href: '/contacto', label: 'Contacto' },
@@ -31,11 +29,8 @@ export function SiteFooter() {
       <div className="mx-auto grid max-w-contenido grid-cols-1 gap-10 px-4 sm:px-6 lg:px-10 py-14 md:grid-cols-2 lg:grid-cols-4">
         {/* Marca */}
         <div className="flex flex-col gap-3">
-          <span className="font-manuscrita text-2xl text-tierra-300">Piedras Rayadito</span>
-          <p className="text-sm leading-relaxed text-piedra-400">
-            Joyería artesanal y lapidación de piedras de Chiloé. Piezas únicas
-            hechas a mano en el sur de Chile.
-          </p>
+          <span className="font-manuscrita text-2xl text-tierra-300">{store.name}</span>
+          <p className="text-sm leading-relaxed text-piedra-400">{store.web.description}</p>
         </div>
 
         {/* Navegación */}
@@ -109,7 +104,7 @@ export function SiteFooter() {
 
       <div className="border-t border-piedra-800">
         <div className="mx-auto max-w-contenido px-4 sm:px-6 lg:px-10 py-6 text-xs text-piedra-500">
-          © {year} Piedras Rayadito · Chiloé, Chile. Todos los derechos reservados.
+          © {year} {store.name} · {store.web.location}. Todos los derechos reservados.
         </div>
       </div>
     </footer>

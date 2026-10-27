@@ -2,11 +2,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { WithdrawalForm } from '@/components/orders/WithdrawalForm';
+import { store } from '@/lib/store-config';
 
 export const metadata: Metadata = {
   title: 'Arrepentimiento de compra (derecho a retracto)',
   description:
-    'Retráctate de una compra en Piedras Rayadito dentro de los 10 días siguientes a recibir tu pedido.',
+    `Retráctate de una compra en ${store.name} dentro de los 10 días siguientes a recibir tu pedido.`,
 };
 
 export default function ArrepentimientoPage() {

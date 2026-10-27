@@ -57,16 +57,10 @@ export async function fetchRelatedProducts(slug: string): Promise<Product[]> {
 
 // ---------- Categorías ------------------------------------------------------
 
-export async function fetchJoyasCategories(): Promise<Category[]> {
+/** Árbol de categorías de un catálogo de store.json, por su `path`. */
+export async function fetchCatalogCategories(path: string): Promise<Category[]> {
   const data = await apiFetch<{ categories: Category[] }>(
-    '/category/categories',
-  );
-  return data.categories;
-}
-
-export async function fetchPiedrasCategories(): Promise<Category[]> {
-  const data = await apiFetch<{ categories: Category[] }>(
-    '/category/piedrascategory',
+    `/category/catalog/${encodeURIComponent(path)}`,
   );
   return data.categories;
 }

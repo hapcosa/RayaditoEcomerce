@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 import { fetchOrderStatus } from '@/lib/checkout';
 import type { OrderStatus } from '@/types/checkout';
+import { catalogHref, primaryCatalog } from '@/lib/store-config';
 
 const STATUS_LABELS: Record<string, { emoji: string; title: string; desc: string; color: string }> = {
   approved: {
@@ -110,7 +111,7 @@ function SuccessContent() {
           className="rounded-full border border-piedra-200 px-6 py-2.5 text-sm font-medium text-piedra-800 hover:border-agata-500">
           Volver al inicio
         </Link>
-        <Link href="/joyas"
+        <Link href={catalogHref(primaryCatalog)}
           className="rounded-full border border-piedra-200 px-6 py-2.5 text-sm font-medium text-piedra-800 hover:border-agata-500">
           Seguir comprando
         </Link>

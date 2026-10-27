@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
+import { store } from '@/lib/store-config';
 
 export const metadata: Metadata = {
   title: 'Política de privacidad',
   description:
-    'Cómo Piedras Rayadito recopila y usa tus datos personales.',
+    `Cómo ${store.name} recopila y usa tus datos personales.`,
 };
 
 export default function PrivacidadPage() {

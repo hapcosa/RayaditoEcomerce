@@ -6,12 +6,10 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { CartBadge } from './CartBadge';
 import { AuthNav } from './AuthNav';
+import { catalogHref, catalogs, store } from '@/lib/store-config';
 
 /** Catálogo: visible en la barra desde `lg`, y también dentro del panel. */
-const NAV = [
-  { href: '/joyas', label: 'Joyas' },
-  { href: '/piedras', label: 'Piedras' },
-];
+const NAV = catalogs.map((c) => ({ href: catalogHref(c), label: c.label }));
 
 /** Secundarias: en la barra solo desde `xl`; el resto del tiempo, en el panel. */
 const NAV_EXTRA = [
@@ -48,14 +46,14 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-piedra-200 bg-piedra-50/95 backdrop-blur-sm">
       <div className="mx-auto flex max-w-contenido items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-10 lg:py-4">
-        <Link href="/" className="shrink-0" aria-label="Piedras Rayadito — inicio">
-          {/* Logo horizontal (pájaro + marca denominativa), ratio 2.72:1.
-              `alt` conserva el nombre para lectores de pantalla. */}
+        <Link href="/" className="shrink-0" aria-label={`${store.name} — inicio`}>
+          {/* Logo de store.json (`web.logo`). `alt` conserva el nombre para
+              lectores de pantalla. */}
           <Image
-            src="/logo-rayadito.png"
-            alt="Piedras Rayadito"
-            width={800}
-            height={294}
+            src={store.web.logo}
+            alt={store.name}
+            width={store.web.logo_width}
+            height={store.web.logo_height}
             priority
             className="h-8 w-auto sm:h-10 lg:h-11"
           />

@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth';
 import { useWishlistStore } from '@/lib/store/wishlist';
 import { formatCLP } from '@/lib/format';
+import { catalogHref, primaryCatalog } from '@/lib/store-config';
 
 export default function WishlistPage() {
   const router = useRouter();
@@ -48,10 +49,10 @@ export default function WishlistPage() {
           <span className="font-manuscrita text-5xl text-tierra-300">♡</span>
           <p className="text-piedra-600">Todavía no guardaste ninguna pieza.</p>
           <Link
-            href="/joyas"
+            href={catalogHref(primaryCatalog)}
             className="rounded-full bg-tierra-500 px-6 py-2.5 text-sm font-medium uppercase tracking-wide text-piedra-50 hover:bg-tierra-600"
           >
-            Explorar joyas
+            Explorar {primaryCatalog.label.toLowerCase()}
           </Link>
         </div>
       ) : (
