@@ -195,7 +195,7 @@ Cada fase lista **objetivo → tareas → entregable → criterio de aceptación
 - [x] Data fetching **sin** Redux legacy. *Desvío:* se resolvió con `lib/api.ts` (fetch de Server Components) + zustand para estado de cliente, en vez de RTK Query / React Query. El objetivo —terminar con el Redux legacy en el front nuevo— se cumple.
 - [x] UI de **estrellas**, **buzón**, **wishlist**.
 - [x] Accesibilidad (a11y) — PR #35 (reduced-motion, focus-visible, skip link).
-- [ ] **Performance / Core Web Vitals:** sin medir todavía.
+- [ ] **Performance / Core Web Vitals:** primera medición el 2026-10-28 (Lighthouse 12, móvil simulado, local con fotos de teléfono de ~3 MB): portada 77→85, catálogo 79→88, ficha 74–92 según la corrida; accesibilidad 96→100 en las tres. Arreglado: `sizes` real por grilla, prioridad para las primeras tarjetas del catálogo, contraste del botón principal y del pie. Falta medir en producción (CDN, latencia real) y bajar el TBT de la ficha (galería y reseñas son client components).
 - [x] **Corte del SPA:** *(hecho; ver Fase 7.)* `core/urls.py` seguía sirviendo el `dist/` de Vite con un catch-all. Next.js existe pero todavía no es la tienda pública. Va junto con la Fase 7 (servidor local + túnel de Cloudflare): dos procesos (Django + `next start`) detrás de un proxy que mande `/api/`, `/admin/` y `/media/` a Django y el resto a Next.
 
 **DoD:** Lighthouse SEO/Perf/A11y altos; catálogo, detalle y checkout funcionando; footer y buzón activos.

@@ -191,9 +191,14 @@ export function CatalogContent({
                 {products.length} {products.length === 1 ? 'producto' : 'productos'}
               </p>
               <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-                {products.map((product) => (
+                {products.map((product, index) => (
                   <li key={product.id}>
-                    <ProductCard product={product} />
+                    {/* 1/2/3/4 columnas; desde lg los filtros ocupan 14rem al costado. */}
+                    <ProductCard
+                      product={product}
+                      sizes="(min-width: 1536px) 22vw, (min-width: 1024px) 28vw, (min-width: 640px) 50vw, 100vw"
+                      priority={index < 2}
+                    />
                   </li>
                 ))}
               </ul>

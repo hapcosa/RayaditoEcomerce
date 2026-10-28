@@ -108,7 +108,11 @@ export default async function HomePage() {
           <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {latest.map((product) => (
               <li key={product.id}>
-                <ProductCard product={product} />
+                {/* 2/3/4/5 columnas: en movil cada tarjeta es media pantalla. */}
+                <ProductCard
+                  product={product}
+                  sizes="(min-width: 1280px) 18vw, (min-width: 1024px) 23vw, (min-width: 640px) 31vw, 48vw"
+                />
               </li>
             ))}
           </ul>

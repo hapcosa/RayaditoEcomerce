@@ -103,7 +103,7 @@ export function SiteFooter() {
       </div>
 
       <div className="border-t border-piedra-800">
-        <div className="mx-auto max-w-contenido px-4 sm:px-6 lg:px-10 py-6 text-xs text-piedra-500">
+        <div className="mx-auto max-w-contenido px-4 sm:px-6 lg:px-10 py-6 text-xs text-piedra-400">
           © {year} {store.name} · {store.web.location}. Todos los derechos reservados.
         </div>
       </div>
