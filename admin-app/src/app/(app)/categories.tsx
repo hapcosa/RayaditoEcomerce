@@ -4,8 +4,8 @@
  * un catálogo nuevo.
  *
  * El rubro (`ProductType`) es texto libre: el repo es template multi-rubro (ver
- * AGENTS.md). Los chips "Joya"/"Piedra" son atajos de esta tienda, no un enum —
- * pero solo esos dos valores hacen que el producto caiga en /joyas o /piedras.
+ * AGENTS.md). Los chips son los `category_type` de los catálogos de
+ * store.json: solo esos valores hacen que el producto caiga en una vitrina.
  */
 import { Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -42,9 +42,10 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { Field } from '@/components/product-form';
 import { useTheme } from '@/hooks/use-theme';
+import { catalogs } from '@/constants/store';
 
 /** Rubros de esta tienda. El campo acepta cualquier texto; esto son atajos. */
-const RUBROS_SUGERIDOS = ['Joya', 'Piedra'];
+const RUBROS_SUGERIDOS = catalogs.map((c) => c.category_type);
 
 /** Borrador del formulario. `id` null = alta. */
 type Draft = { id: number | null; name: string; ProductType: string; parent: number | null };
@@ -279,7 +280,7 @@ export default function CategoriesScreen() {
       return;
     }
     if (!rubro) {
-      Alert.alert('Falta el rubro', 'Indicá el rubro (ej. Joya o Piedra).');
+      Alert.alert('Falta el rubro', `Indicá el rubro (ej. ${RUBROS_SUGERIDOS.join(' o ')}).`);
       return;
     }
     setSaving(true);
@@ -347,8 +348,8 @@ export default function CategoriesScreen() {
         >
           <ThemedText type="subtitle">Categorías</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            Todo producto necesita una. El rubro decide la vitrina del sitio:
-            &quot;Joya&quot; → /joyas, &quot;Piedra&quot; → /piedras.
+            Todo producto necesita una. El rubro decide la vitrina del sitio:{' '}
+            {catalogs.map((c) => `"${c.category_type}" → /${c.path}`).join(', ')}.
           </ThemedText>
 
           {error && (
@@ -401,7 +402,7 @@ export default function CategoriesScreen() {
                   style={inputStyle}
                   value={draft.ProductType}
                   onChangeText={(t) => setDraft({ ...draft, ProductType: t })}
-                  placeholder="Joya"
+                  placeholder={RUBROS_SUGERIDOS[0]}
                   placeholderTextColor={theme.textSecondary}
                 />
               </Field>

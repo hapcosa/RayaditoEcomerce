@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth';
 import { useWishlistStore } from '@/lib/store/wishlist';
+import { catalogHref, catalogs } from '@/lib/store-config';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -63,16 +64,14 @@ export default function DashboardPage() {
           description="Ver y editar los productos guardados."
           href="/carrito"
         />
-        <DashCard
-          title="Joyas"
-          description="Explorar el catálogo de joyería."
-          href="/joyas"
-        />
-        <DashCard
-          title="Piedras"
-          description="Explorar el catálogo de piedras."
-          href="/piedras"
-        />
+        {catalogs.map((c) => (
+          <DashCard
+            key={c.path}
+            title={c.label}
+            description={`Explorar el catálogo de ${c.label.toLowerCase()}.`}
+            href={catalogHref(c)}
+          />
+        ))}
       </div>
 
       <button

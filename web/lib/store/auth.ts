@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { UserInfo } from '@/lib/auth';
+import { storageKey } from '@/lib/store-config';
 
 interface AuthStore {
   access: string | null;
@@ -24,7 +25,7 @@ export const useAuthStore = create<AuthStore>()(
       setAccess: (access) => set({ access }),
     }),
     {
-      name: 'rayadito-auth',
+      name: storageKey('auth'),
       // Evita el mismatch SSR/cliente — el cliente rehidrata manualmente.
       skipHydration: true,
     },

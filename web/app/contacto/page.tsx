@@ -1,16 +1,16 @@
 import type { Metadata } from 'next';
 import { SuggestionForm } from '@/components/layout/SuggestionForm';
+import { contact, store } from '@/lib/store-config';
 
 export const metadata: Metadata = {
   title: 'Contacto',
   description:
-    'Escríbenos: dudas, encargos a medida, reclamos o felicitaciones para Piedras Rayadito.',
+    `Escríbenos: dudas, encargos a medida, reclamos o felicitaciones para ${store.name}.`,
 };
 
-const CONTACT_EMAIL =
-  process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'contacto@piedrasdelrayadito.cl';
-const INSTAGRAM_URL = process.env.NEXT_PUBLIC_INSTAGRAM_URL ?? '';
-const WHATSAPP_URL = process.env.NEXT_PUBLIC_WHATSAPP_URL ?? '';
+const CONTACT_EMAIL = contact.email;
+const INSTAGRAM_URL = contact.instagramUrl;
+const WHATSAPP_URL = contact.whatsappUrl;
 
 export default function ContactoPage() {
   return (

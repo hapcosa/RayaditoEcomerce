@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useCartStore } from '@/lib/store/cart';
 
@@ -35,13 +36,13 @@ export function AddToCartButton({ productId, outOfStock }: AddToCartButtonProps)
 
   if (inCart) {
     return (
-      <a
+      <Link
         href="/carrito"
         className="flex w-full items-center justify-center gap-2 rounded-full border border-tierra-500 px-8 py-3 text-sm font-medium uppercase tracking-wide text-tierra-600 transition-colors hover:bg-tierra-50"
       >
         <CartIcon />
         Ver carrito
-      </a>
+      </Link>
     );
   }
 

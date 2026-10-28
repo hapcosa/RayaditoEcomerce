@@ -1,16 +1,18 @@
 import { ImageResponse } from 'next/og';
 import { fetchProduct } from '@/lib/api';
 import { formatCLP } from '@/lib/format';
+import { catalogBySlug, store } from '@/lib/store-config';
 
 // Ruta dinámica: se renderiza por petición, nunca en build.
 export const runtime = 'nodejs';
 
-export const alt = 'Piedras Rayadito — pieza artesanal';
+export const alt = `${store.name} — pieza artesanal`;
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
-// Espejo literal de globals.css: Satori no resuelve variables CSS, asi que
-// estos valores hay que actualizarlos a mano si cambia la paleta.
+// Espejo literal de app/theme.css: Satori no resuelve variables CSS, asi que
+// estos valores hay que actualizarlos a mano si cambia la paleta (un fork
+// tambien los cambia; ver docs/FORK.md).
 const PIEDRA_50 = 'rgb(250, 250, 249)';
 const PIEDRA_500 = 'rgb(115, 115, 112)';
 const PIEDRA_900 = 'rgb(29, 29, 27)';
@@ -52,7 +54,7 @@ interface Props {
 
 export default async function Image({ params }: Props) {
   const { slug } = await params;
-  let name = 'Piezas únicas de Chiloé';
+  let name = store.tagline || store.name;
   let price: string | null = null;
   let typeLabel = 'Artesanía';
 
@@ -60,12 +62,13 @@ export default async function Image({ params }: Props) {
     const product = await fetchProduct(slug);
     name = product.name;
     price = formatCLP(product.price);
-    typeLabel = product.product_type === 'piedra' ? 'Piedra lapidada' : 'Joya artesanal';
+    const catalog = catalogBySlug(product.product_type);
+    typeLabel = catalog ? (catalog.item_label ?? catalog.singular) : typeLabel;
   } catch {
     // Cae en los valores por defecto (producto no encontrado / API caída).
   }
 
-  const serifText = `${name}${price ?? ''}${typeLabel}Piedras Rayadito`;
+  const serifText = `${name}${price ?? ''}${typeLabel}${store.name}`;
   const serif = await loadSerif(serifText);
 
   return new ImageResponse(
@@ -109,7 +112,7 @@ export default async function Image({ params }: Props) {
             color: TIERRA_600,
           }}
         >
-          Piedras Rayadito
+          {store.name}
         </div>
 
         {/* Cuerpo: nombre + tipo */}
@@ -150,7 +153,7 @@ export default async function Image({ params }: Props) {
             </div>
           )}
           <div style={{ fontSize: 26, color: PIEDRA_500 }}>
-            Joyería y lapidación · Chiloé
+            {store.web.og_footer}
           </div>
         </div>
       </div>

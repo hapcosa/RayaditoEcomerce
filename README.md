@@ -12,6 +12,7 @@ Monorepo con tres partes:
 - Guía para agentes/humanos y convenciones: **[`AGENTS.md`](AGENTS.md)**
 - Plan de trabajo por fases: **[`docs/ROADMAP.md`](docs/ROADMAP.md)**
 - Producción (Cloudflare Tunnel, systemd, backups): **[`docs/DEPLOY.md`](docs/DEPLOY.md)**
+- Crear otra tienda sobre este repo (fork por rubro): **[`docs/FORK.md`](docs/FORK.md)**
 - Integraciones: [`STARKEN`](docs/STARKEN.md) · [`SII`](docs/SII.md) ·
   [`INSTAGRAM`](docs/INSTAGRAM.md) · [`WHATSAPP`](docs/WHATSAPP.md)
 

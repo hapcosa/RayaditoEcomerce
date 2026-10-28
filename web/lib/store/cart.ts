@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { storageKey } from '@/lib/store-config';
 
 export interface LocalCartItem {
   product_id: number;
@@ -49,7 +50,7 @@ export const useCartStore = create<CartStore>()(
 
       clear: () => set({ items: [], shippingId: null }),
     }),
-    { name: 'rayadito-cart' },
+    { name: storageKey('cart') },
   ),
 );
 

@@ -5,7 +5,9 @@ import { SiteFooter } from '@/components/layout/SiteFooter';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { SITE_URL } from '@/lib/site';
+import './theme.css';
 import './globals.css';
+import { store } from '@/lib/store-config';
 
 // Serif editorial para títulos, sans legible para texto, manuscrita para acentos.
 const serif = Cormorant_Garamond({
@@ -31,15 +33,14 @@ const manuscrita = Caveat({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
   title: {
-    default: 'Piedras Rayadito — Joyería y lapidación de piedras de Chiloé',
-    template: '%s · Piedras Rayadito',
+    default: store.web.title,
+    template: `%s · ${store.name}`,
   },
-  description:
-    'Joyería artesanal y lapidación de piedras de Chiloé. Piezas únicas hechas a mano en el sur de Chile.',
+  description: store.web.description,
   openGraph: {
     type: 'website',
     locale: 'es_CL',
-    siteName: 'Piedras Rayadito',
+    siteName: store.name,
   },
 };
 // Los iconos y la og-image por defecto salen de las convenciones de archivo del
@@ -53,10 +54,9 @@ export default function RootLayout({
   const organizationJsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Piedras Rayadito',
+    name: store.name,
     url: SITE_URL,
-    description:
-      'Joyería artesanal y lapidación de piedras de Chiloé. Piezas únicas hechas a mano en el sur de Chile.',
+    description: store.web.description,
   };
 
   return (

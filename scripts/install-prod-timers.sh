@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Timers de systemd de Piedras Rayadito en produccion.
+# Timers de systemd de la tienda en produccion (prefijo = slug de store.json).
 #
 # Genera las unidades con las rutas reales del checkout (no las de ejemplo de
 # docs/DEPLOY.md) y, con --install, las instala y habilita. Sin argumentos solo
@@ -21,14 +21,22 @@
 #   sudo scripts/install-prod-timers.sh --install  # instala y habilita
 #
 # Variables opcionales: RUN_USER (dueño del checkout), BACKUP_DIR
-# (~RUN_USER/backups-rayadito) y RETENTION_DAYS (14).
+# (~RUN_USER/backups-<slug>) y RETENTION_DAYS (14).
 set -euo pipefail
 
 MODE="${1:---print}"
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Prefijo de las unidades y nombre visible: salen de store.json, asi dos
+# tiendas en el mismo servidor no se pisan los timers (rayadito-*, colilarga-*).
+store_field() {
+  python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))[sys.argv[2]])' \
+    "$PROJECT_DIR/store.json" "$1"
+}
+STORE_SLUG="${STORE_SLUG:-$(store_field slug)}"
+STORE_NAME="${STORE_NAME:-$(store_field name)}"
 RUN_USER="${RUN_USER:-$(stat -c %U "$PROJECT_DIR")}"
 RUN_HOME="$(getent passwd "$RUN_USER" | cut -d: -f6)"
-BACKUP_DIR="${BACKUP_DIR:-$RUN_HOME/backups-rayadito}"
+BACKUP_DIR="${BACKUP_DIR:-$RUN_HOME/backups-${STORE_SLUG}}"
 RETENTION_DAYS="${RETENTION_DAYS:-14}"
 PYTHON="$PROJECT_DIR/.venv/bin/python"
 UNIT_DIR=/etc/systemd/system
@@ -38,14 +46,14 @@ env_get() {
   sed -n "s/^$1=//p" "$PROJECT_DIR/.env" | tail -1
 }
 
-# Sin EnvironmentFile= a proposito, igual que rayadito-api.service: settings.py
+# Sin EnvironmentFile= a proposito, igual que ${STORE_SLUG}-api.service: settings.py
 # lee el .env con django-environ, y el parser de systemd trata distinto los
 # valores con caracteres especiales (SECRET_KEY tiene uno).
 manage_service() {  # descripcion comando
   cat <<UNIT
 [Unit]
 Description=$1
-After=network-online.target compose-rayadito.service
+After=network-online.target compose-${STORE_SLUG}.service
 Wants=network-online.target
 
 [Service]
@@ -75,10 +83,10 @@ UNIT
 
 declare -A UNITS
 
-UNITS[rayadito-backup.service]="$(cat <<UNIT
+UNITS[${STORE_SLUG}-backup.service]="$(cat <<UNIT
 [Unit]
-Description=Backup de Piedras Rayadito (base + media)
-After=compose-rayadito.service
+Description=Backup de $STORE_NAME (base + media)
+After=compose-${STORE_SLUG}.service
 
 [Service]
 Type=oneshot
@@ -91,17 +99,17 @@ Nice=10
 IOSchedulingClass=idle
 UNIT
 )"
-UNITS[rayadito-backup.timer]="$(timer 'Backup diario de Piedras Rayadito' '*-*-* 03:30:00')"
+UNITS[${STORE_SLUG}-backup.timer]="$(timer "Backup diario de $STORE_NAME" '*-*-* 03:30:00')"
 
-UNITS[rayadito-dispatch-notice.service]="$(manage_service \
-  'Aviso de plazo de despacho de Piedras Rayadito' notify_pending_dispatch)"
-UNITS[rayadito-dispatch-notice.timer]="$(timer 'Revision horaria del plazo de despacho' hourly)"
+UNITS[${STORE_SLUG}-dispatch-notice.service]="$(manage_service \
+  "Aviso de plazo de despacho de $STORE_NAME" notify_pending_dispatch)"
+UNITS[${STORE_SLUG}-dispatch-notice.timer]="$(timer 'Revision horaria del plazo de despacho' hourly)"
 
-UNITS[rayadito-instagram.service]="$(manage_service \
-  'Publicaciones programadas de Instagram de Piedras Rayadito' publish_instagram)"
-UNITS[rayadito-instagram.timer]="$(timer 'Revision de publicaciones de Instagram cada 5 minutos' '*:0/5')"
+UNITS[${STORE_SLUG}-instagram.service]="$(manage_service \
+  "Publicaciones programadas de Instagram de $STORE_NAME" publish_instagram)"
+UNITS[${STORE_SLUG}-instagram.timer]="$(timer 'Revision de publicaciones de Instagram cada 5 minutos' '*:0/5')"
 
-TIMERS=(rayadito-backup.timer rayadito-dispatch-notice.timer rayadito-instagram.timer)
+TIMERS=(${STORE_SLUG}-backup.timer ${STORE_SLUG}-dispatch-notice.timer ${STORE_SLUG}-instagram.timer)
 SKIPPED=()
 
 has_command() {
@@ -111,30 +119,30 @@ has_command() {
 # Los que dependen de un comando se instalan recien cuando el checkout lo
 # trae: asi el orden en que se mergean los PR no deja un timer fallando.
 if has_command social instagram_token; then
-  UNITS[rayadito-instagram-token.service]="$(manage_service \
-    'Renovacion del token de Instagram de Piedras Rayadito' 'instagram_token refresh')"
-  UNITS[rayadito-instagram-token.timer]="$(timer 'Revision diaria del token de Instagram' '*-*-* 04:10:00')"
-  TIMERS+=(rayadito-instagram-token.timer)
+  UNITS[${STORE_SLUG}-instagram-token.service]="$(manage_service \
+    "Renovacion del token de Instagram de $STORE_NAME" 'instagram_token refresh')"
+  UNITS[${STORE_SLUG}-instagram-token.timer]="$(timer 'Revision diaria del token de Instagram' '*-*-* 04:10:00')"
+  TIMERS+=(${STORE_SLUG}-instagram-token.timer)
 else
-  SKIPPED+=("rayadito-instagram-token: este checkout no trae instagram_token")
+  SKIPPED+=("${STORE_SLUG}-instagram-token: este checkout no trae instagram_token")
 fi
 
 if [[ "$(env_get BILLING_MODE)" == provider ]]; then
-  UNITS[rayadito-billing.service]="$(manage_service \
-    'Emision y reintento de boletas/facturas de Piedras Rayadito' issue_tax_documents)"
-  UNITS[rayadito-billing.timer]="$(timer 'Reintento de documentos tributarios cada 10 minutos' '*:0/10')"
-  TIMERS+=(rayadito-billing.timer)
+  UNITS[${STORE_SLUG}-billing.service]="$(manage_service \
+    "Emision y reintento de boletas/facturas de $STORE_NAME" issue_tax_documents)"
+  UNITS[${STORE_SLUG}-billing.timer]="$(timer 'Reintento de documentos tributarios cada 10 minutos' '*:0/10')"
+  TIMERS+=(${STORE_SLUG}-billing.timer)
 else
-  SKIPPED+=("rayadito-billing: BILLING_MODE no es 'provider'")
+  SKIPPED+=("${STORE_SLUG}-billing: BILLING_MODE no es 'provider'")
 fi
 
 if [[ "$(env_get STARKEN_ENABLED)" == true ]] && has_command shipping starken_tracking; then
-  UNITS[rayadito-starken-tracking.service]="$(manage_service \
-    'Seguimiento de envios Starken de Piedras Rayadito' starken_tracking)"
-  UNITS[rayadito-starken-tracking.timer]="$(timer 'Seguimiento de envios Starken cada 2 horas' '0/2:15')"
-  TIMERS+=(rayadito-starken-tracking.timer)
+  UNITS[${STORE_SLUG}-starken-tracking.service]="$(manage_service \
+    "Seguimiento de envios Starken de $STORE_NAME" starken_tracking)"
+  UNITS[${STORE_SLUG}-starken-tracking.timer]="$(timer 'Seguimiento de envios Starken cada 2 horas' '0/2:15')"
+  TIMERS+=(${STORE_SLUG}-starken-tracking.timer)
 else
-  SKIPPED+=("rayadito-starken-tracking: STARKEN_ENABLED no es 'true' o falta el comando")
+  SKIPPED+=("${STORE_SLUG}-starken-tracking: STARKEN_ENABLED no es 'true' o falta el comando")
 fi
 
 case "$MODE" in
@@ -157,7 +165,7 @@ case "$MODE" in
     done
     systemctl daemon-reload
     systemctl enable --now "${TIMERS[@]}"
-    systemctl list-timers 'rayadito-*' --no-pager
+    systemctl list-timers "${STORE_SLUG}-*" --no-pager
     ;;
   *)
     echo "Uso: $0 [--print|--install]" >&2

@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/auth/auth-context';
 import { useAdminStats } from '@/hooks/use-admin-stats';
 import { useTheme } from '@/hooks/use-theme';
+import { primaryCatalog } from '@/constants/store';
 
 export default function DashboardScreen() {
   const { user, signOut } = useAuth();
@@ -60,7 +61,7 @@ export default function DashboardScreen() {
             <Pressable style={StyleSheet.flatten([styles.card, { backgroundColor: theme.backgroundElement }])}>
               <ThemedText type="default">Productos</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                Cargar joyas con fotos y ver el catálogo
+                Cargar {primaryCatalog.label.toLowerCase()} con fotos y ver el catálogo
               </ThemedText>
             </Pressable>
           </Link>

@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { apiSocialAuthUrl, type SocialProvider } from '@/lib/auth';
+import { storageKey } from '@/lib/store-config';
 
 // Clave de sessionStorage: el callback necesita saber qué proveedor y a dónde volver.
-export const SOCIAL_PENDING_KEY = 'rayadito-social-pending';
+export const SOCIAL_PENDING_KEY = storageKey('social-pending');
 
 interface SocialLoginButtonsProps {
   /** Ruta a la que volver tras autenticar (por defecto /dashboard). */

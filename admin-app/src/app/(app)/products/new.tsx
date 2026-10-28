@@ -37,6 +37,7 @@ import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { cropFromViewer, type ViewerTransform } from '@/utils/crop-image';
 import { pickFromLibrary, takePhoto } from '@/utils/pick-image';
+import { catalogSingularsText } from '@/constants/store';
 
 const EMPTY_FORM: ProductFormValue = {
   name: '',
@@ -144,7 +145,7 @@ export default function NewProductScreen() {
     if (!form.price) return 'El precio es obligatorio.';
     if (!form.stock) return 'Indica el stock (1 si es una pieza única).';
     if (form.categoryId == null) return 'Elegí una categoría.';
-    if (form.productType == null) return 'Elegí el tipo: joya o piedra.';
+    if (form.productType == null) return `Elegí el tipo: ${catalogSingularsText()}.`;
     if (!photo) return 'Agregá una foto del producto.';
     return faltaAtributo(atributos.fields, atributos.draft);
   }
