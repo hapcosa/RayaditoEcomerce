@@ -7,7 +7,7 @@ gestione pedidos desde el celular. Consume la misma API DRF del backend Django
 Parte de la **Fase 5** del [ROADMAP](../docs/ROADMAP.md).
 
 ## Stack
-- Expo SDK 57 + Expo Router (TS).
+- Expo SDK 58 + Expo Router (TS).
 - Auth JWT (djoser + simplejwt) con header `Authorization: JWT <access>` (¡no Bearer!).
 - Tokens en `expo-secure-store` (Keychain/Keystore).
 

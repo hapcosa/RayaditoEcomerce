@@ -116,7 +116,7 @@ export default function ProductsListScreen() {
               <ThemedText type="small" themeColor="textSecondary" style={styles.err}>
                 {error}
               </ThemedText>
-            ) : null
+            ) : undefined
           }
         />
       )}
