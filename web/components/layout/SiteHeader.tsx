@@ -18,6 +18,15 @@ const NAV_EXTRA = [
   { href: '/contacto', label: 'Contacto' },
 ];
 
+/**
+ * Ancho en pantalla del logo para `sizes`: el alto lo fijan las clases
+ * (h-8 / sm:h-10 / lg:h-11) y el ancho sale de la proporción del archivo.
+ * Sin esto next/image asume el ancho real del PNG y baja la variante de 1920 px.
+ */
+const logoAncho = (alto: number) =>
+  Math.ceil((alto * store.web.logo_width) / store.web.logo_height);
+const LOGO_SIZES = `(min-width: 1024px) ${logoAncho(44)}px, (min-width: 640px) ${logoAncho(40)}px, ${logoAncho(32)}px`;
+
 export function SiteHeader() {
   const pathname = usePathname();
   const [abierto, setAbierto] = useState(false);
@@ -54,6 +63,7 @@ export function SiteHeader() {
             alt={store.name}
             width={store.web.logo_width}
             height={store.web.logo_height}
+            sizes={LOGO_SIZES}
             priority
             className="h-8 w-auto sm:h-10 lg:h-11"
           />
