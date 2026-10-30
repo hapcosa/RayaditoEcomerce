@@ -274,6 +274,33 @@ sudo systemctl restart rayadito-api rayadito-web
 servidor nuevo hay que correrlo antes del primer arranque, o el admin de Django
 responde 500 (le falta el manifest de `ManifestStaticFilesStorage`).
 
+### 4.1 Una sola vez: fotos que dejan de estar versionadas
+
+Hasta este cambio git versionaba `public/photos/`, `public/logos/` y una copia
+vieja en `photos/` (~600 MB). Se sacaron del índice, así que el primer
+`git pull` que los traiga **borra esos archivos del disco** (git elimina lo que
+deja de trackear). Las fotos subidas después no se tocan: nunca estuvieron
+versionadas. Respaldar antes y restaurar después:
+
+```bash
+cd ~/servicios/RayaditoEcomerce
+tar -cf ~/media-versionada.tar public/photos public/logos   # ~360 MB, son JPG: no comprimir
+git pull
+tar -xf ~/media-versionada.tar --skip-old-files            # repone solo lo que borró el pull
+git status --short public                                   # vacío: quedan ignoradas
+```
+
+Comprobar una foto de producto en la tienda y, si se ve, borrar
+`~/media-versionada.tar`. `photos/` (la copia vieja de la raíz) no se restaura:
+no está bajo `MEDIA_ROOT` y nada la usa.
+
+En la máquina de test (§11) pasa lo mismo con el `git checkout` de
+`deploy-test.sh`: hacer el `tar -cf` en `/mnt/datos/RayaditoEcomerce` antes del
+siguiente deploy de `test` y el `tar -xf --skip-old-files` después.
+
+Esto achica el checkout, no el historial: un `git clone` sigue bajando las fotos
+viejas hasta que se reescriba la historia (afecta a todos los clones y forks).
+
 ## 5. Verificación post-deploy
 
 ```bash
