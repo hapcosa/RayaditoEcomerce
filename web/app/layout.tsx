@@ -28,6 +28,9 @@ const manuscrita = Caveat({
   weight: ['400', '600'],
   variable: '--font-manuscrita',
   display: 'swap',
+  // Solo acentos (eyebrows, footer, ✦): no se precarga para no competir con la
+  // imagen principal y el texto, que son los que definen FCP/LCP.
+  preload: false,
 });
 
 export const metadata: Metadata = {
