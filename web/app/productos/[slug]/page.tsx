@@ -273,7 +273,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
           <ul className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {related.map((p) => (
               <li key={p.id}>
-                <ProductCard product={p} />
+                {/* 1/2/3/4 columnas. */}
+                <ProductCard
+                  product={p}
+                  sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                />
               </li>
             ))}
           </ul>

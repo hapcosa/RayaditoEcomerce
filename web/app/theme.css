@@ -29,13 +29,15 @@
   /* Tierra — el naranjo del logo (primario: enlaces, botones, estado activo).
      El 400 es el naranjo exacto del logo; sirve para bordes y acentos, pero
      como texto o fondo de boton solo llega a 3.6:1, asi que los pasos de
-     accion son el 500 y el 600, que si cumplen AA. */
+     accion son el 500 y el 600, que si cumplen AA. El 500 estaba en 196 85 15
+     y con texto claro chico daba 4.32:1 (Lighthouse lo marcaba en el boton
+     principal); 188 81 14 da 4.65:1 y a la vista es el mismo naranjo. */
   --color-tierra-50: 253 244 238;
   --color-tierra-100: 251 229 214;
   --color-tierra-200: 246 200 165;
   --color-tierra-300: 238 158 104;
   --color-tierra-400: 218 95 21;
-  --color-tierra-500: 196 85 15;
+  --color-tierra-500: 188 81 14;
   --color-tierra-600: 168 72 14;
   --color-tierra-700: 138 60 13;
   --color-tierra-800: 110 49 12;

@@ -7,9 +7,21 @@ import { WishlistButton } from '@/components/ui/WishlistButton';
 
 interface ProductCardProps {
   product: Product;
+  /**
+   * Ancho real de la tarjeta en la grilla donde se usa (atributo `sizes`). Cada
+   * grilla tiene otras columnas: con un valor generico el movil bajaba la foto
+   * en 750 px para mostrarla a ~180.
+   */
+  sizes?: string;
+  /** Primeras tarjetas visibles al cargar: sin lazy-load y con prioridad alta (LCP). */
+  priority?: boolean;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({
+  product,
+  sizes = '(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw',
+  priority = false,
+}: ProductCardProps) {
   const href = `/productos/${product.slug ?? product.id}`;
   const hasDiscount = product.compare_price > product.price;
 
@@ -27,7 +39,8 @@ export function ProductCard({ product }: ProductCardProps) {
               src={mediaUrl(product.photo)}
               alt={product.name}
               fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              sizes={sizes}
+              priority={priority}
               className="object-contain transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
