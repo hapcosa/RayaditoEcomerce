@@ -147,7 +147,7 @@ export default function OrdersListScreen() {
               <ThemedText type="small" themeColor="textSecondary" style={styles.err}>
                 {error}
               </ThemedText>
-            ) : null
+            ) : undefined
           }
         />
       )}
