@@ -20,6 +20,14 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 // ---------- Productos -------------------------------------------------------
 
+/**
+ * Productos sin caché: cada pieza es única y, vendida, tiene que salir del
+ * catálogo en la visita siguiente. Con `revalidate: 60` Next sirve una vez más
+ * la copia vencida mientras la renueva, y con poco tráfico esa copia (con la
+ * pieza vendida) podía durar horas. Categorías y portada siguen cacheadas.
+ */
+const FRESH: RequestInit = { next: { revalidate: 0 } } as RequestInit;
+
 export interface ProductListParams {
   product_type?: string;
   search?: string;
@@ -39,18 +47,19 @@ export async function fetchProducts(
     if (v !== undefined && v !== '') qs.set(k, String(v));
   });
   const query = qs.toString() ? `?${qs}` : '';
-  const data = await apiFetch<{ products: Product[] }>(`/products/${query}`);
+  const data = await apiFetch<{ products: Product[] }>(`/products/${query}`, FRESH);
   return data.products;
 }
 
 export async function fetchProduct(slug: string): Promise<Product> {
-  const data = await apiFetch<{ product: Product }>(`/products/${slug}`);
+  const data = await apiFetch<{ product: Product }>(`/products/${slug}`, FRESH);
   return data.product;
 }
 
 export async function fetchRelatedProducts(slug: string): Promise<Product[]> {
   const data = await apiFetch<{ related_products: Product[] }>(
     `/products/related/${slug}`,
+    FRESH,
   );
   return data.related_products;
 }
