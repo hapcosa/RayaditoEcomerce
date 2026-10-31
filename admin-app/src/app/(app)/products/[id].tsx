@@ -42,6 +42,7 @@ import {
 } from '@/components/product-attributes';
 import { ProductFormFields, type ProductFormValue } from '@/components/product-form';
 import { ThemedText } from '@/components/themed-text';
+import { BusyOverlay } from '@/components/busy-overlay';
 import { useTheme } from '@/hooks/use-theme';
 import { cropFromViewer, type ViewerTransform } from '@/utils/crop-image';
 import { pickFromLibrary, takePhoto } from '@/utils/pick-image';
@@ -446,6 +447,11 @@ export default function EditProductScreen() {
         // "Dejar como principal".
         dests={zoom?.galleryId != null ? ['replace', 'main', 'gallery'] : ['main', 'gallery']}
         busy={cropping}
+      />
+
+      <BusyOverlay
+        visible={addingImages || cropping || saving}
+        label={saving ? 'Guardando cambios…' : 'Subiendo foto…'}
       />
     </KeyboardAvoidingView>
   );
