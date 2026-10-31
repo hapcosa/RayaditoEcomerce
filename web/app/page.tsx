@@ -5,10 +5,6 @@ import { ProductCard } from '@/components/ui/ProductCard';
 import { home } from '@/content/home';
 import { catalogHref, catalogs, primaryCatalog, store } from '@/lib/store-config';
 
-// Revalida la portada cada 5 min (ni las fotos de portada ni las últimas
-// creaciones cambian a cada instante).
-export const revalidate = 300;
-
 export default async function HomePage() {
   const [hero, latest] = await Promise.all([
     fetchHeroImages(),
