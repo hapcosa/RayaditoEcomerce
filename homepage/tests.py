@@ -10,7 +10,7 @@ from django.test import TestCase, override_settings
 from PIL import Image
 from rest_framework.test import APIClient
 
-from .models import HeroImage
+from .models import HeroImage, HomepageSettings, hero_max_photos
 
 User = get_user_model()
 
@@ -41,8 +41,8 @@ def foto(nombre='portada.jpg'):
 
 @media_temporal
 class HeroImageModelTests(MediaTemporalMixin, TestCase):
-    def test_no_deja_activar_una_cuarta_foto(self):
-        for i in range(HeroImage.MAX_ACTIVAS):
+    def test_no_deja_activar_mas_fotos_que_el_tope(self):
+        for i in range(hero_max_photos()):
             HeroImage.objects.create(image=foto(f'{i}.jpg'), position=i)
 
         cuarta = HeroImage(image=foto('cuarta.jpg'))
@@ -51,7 +51,7 @@ class HeroImageModelTests(MediaTemporalMixin, TestCase):
 
     def test_una_foto_activa_puede_seguir_editandose(self):
         """Editar una activa no debe contarse a si misma como una cuarta."""
-        for i in range(HeroImage.MAX_ACTIVAS):
+        for i in range(hero_max_photos()):
             hero = HeroImage.objects.create(image=foto(f'{i}.jpg'), position=i)
 
         hero.caption = 'Ágata de Cucao'
@@ -60,7 +60,7 @@ class HeroImageModelTests(MediaTemporalMixin, TestCase):
     def test_desactivar_libera_el_cupo(self):
         fotos = [
             HeroImage.objects.create(image=foto(f'{i}.jpg'), position=i)
-            for i in range(HeroImage.MAX_ACTIVAS)
+            for i in range(hero_max_photos())
         ]
         fotos[0].is_active = False
         fotos[0].save()
@@ -129,15 +129,31 @@ class HeroImageAdminAPITests(MediaTemporalMixin, TestCase):
         self.assertEqual(HeroImage.objects.count(), 1)
         self.assertEqual(HeroImage.objects.get().alt_text, 'Ágata rayada')
 
-    def test_la_cuarta_foto_activa_da_400_y_no_500(self):
-        for i in range(HeroImage.MAX_ACTIVAS):
+    def test_pasar_el_tope_con_is_active_da_400_y_no_500(self):
+        for i in range(hero_max_photos()):
+            HeroImage.objects.create(image=foto(f'{i}.jpg'), position=i)
+        self.client.force_authenticate(self.staff)
+
+        res = self.client.post(
+            ADMIN_LIST, {'image': foto(), 'is_active': 'true'}, format='multipart',
+        )
+
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(HeroImage.objects.count(), hero_max_photos())
+
+    def test_con_la_portada_llena_la_foto_nueva_queda_archivada(self):
+        """Subir no depende de sacar antes otra foto: la nueva espera archivada."""
+        for i in range(hero_max_photos()):
             HeroImage.objects.create(image=foto(f'{i}.jpg'), position=i)
         self.client.force_authenticate(self.staff)
 
         res = self.client.post(ADMIN_LIST, {'image': foto()}, format='multipart')
 
-        self.assertEqual(res.status_code, 400)
-        self.assertEqual(HeroImage.objects.count(), HeroImage.MAX_ACTIVAS)
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertFalse(res.json()['is_active'])
+        self.assertEqual(
+            HeroImage.objects.filter(is_active=True).count(), hero_max_photos(),
+        )
 
     def test_una_foto_subida_por_multipart_nace_activa(self):
         """Regresion: DRF lee un booleano ausente en multipart como `False`.
@@ -190,3 +206,81 @@ class HeroImageMedidasTests(MediaTemporalMixin, TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertIsNone(res.data[0]['width'])
         self.assertIsNone(res.data[0]['height'])
+
+
+@media_temporal
+class HomepageSettingsTests(MediaTemporalMixin, TestCase):
+    """La dueña elige cuántas fotos muestra la portada (entre 3 y 7)."""
+
+    URL = '/api/admin/homepage-settings/'
+
+    def setUp(self):
+        self.client = APIClient()
+        self.staff = User.objects.create_user(
+            email='staff@rayadito.cl', password='clave-larga-1', is_staff=True,
+        )
+
+    def _fotos(self, n):
+        return [
+            HeroImage.objects.create(image=foto(f'{i}.jpg'), position=i, alt_text=str(i))
+            for i in range(n)
+        ]
+
+    def test_por_defecto_son_cinco_y_viajan_los_topes(self):
+        self.client.force_authenticate(self.staff)
+
+        res = self.client.get(self.URL)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json(), {
+            'hero_max_photos': 5, 'min_hero_photos': 3, 'max_hero_photos': 7,
+        })
+
+    def test_staff_sube_el_tope_y_puede_activar_mas(self):
+        self.client.force_authenticate(self.staff)
+        self._fotos(5)
+
+        res = self.client.patch(self.URL, {'hero_max_photos': 7}, format='json')
+
+        self.assertEqual(res.status_code, 200, res.content)
+        HeroImage(image=foto('sexta.jpg')).clean()  # ya no levanta
+
+    def test_fuera_de_rango_da_400(self):
+        self.client.force_authenticate(self.staff)
+        for valor in (2, 8):
+            with self.subTest(valor=valor):
+                res = self.client.patch(self.URL, {'hero_max_photos': valor}, format='json')
+                self.assertEqual(res.status_code, 400)
+        self.assertEqual(hero_max_photos(), 5)
+
+    def test_bajar_el_tope_archiva_las_ultimas_sin_borrarlas(self):
+        self.client.force_authenticate(self.staff)
+        self._fotos(5)
+
+        res = self.client.patch(self.URL, {'hero_max_photos': 3}, format='json')
+
+        self.assertEqual(res.status_code, 200, res.content)
+        activas = HeroImage.objects.filter(is_active=True).values_list('alt_text', flat=True)
+        self.assertEqual(list(activas), ['0', '1', '2'])
+        self.assertEqual(HeroImage.objects.count(), 5)
+
+    def test_crear_el_ajuste_no_archiva_nada(self):
+        """El primer `load()` crea la fila: no debe tocar una portada ya armada."""
+        self._fotos(6)  # mas que el default, p. ej. cargadas desde el admin
+        HomepageSettings.load()
+        self.assertEqual(HeroImage.objects.filter(is_active=True).count(), 6)
+
+    def test_la_api_publica_respeta_el_tope(self):
+        self._fotos(5)
+        HomepageSettings.objects.update_or_create(pk=1, defaults={'hero_max_photos': 7})
+        HeroImage.objects.create(image=foto('6.jpg'), position=6, alt_text='6')
+
+        res = APIClient().get(HERO_LIST)
+
+        self.assertEqual(len(res.json()), 6)
+
+    def test_un_cliente_no_cambia_el_tope(self):
+        cliente = User.objects.create_user(email='c@rayadito.cl', password='clave-larga-2')
+        self.client.force_authenticate(cliente)
+        res = self.client.patch(self.URL, {'hero_max_photos': 7}, format='json')
+        self.assertEqual(res.status_code, 403)
