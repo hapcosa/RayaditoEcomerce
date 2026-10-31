@@ -219,7 +219,7 @@ class AdminProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'name', 'slug', 'product_type', 'photo', 'description',
-            'price', 'compare_price', 'category', 'status', 'is_featured',
+            'price', 'compare_price', 'cost', 'category', 'status', 'is_featured',
             'stock', 'sold', 'available_stock', 'date_created', 'gallery',
         ]
         read_only_fields = ['id', 'slug', 'available_stock', 'date_created']
@@ -263,6 +263,24 @@ class AdminProductViewSet(viewsets.ModelViewSet):
     serializer_class = AdminProductSerializer
     permission_classes = (IsAdminUser,)
     parser_classes = (MultiPartParser, FormParser, JSONParser)
+
+    def destroy(self, request, *args, **kwargs):
+        """Borra solo si la pieza nunca se vendio.
+
+        `OrderItem.product` es DO_NOTHING: borrar una pieza vendida rompia la
+        llave foranea (un 500) y, si pasaba, el pedido y los reportes de ventas
+        quedaban apuntando a nada. Una pieza vendida se archiva.
+        """
+        product = self.get_object()
+        if product.orderitem_set.exists():
+            return Response(
+                {'detail': (
+                    'No se puede borrar: esta pieza tiene ventas registradas. '
+                    'Archivala para sacarla de la tienda.'
+                )},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return super().destroy(request, *args, **kwargs)
 
     @action(detail=True, methods=['post'], url_path='images')
     def add_images(self, request, pk=None):

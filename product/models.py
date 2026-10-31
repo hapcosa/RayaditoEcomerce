@@ -9,6 +9,7 @@ from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.text import slugify
 
+from core.images import shrink_upload
 from core.store import GENERAL_PRODUCT_TYPE
 
 
@@ -69,6 +70,10 @@ class Product(models.Model):
     # Dinero en entero CLP (peso chileno, sin decimales). Ver AGENTS.md.
     price = models.PositiveIntegerField()
     compare_price = models.PositiveIntegerField(default=0)
+    # Lo que le costó a la dueña hacer la pieza (materiales), en entero CLP.
+    # Opcional: sin él no hay margen, pero la venta se reporta igual. Nunca se
+    # muestra en la tienda.
+    cost = models.PositiveIntegerField(null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     # Unidades disponibles. En joyeria casi siempre es 1 (pieza unica) o 0
     # (vendida). Si el producto tiene variantes activas, manda la suma de las
@@ -99,6 +104,7 @@ class Product(models.Model):
         return self.available_stock == 0
 
     def save(self, *args, **kwargs):
+        shrink_upload(self.photo)
         if not self.slug:
             base_slug = slugify(self.name) or 'producto'
             candidate = base_slug[:255]
@@ -223,6 +229,10 @@ class ProductVariantAttributeValue(models.Model):
 class GalleryProduct(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     photos = models.ImageField(upload_to='photos/%y/%m')
+
+    def save(self, *args, **kwargs):
+        shrink_upload(self.photos)
+        super().save(*args, **kwargs)
 
 
 class Review(models.Model):

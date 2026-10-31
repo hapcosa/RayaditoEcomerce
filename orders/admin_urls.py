@@ -2,6 +2,7 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
+from .admin_analytics import AdminAnalyticsView
 from .admin_api import AdminOrderViewSet
 from .admin_stats import AdminStatsView
 from .admin_withdrawals import AdminWithdrawalViewSet
@@ -14,4 +15,5 @@ router.register('withdrawals', AdminWithdrawalViewSet, basename='admin-withdrawa
 
 urlpatterns = [
     path('stats/', AdminStatsView.as_view(), name='admin-stats'),
+    path('analytics/', AdminAnalyticsView.as_view(), name='admin-analytics'),
 ] + router.urls

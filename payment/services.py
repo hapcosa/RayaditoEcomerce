@@ -11,6 +11,7 @@ from carrito.models import Carrito, CarritoItem
 from billing.services import on_order_paid_on_commit
 from notifications.services import notify_paid_order_on_commit
 from orders.models import Order, OrderItem
+from orders.snapshots import snapshot_order_item
 from product.models import Product
 from .models import Payments
 from notifications import whatsapp_notices
@@ -82,13 +83,15 @@ def deduct_product_stock(product, count):
 
 
 def create_order_item(order, product, count):
-    OrderItem.objects.create(
+    item = OrderItem.objects.create(
         product=product,
         order=order,
         name=product.name,
         price=int(product.price),
         count=count,
     )
+    snapshot_order_item(item)
+    return item
 
 
 def payment_status(raw_status):

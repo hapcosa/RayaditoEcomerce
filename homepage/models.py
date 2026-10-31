@@ -1,6 +1,8 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from core.images import shrink_upload
+
 
 class HeroImage(models.Model):
     """Una de las fotos de portada que el dueño sube desde la app admin.
@@ -28,6 +30,10 @@ class HeroImage(models.Model):
 
     def __str__(self):
         return self.alt_text or self.caption or f'Foto de portada {self.pk}'
+
+    def save(self, *args, **kwargs):
+        shrink_upload(self.image)
+        super().save(*args, **kwargs)
 
     def clean(self):
         """Impide activar una cuarta foto.

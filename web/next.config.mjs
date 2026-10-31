@@ -35,6 +35,13 @@ const configuredPatterns = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    // Segundos que el optimizador espera el original. El default (7) no
+    // alcanzaba para una foto de 10 MB por el túnel y el celular la veía en
+    // blanco. Las fotos ya se achican al subirse (core/images.py); esto es el
+    // margen para conexiones lentas entre Next y Django.
+    imgOptTimeoutInSeconds: 30,
+  },
   images: {
     // Media servida por Django / object storage (Fase 7).
     remotePatterns: [
