@@ -134,10 +134,26 @@ class HeroImageAdminAPITests(MediaTemporalMixin, TestCase):
             HeroImage.objects.create(image=foto(f'{i}.jpg'), position=i)
         self.client.force_authenticate(self.staff)
 
-        res = self.client.post(ADMIN_LIST, {'image': foto()}, format='multipart')
+        res = self.client.post(
+            ADMIN_LIST, {'image': foto(), 'is_active': 'true'}, format='multipart',
+        )
 
         self.assertEqual(res.status_code, 400)
         self.assertEqual(HeroImage.objects.count(), HeroImage.MAX_ACTIVAS)
+
+    def test_con_la_portada_llena_la_foto_nueva_queda_archivada(self):
+        """Subir no depende de sacar antes otra foto: la nueva espera archivada."""
+        for i in range(HeroImage.MAX_ACTIVAS):
+            HeroImage.objects.create(image=foto(f'{i}.jpg'), position=i)
+        self.client.force_authenticate(self.staff)
+
+        res = self.client.post(ADMIN_LIST, {'image': foto()}, format='multipart')
+
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertFalse(res.json()['is_active'])
+        self.assertEqual(
+            HeroImage.objects.filter(is_active=True).count(), HeroImage.MAX_ACTIVAS,
+        )
 
     def test_una_foto_subida_por_multipart_nace_activa(self):
         """Regresion: DRF lee un booleano ausente en multipart como `False`.

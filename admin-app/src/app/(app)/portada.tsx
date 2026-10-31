@@ -3,7 +3,8 @@
  * el sitio muestra escalonadas en el orden de esta lista.
  *
  * Las fotos inactivas no se borran: quedan archivadas para poder rotar la
- * portada sin volver a subirlas desde el celular.
+ * portada sin volver a subirlas desde el celular. Con la portada llena se puede
+ * seguir subiendo: la foto nueva entra archivada.
  */
 import { Image } from 'expo-image';
 import { Stack, useFocusEffect } from 'expo-router';
@@ -29,6 +30,7 @@ import {
   MAX_FOTOS_ACTIVAS,
   type HeroImage,
 } from '@/api/homepage';
+import { BusyOverlay } from '@/components/busy-overlay';
 import { ImageZoomViewer, type CropDest } from '@/components/image-zoom-viewer';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
@@ -58,6 +60,8 @@ export default function PortadaScreen() {
   // Foto que se está encuadrando en el visor (recorte que pisa la original).
   const [zoom, setZoom] = useState<{ uri: string; id: number } | null>(null);
   const [cropping, setCropping] = useState(false);
+  // Solo las subidas tapan la pantalla; mover o activar es instantáneo.
+  const [uploading, setUploading] = useState(false);
 
   const activas = fotos.filter((f) => f.is_active);
   const hayCupo = activas.length < MAX_FOTOS_ACTIVAS;
@@ -107,9 +111,21 @@ export default function PortadaScreen() {
       if (!imagen) return;
       // Va al final: la posición de las que ya están no se toca.
       const position = fotos.reduce((max, f) => Math.max(max, f.position), 0) + 1;
-      await ejecutar(() =>
-        createHeroImage(imagen, { alt_text: '', caption: '', position }),
-      );
+      await ejecutar(async () => {
+        setUploading(true);
+        let nueva: HeroImage;
+        try {
+          nueva = await createHeroImage(imagen, { alt_text: '', caption: '', position });
+        } finally {
+          setUploading(false);
+        }
+        if (!nueva.is_active) {
+          Alert.alert(
+            'Foto archivada',
+            `La portada ya tiene ${MAX_FOTOS_ACTIVAS} fotos, así que la nueva quedó en Archivadas. Sacá una de la portada para ponerla.`,
+          );
+        }
+      });
     },
     [ejecutar, fotos],
   );
@@ -234,10 +250,10 @@ export default function PortadaScreen() {
 
           <Pressable
             onPress={agregar}
-            disabled={!hayCupo || saving}
+            disabled={saving}
             style={StyleSheet.flatten([
               styles.boton,
-              { backgroundColor: theme.accent, opacity: !hayCupo || saving ? 0.5 : 1 },
+              { backgroundColor: theme.accent, opacity: saving ? 0.5 : 1 },
             ])}
           >
             <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
@@ -247,8 +263,8 @@ export default function PortadaScreen() {
 
           {!hayCupo && (
             <ThemedText type="small" themeColor="textSecondary">
-              Ya hay {MAX_FOTOS_ACTIVAS} fotos en la portada. Sacá una de la
-              portada para poder subir otra.
+              Ya hay {MAX_FOTOS_ACTIVAS} fotos en la portada: las que subas
+              quedan en Archivadas hasta que saques una.
             </ThemedText>
           )}
 
@@ -262,8 +278,10 @@ export default function PortadaScreen() {
                 <FotoRow
                   key={foto.id}
                   foto={foto}
-                  disabled={saving || !hayCupo}
-                  onAlternar={() => alternarActiva(foto)}
+                  disabled={saving}
+                  // Recortar y borrar siguen disponibles; solo activarla
+                  // espera a que se libere un lugar.
+                  onAlternar={hayCupo ? () => alternarActiva(foto) : undefined}
                   onBorrar={() => borrar(foto)}
                   onEditar={(uri) => setZoom({ uri, id: foto.id })}
                 />
@@ -283,6 +301,8 @@ export default function PortadaScreen() {
         dests={['replace']}
         busy={cropping}
       />
+
+      <BusyOverlay visible={uploading || cropping} label="Subiendo foto…" />
     </SafeAreaView>
   );
 }
@@ -300,7 +320,8 @@ function FotoRow({
   disabled: boolean;
   onSubir?: () => void;
   onBajar?: () => void;
-  onAlternar: () => void;
+  /** Sin esto el botón se ve apagado (portada llena). */
+  onAlternar?: () => void;
   onBorrar: () => void;
   onEditar: (uri: string) => void;
 }) {
@@ -337,7 +358,12 @@ function FotoRow({
               <ThemedText type="linkPrimary">Recortar</ThemedText>
             </Pressable>
           )}
-          <Pressable onPress={onAlternar} disabled={disabled} hitSlop={8}>
+          <Pressable
+            onPress={onAlternar}
+            disabled={disabled || !onAlternar}
+            hitSlop={8}
+            style={{ opacity: onAlternar ? 1 : 0.4 }}
+          >
             <ThemedText type="linkPrimary">
               {foto.is_active ? 'Sacar de la portada' : 'Poner en la portada'}
             </ThemedText>

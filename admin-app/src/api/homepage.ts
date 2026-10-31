@@ -22,6 +22,10 @@ export async function listHeroImages(): Promise<HeroImage[]> {
   return apiJson<HeroImage[]>('/api/admin/hero-images/');
 }
 
+/**
+ * Sube una foto nueva. No manda `is_active`: el backend la pone en la portada
+ * si hay cupo y, si está llena, la deja archivada.
+ */
 export async function createHeroImage(
   photo: LocalImage,
   fields: { alt_text: string; caption: string; position: number },
@@ -33,7 +37,6 @@ export async function createHeroImage(
       alt_text: fields.alt_text,
       caption: fields.caption,
       position: String(fields.position),
-      is_active: 'true',
     },
   });
 }
