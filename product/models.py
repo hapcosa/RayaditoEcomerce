@@ -69,6 +69,10 @@ class Product(models.Model):
     # Dinero en entero CLP (peso chileno, sin decimales). Ver AGENTS.md.
     price = models.PositiveIntegerField()
     compare_price = models.PositiveIntegerField(default=0)
+    # Lo que le costó a la dueña hacer la pieza (materiales), en entero CLP.
+    # Opcional: sin él no hay margen, pero la venta se reporta igual. Nunca se
+    # muestra en la tienda.
+    cost = models.PositiveIntegerField(null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     # Unidades disponibles. En joyeria casi siempre es 1 (pieza unica) o 0
     # (vendida). Si el producto tiene variantes activas, manda la suma de las

@@ -65,9 +65,36 @@ class OrderItem(models.Model):
     price = models.PositiveIntegerField()  # entero CLP
     count = models.PositiveIntegerField(default=1)
     date_added = models.DateTimeField(auto_now_add=datetime.now)
+    # Foto del producto al momento de la compra, para los reportes de ventas.
+    # Si despues la duena cambia la categoria o el costo de la pieza, lo que ya
+    # se vendio no se reescribe (mismo criterio que `name` y `price`).
+    category_name = models.CharField(max_length=255, blank=True, default='')
+    # Slug del catalogo publico (`catalogs` de store.json), ej. 'joya'.
+    catalog = models.SlugField(max_length=55, blank=True, default='')
+    unit_cost = models.PositiveIntegerField(null=True, blank=True)  # entero CLP
 
     def __str__(self):
         return str(self.product)
+
+
+class OrderItemAttribute(models.Model):
+    """Un valor de atributo (piedra, material...) de la pieza vendida.
+
+    Tabla aparte y no un JSON: un producto puede tener varios valores del
+    mismo atributo (agata y cuarzo) y asi se agrupa con el ORM sin SQL a mano.
+    """
+    item = models.ForeignKey(
+        OrderItem, related_name='attributes', on_delete=models.CASCADE,
+    )
+    attribute_slug = models.SlugField(max_length=120)
+    attribute_name = models.CharField(max_length=100)
+    value = models.CharField(max_length=255)
+
+    class Meta:
+        indexes = [models.Index(fields=['attribute_slug', 'value'])]
+
+    def __str__(self):
+        return f'{self.attribute_name}: {self.value}'
 
 
 class WithdrawalRequest(models.Model):
