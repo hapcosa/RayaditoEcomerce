@@ -10,8 +10,12 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
     headers: { 'Content-Type': 'application/json', ...init?.headers },
-    // Server Components: revalidar cada 60 s en producción. En dev no hay caché.
-    next: { revalidate: 60 },
+    // Sin caché de datos: todo lo que sirve la API (stock, portada, categorías)
+    // lo cambia la dueña desde la app y tiene que verse en la visita siguiente.
+    // Con `revalidate` Next sirve una vez más la copia vencida mientras la
+    // renueva, y con poco tráfico esa copia duraba horas (una pieza vendida
+    // seguía en el catálogo, una foto borrada seguía en la portada).
+    next: { revalidate: 0 },
     ...(init as RequestInit & { next?: unknown }),
   });
   if (!res.ok) throw new Error(`API ${res.status} en ${path}`);
@@ -19,14 +23,6 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 // ---------- Productos -------------------------------------------------------
-
-/**
- * Productos sin caché: cada pieza es única y, vendida, tiene que salir del
- * catálogo en la visita siguiente. Con `revalidate: 60` Next sirve una vez más
- * la copia vencida mientras la renueva, y con poco tráfico esa copia (con la
- * pieza vendida) podía durar horas. Categorías y portada siguen cacheadas.
- */
-const FRESH: RequestInit = { next: { revalidate: 0 } } as RequestInit;
 
 export interface ProductListParams {
   product_type?: string;
@@ -47,19 +43,18 @@ export async function fetchProducts(
     if (v !== undefined && v !== '') qs.set(k, String(v));
   });
   const query = qs.toString() ? `?${qs}` : '';
-  const data = await apiFetch<{ products: Product[] }>(`/products/${query}`, FRESH);
+  const data = await apiFetch<{ products: Product[] }>(`/products/${query}`);
   return data.products;
 }
 
 export async function fetchProduct(slug: string): Promise<Product> {
-  const data = await apiFetch<{ product: Product }>(`/products/${slug}`, FRESH);
+  const data = await apiFetch<{ product: Product }>(`/products/${slug}`);
   return data.product;
 }
 
 export async function fetchRelatedProducts(slug: string): Promise<Product[]> {
   const data = await apiFetch<{ related_products: Product[] }>(
     `/products/related/${slug}`,
-    FRESH,
   );
   return data.related_products;
 }
