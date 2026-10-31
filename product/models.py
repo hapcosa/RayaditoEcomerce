@@ -9,6 +9,7 @@ from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.text import slugify
 
+from core.images import shrink_upload
 from core.store import GENERAL_PRODUCT_TYPE
 
 
@@ -103,6 +104,7 @@ class Product(models.Model):
         return self.available_stock == 0
 
     def save(self, *args, **kwargs):
+        shrink_upload(self.photo)
         if not self.slug:
             base_slug = slugify(self.name) or 'producto'
             candidate = base_slug[:255]
@@ -227,6 +229,10 @@ class ProductVariantAttributeValue(models.Model):
 class GalleryProduct(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     photos = models.ImageField(upload_to='photos/%y/%m')
+
+    def save(self, *args, **kwargs):
+        shrink_upload(self.photos)
+        super().save(*args, **kwargs)
 
 
 class Review(models.Model):
