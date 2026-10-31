@@ -81,9 +81,14 @@ export default function PortadaScreen() {
     if (isRefresh) setRefreshing(true);
     setError(null);
     try {
-      const [lista, conf] = await Promise.all([listHeroImages(), getHomepageSettings()]);
+      const [lista, conf] = await Promise.all([
+        listHeroImages(),
+        // Un servidor sin este endpoint (APK nuevo contra backend viejo) no
+        // debe tumbar la pantalla: se sigue con el tope que ya había.
+        getHomepageSettings().catch(() => null),
+      ]);
       setFotos(ordenar(lista));
-      setAjustes(conf);
+      if (conf) setAjustes(conf);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo cargar la portada.');
     } finally {
