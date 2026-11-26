@@ -1,4 +1,5 @@
-"""Avisos al cliente por WhatsApp: pedido pagado y pedido despachado.
+"""Avisos por WhatsApp: al cliente (pedido pagado y despachado) y a la duena
+(venta nueva y recordatorio de despacho).
 
 Mismas reglas que `services.py`: un aviso nunca tumba la operacion que lo
 dispara (sale en `transaction.on_commit` y cualquier error se registra y se
@@ -10,6 +11,7 @@ parametros; ver docs/WHATSAPP.md.
 """
 import logging
 
+from django.conf import settings
 from django.db import IntegrityError, transaction
 
 from . import whatsapp
@@ -21,6 +23,9 @@ logger = logging.getLogger(__name__)
 # Nombre en Meta -> parametros con nombre del cuerpo de la plantilla.
 TEMPLATE_PAID_ORDER = 'pedido_confirmado'    # nombre, pedido, total
 TEMPLATE_SHIPPED = 'pedido_despachado'       # nombre, pedido, envio, seguimiento
+# Avisos a la duena (ADMIN_WHATSAPP_PHONES).
+TEMPLATE_ADMIN_SALE = 'aviso_venta'          # pedido, cliente, total, piezas
+TEMPLATE_ADMIN_PENDING = 'aviso_por_despachar'  # pedido, cliente, plazo
 
 
 def record_opt_in(order, phone, consent_text):
@@ -45,27 +50,21 @@ def _reference(order):
     return order.transaction_id or str(order.id)
 
 
-def send_order_notice(order, key, template, parameters):
-    """Manda el aviso `key` del pedido una sola vez. Devuelve True si salio."""
-    if not whatsapp.is_enabled():
-        return False
-    opt_in = WhatsAppOptIn.objects.filter(order=order, revoked_at__isnull=True).first()
-    if opt_in is None:
-        return False
-
+def _send_once(order, key, template, to, parameters):
+    """Manda la plantilla una sola vez por (pedido, key). True si salio."""
     # Se reserva el aviso antes de llamar a Meta: si MercadoPago reenvia la
     # aprobacion mientras el primer envio esta en curso, el segundo choca con
     # la restriccion unica y no manda (ni cobra) un duplicado.
     try:
         with transaction.atomic():
             message = WhatsAppMessage.objects.create(
-                order=order, key=key, template=template, to=opt_in.phone)
+                order=order, key=key, template=template, to=to)
     except IntegrityError:
         logger.info('aviso de WhatsApp %s del pedido %s ya enviado', key, order.id)
         return False
 
     try:
-        message.wamid = whatsapp.send_template(opt_in.phone, template, parameters)
+        message.wamid = whatsapp.send_template(to, template, parameters)
         message.status = WhatsAppMessage.Status.SENT
     except Exception as exc:
         # Ancho a proposito, como en `services.send_admin_mail`.
@@ -74,6 +73,42 @@ def send_order_notice(order, key, template, parameters):
         message.error = str(exc)[:500]
     message.save(update_fields=['wamid', 'status', 'error', 'updated_at'])
     return message.status == WhatsAppMessage.Status.SENT
+
+
+def send_order_notice(order, key, template, parameters):
+    """Manda el aviso `key` del pedido al cliente una sola vez. True si salio."""
+    if not whatsapp.is_enabled():
+        return False
+    opt_in = WhatsAppOptIn.objects.filter(order=order, revoked_at__isnull=True).first()
+    if opt_in is None:
+        return False
+    return _send_once(order, key, template, opt_in.phone, parameters)
+
+
+def admin_phones():
+    """Celulares de la duena, normalizados. Los mal escritos se descartan."""
+    phones = []
+    for raw in settings.ADMIN_WHATSAPP_PHONES:
+        phone = whatsapp.normalize_phone(raw)
+        if phone and phone not in phones:
+            phones.append(phone)
+        elif not phone and raw.strip():
+            logger.warning('ADMIN_WHATSAPP_PHONES: %r no es un celular chileno', raw)
+    return phones
+
+
+def notify_admins(order, key, template, parameters):
+    """Manda el aviso a cada celular de la duena. Devuelve a cuantos salio.
+
+    La clave lleva el telefono: la restriccion unica es por (pedido, key), y
+    cada destinatario es un mensaje distinto.
+    """
+    if not whatsapp.is_enabled():
+        return 0
+    return sum(
+        _send_once(order, f'{key}:{phone}'[:50], template, phone, parameters)
+        for phone in admin_phones()
+    )
 
 
 def notify_paid_order(order):

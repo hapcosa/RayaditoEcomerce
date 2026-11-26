@@ -1,8 +1,10 @@
-"""Avisos al cliente por WhatsApp (Cloud API)."""
+"""Avisos por WhatsApp (Cloud API): al cliente y a la duena."""
+from datetime import timedelta
 from io import StringIO
 from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.core.management import CommandError, call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
@@ -10,7 +12,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from category.models import Category
-from notifications import whatsapp, whatsapp_notices
+from notifications import services as notify, whatsapp, whatsapp_notices
 from notifications.models import WhatsAppMessage, WhatsAppOptIn
 from orders.models import Order, OrderItem
 from payment import services
@@ -311,3 +313,73 @@ class WhatsAppTestCommandTests(TestCase):
     def test_without_credentials_it_explains_what_is_missing(self):
         with self.assertRaisesMessage(CommandError, 'WHATSAPP_PHONE_NUMBER_ID'):
             call_command('whatsapp_test', '+56912345678')
+
+
+@WHATSAPP_ON
+@override_settings(ADMIN_WHATSAPP_PHONES=['+56 9 8765 4321', 'fijo 22223333'],
+                   DISPATCH_SLA_HOURS=72, DISPATCH_REMIND_HOURS=24)
+class AdminWhatsAppTests(OrderFixtureMixin, APITestCase):
+    """Avisos a la duena: venta nueva y recordatorio diario de despacho."""
+
+    def _sent(self, post):
+        return [call.kwargs['json'] for call in post.call_args_list]
+
+    def test_a_new_sale_reaches_the_owner_by_whatsapp(self):
+        order = self.order
+        with mock.patch('notifications.whatsapp.requests.post',
+                        return_value=accepted()) as post:
+            self.assertTrue(notify.notify_paid_order(order))
+            notify.notify_paid_order(order)  # MercadoPago reenvia
+
+        sent = self._sent(post)
+        self.assertEqual(len(sent), 1)
+        self.assertEqual(sent[0]['to'], '56987654321')
+        self.assertEqual(sent[0]['template']['name'], 'aviso_venta')
+        message = WhatsAppMessage.objects.get(order=order)
+        self.assertEqual(message.key, 'admin_paid:56987654321')
+
+    def test_the_dispatch_reminder_goes_once_per_day(self):
+        order = self.order
+        order.status = S.processed
+        order.paid_at = timezone.now() - timedelta(hours=25)
+        order.save(update_fields=['status', 'paid_at'])
+
+        with mock.patch('notifications.whatsapp.requests.post',
+                        return_value=accepted()) as post:
+            day1 = order.paid_at + timedelta(hours=24)
+            notify.notify_pending_dispatch(order, now=day1)
+            notify.notify_pending_dispatch(order, now=day1 + timedelta(minutes=5))
+            notify.notify_pending_dispatch(order, now=order.paid_at + timedelta(hours=48))
+
+        sent = self._sent(post)
+        self.assertEqual(len(sent), 2)
+        self.assertEqual(sent[0]['template']['name'], 'aviso_por_despachar')
+        self.assertEqual(
+            sorted(WhatsAppMessage.objects.filter(order=order).values_list('key', flat=True)),
+            ['admin_remind:1:56987654321', 'admin_remind:2:56987654321'])
+
+    @override_settings(WHATSAPP_ENABLED=False)
+    def test_with_whatsapp_off_the_owner_gets_nothing_there(self):
+        order = self.order
+        with mock.patch('notifications.whatsapp.requests.post') as post:
+            notify.notify_paid_order(order)
+        post.assert_not_called()
+
+
+@override_settings(ADMIN_NOTIFY_EMAILS=['duena@rayadito.cl'],
+                   EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+                   WHATSAPP_ENABLED=False, ADMIN_WHATSAPP_PHONES=[])
+class NotifyCheckCommandTests(TestCase):
+    def test_reports_each_channel_without_sending(self):
+        out = StringIO()
+        call_command('notify_check', stdout=out)
+        text = out.getvalue()
+        self.assertIn('Correo: 1 destinatario', text)
+        self.assertIn('Push: 0', text)
+        self.assertIn('WhatsApp: apagado', text)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_send_mails_a_test_notice(self):
+        call_command('notify_check', '--send', stdout=StringIO())
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('Prueba de avisos', mail.outbox[0].subject)

@@ -426,12 +426,18 @@ WHATSAPP_ACCESS_TOKEN = env('WHATSAPP_ACCESS_TOKEN', default='')
 WHATSAPP_GRAPH_VERSION = env('WHATSAPP_GRAPH_VERSION', default='v23.0')
 # Idioma con el que se aprobaron las plantillas en Meta.
 WHATSAPP_TEMPLATE_LANGUAGE = env('WHATSAPP_TEMPLATE_LANGUAGE', default='es_CL')
+# Celulares de la duena que reciben la venta nueva y el recordatorio de
+# despacho por WhatsApp (plantillas `aviso_venta` y `aviso_por_despachar`).
+# Vacio = sin avisos a la duena por WhatsApp; el correo y el push siguen.
+ADMIN_WHATSAPP_PHONES = env.list('ADMIN_WHATSAPP_PHONES', default=[])
 
-# Plazo para despachar un pedido pagado, y cuanto antes avisar que se vence.
-# El reloj arranca en `Order.paid_at`, no en la creacion del pedido. Con 72 y
-# 24, el aviso sale a las 48 h de pagado y el plazo vence a las 72 h.
+# Plazo para despachar un pedido pagado, y cuanto antes contarlo como "por
+# vencer" en el resumen de la app. El reloj arranca en `Order.paid_at`.
 DISPATCH_SLA_HOURS = env.int('DISPATCH_SLA_HOURS', default=72)
 DISPATCH_WARN_HOURS = env.int('DISPATCH_WARN_HOURS', default=24)
+# Cada cuantas horas se le recuerda a la duena un pedido pagado que sigue sin
+# despachar (correo, push y WhatsApp), hasta que pase a "enviado".
+DISPATCH_REMIND_HOURS = env.int('DISPATCH_REMIND_HOURS', default=24)
 
 # Starken (API oficial de developers.starken.cl). Apagado por defecto: sin
 # credenciales las opciones de envio son las de precio fijo de /admin/. Con

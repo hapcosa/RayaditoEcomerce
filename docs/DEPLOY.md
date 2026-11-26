@@ -457,18 +457,25 @@ están en el bucket.
 > migración, las fotos nuevas ya no están ahí: el bucket pasa a ser la copia
 > principal de la media y el tar solo cubre las anteriores.
 
-### Aviso de plazo de despacho
+### Recordatorio de despacho
 
 `notify_pending_dispatch` recorre los pedidos pagados que siguen en `procesado`
-y avisa —correo y push— cuando al plazo le quedan menos de
-`DISPATCH_WARN_HOURS`. El reloj arranca en `Order.paid_at`, así que un carrito
-abandonado nunca entra. Con los valores por defecto (72 y 24) el aviso sale a
-las 48 h de pagado.
+y le recuerda a la dueña —correo, push y WhatsApp (`ADMIN_WHATSAPP_PHONES`)—
+cada `DISPATCH_REMIND_HOURS` (24) desde el pago: a las 24 h, a las 48 h, etc.,
+hasta que el pedido pasa a *enviado* o se cancela. El reloj arranca en
+`Order.paid_at`, así que un carrito abandonado nunca entra. El texto dice
+cuánto queda del plazo (`DISPATCH_SLA_HOURS`, 72) o hace cuánto venció.
 
-Se avisa **una sola vez por pedido** (`Order.dispatch_warned_at`): un
-recordatorio cada hora se vuelve ruido que se ignora. Si el aviso no sale por
-ningún canal —sin `ADMIN_NOTIFY_EMAILS` y sin aparatos registrados— el pedido
-queda sin marcar y se reintenta en la corrida siguiente.
+`Order.dispatch_warned_at` guarda el último recordatorio. Si no sale por
+ningún canal, el pedido queda sin marcar y se reintenta en la corrida
+siguiente.
+
+Para revisar qué canales están configurados y mandar una prueba por cada uno:
+
+```bash
+.venv/bin/python manage.py notify_check          # solo muestra el estado
+.venv/bin/python manage.py notify_check --send   # manda una prueba
+```
 
 Para ver qué haría sin mandar nada:
 
@@ -538,7 +545,7 @@ periódicos con las rutas del checkout donde vive el script:
 | Timer | Frecuencia | Qué corre |
 |---|---|---|
 | `rayadito-backup` | diario, 03:30 | `scripts/backup-db.sh ~/backups-rayadito` |
-| `rayadito-dispatch-notice` | cada hora | `manage.py notify_pending_dispatch` |
+| `rayadito-dispatch-notice` | cada hora | `manage.py notify_pending_dispatch` (recordatorio cada 24 h por pedido) |
 | `rayadito-instagram` | cada 5 min | `manage.py publish_instagram` |
 | `rayadito-instagram-token` | diario, 04:10 | `manage.py instagram_token refresh`, si el checkout ya trae el comando |
 | `rayadito-billing` | cada 10 min | `manage.py issue_tax_documents`, **solo si** el `.env` tiene `BILLING_MODE=provider` |
