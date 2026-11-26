@@ -156,8 +156,8 @@ def _top_products(orders):
 def _pending(now):
     """Pedidos pagados que siguen sin salir, con el reloj de despacho encima.
 
-    Mismo criterio que `notifications.services.orders_to_warn`, pero contando en
-    vez de notificando: aca interesa el estado actual, no si ya se aviso.
+    Cuenta el estado actual; los recordatorios los manda
+    `notifications.services.orders_to_warn`.
     """
     pending = Order.objects.filter(
         status=S.processed, paid_at__isnull=False, shipped_at__isnull=True,

@@ -1,4 +1,4 @@
-# Avisos al cliente por WhatsApp (Cloud API)
+# Avisos por WhatsApp (Cloud API): al cliente y a la dueña
 
 Usa solo la **WhatsApp Cloud API oficial de Meta**. No usa scraping ni
 WhatsApp Web automatizado. Está **apagado** (`WHATSAPP_ENABLED=false`) hasta
@@ -11,7 +11,14 @@ cargar las credenciales y tener las plantillas aprobadas.
 | Pedido pagado | Cuando MercadoPago aprueba el pago (una sola vez, aunque el webhook se repita) | `pedido_confirmado` |
 | Pedido despachado | Cuando el pedido pasa a *enviado* con su número de seguimiento (app admin o `/api/orders/dispatch/`) | `pedido_despachado` |
 
-Solo se le escribe a quien aceptó recibir avisos por WhatsApp en el checkout
+Y a la dueña, a los celulares de `ADMIN_WHATSAPP_PHONES`:
+
+| Aviso | Cuándo sale | Plantilla |
+|---|---|---|
+| Venta nueva | Cuando MercadoPago aprueba el pago (una vez por pedido y celular) | `aviso_venta` |
+| Falta despachar | Cada `DISPATCH_REMIND_HOURS` (24) desde el pago, hasta que el pedido pasa a *enviado* (timer `rayadito-dispatch-notice`) | `aviso_por_despachar` |
+
+Al cliente solo se le escribe si aceptó recibir avisos por WhatsApp en el checkout
 (`WhatsAppOptIn`). Cada envío queda en `WhatsAppMessage` (admin de Django →
 *Mensajes de WhatsApp*), con el `wamid` de Meta o el error.
 
@@ -47,7 +54,7 @@ sigue.
    Va a `WHATSAPP_ACCESS_TOKEN` (solo en el `.env` de prod).
 3. **Método de pago** en la cuenta de WhatsApp Business: las plantillas
    `utility` fuera de una conversación abierta se cobran.
-4. **Dos plantillas**, categoría **Utility**, idioma **Spanish (CHL) — `es_CL`**,
+4. **Cuatro plantillas**, categoría **Utility**, idioma **Spanish (CHL) — `es_CL`**,
    con parámetros **con nombre** (*named*). Los nombres y los parámetros tienen
    que ser exactamente estos, porque el código los manda así:
 
@@ -57,7 +64,13 @@ sigue.
    **`pedido_despachado`**, con los parámetros `nombre`, `pedido`, `envio` y `seguimiento`:
    > Hola {{nombre}}, tu pedido #{{pedido}} de Piedras Rayadito ya va en camino por {{envio}}. Tu número de seguimiento es {{seguimiento}}. ¡Gracias por tu compra!
 
-   Pie de página sugerido para las dos: *"¿No quieres más avisos? Escríbenos a
+   **`aviso_venta`** (a la dueña), con los parámetros `pedido`, `cliente`, `total` y `piezas`:
+   > Nueva venta en Piedras Rayadito: pedido #{{pedido}} de {{cliente}}, {{piezas}}, total {{total}}. Revisa la app para despacharlo.
+
+   **`aviso_por_despachar`** (a la dueña), con los parámetros `pedido`, `cliente` y `plazo`:
+   > El pedido #{{pedido}} de {{cliente}} sigue sin despachar ({{plazo}}). Cuando salga, márcalo como enviado en la app.
+
+   Pie de página sugerido para las de cliente: *"¿No quieres más avisos? Escríbenos a
    contacto@piedrasdelrayadito.cl"*. Meta pide valores de ejemplo para cada
    parámetro al crear la plantilla (ej. `Ana`, `1234567890`, `$54.500`,
    `Starken`, `OF-998877`).
@@ -82,7 +95,13 @@ python manage.py whatsapp_test +569XXXXXXXX --template pedido_despachado --langu
   --params '{"nombre": "Ana", "pedido": "123", "envio": "Starken", "seguimiento": "OF-1"}'
 # Si llegan bien:
 WHATSAPP_ENABLED=true
+ADMIN_WHATSAPP_PHONES=+569XXXXXXXX   # tu celular (varios separados por coma)
+# Revisar todos los canales de aviso a la dueña y mandar una prueba por cada uno:
+python manage.py notify_check --send
 ```
+
+En `ADMIN_WHATSAPP_PHONES` va el celular personal de la dueña, no el número
+registrado en la API (ese queda solo para la API, ver el paso 1).
 
 `whatsapp_test` no exige el flag, justamente para probar antes de encenderlo.
 

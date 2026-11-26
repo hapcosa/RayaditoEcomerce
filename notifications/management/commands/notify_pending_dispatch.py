@@ -1,4 +1,4 @@
-"""Aviso de plazo de despacho por vencer.
+"""Recordatorio diario de pedidos pagados que siguen sin despachar.
 
 Pensado para correr cada hora desde un timer de systemd (ver docs/DEPLOY.md).
 El proyecto no tiene Celery a proposito: un comando idempotente que se puede
@@ -11,7 +11,7 @@ from notifications.services import notify_pending_dispatch, orders_to_warn
 
 
 class Command(BaseCommand):
-    help = 'Warn the owner about paid orders whose dispatch deadline is near.'
+    help = 'Remind the owner, every DISPATCH_REMIND_HOURS, of paid orders not yet shipped.'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -24,7 +24,7 @@ class Command(BaseCommand):
         now = timezone.now()
         pending = list(orders_to_warn(now))
         if not pending:
-            self.stdout.write('No orders are close to their dispatch deadline.')
+            self.stdout.write('No paid orders are due for a dispatch reminder.')
             return
 
         warned = 0

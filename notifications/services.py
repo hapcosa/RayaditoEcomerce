@@ -1,4 +1,4 @@
-"""Avisos al administrador: correo y push a la app.
+"""Avisos al administrador: correo, push a la app y WhatsApp.
 
 Un aviso nunca puede tumbar la operacion que lo dispara: el correo sale despues
 de que la transaccion commitea (`transaction.on_commit`) y cualquier error del
@@ -12,12 +12,13 @@ from datetime import timedelta
 from django.conf import settings
 from django.core.mail import EmailMessage
 from django.db import transaction
+from django.db.models import Q
 from django.template.loader import render_to_string
 from django.utils import timezone
 
 from orders.models import Order, OrderItem
 
-from . import expo
+from . import expo, whatsapp_notices
 from .formatting import clp
 from .models import DevicePushToken
 
@@ -206,7 +207,23 @@ def notify_paid_order(order):
     except Exception:
         logger.exception('no se pudo pushear el aviso del pedido %s', order.id)
         pushed = 0
-    return sent or bool(pushed)
+    pieces = sum(item.count for item in items)
+    texted = _whatsapp_admins(order, 'admin_paid', whatsapp_notices.TEMPLATE_ADMIN_SALE, {
+        'pedido': str(order.id),
+        'cliente': (order.full_name or '').strip() or 'Sin nombre',
+        'total': f'${clp(order.amount)}',
+        'piezas': f'{pieces} {"pieza" if pieces == 1 else "piezas"}',
+    })
+    return sent or bool(pushed) or bool(texted)
+
+
+def _whatsapp_admins(order, key, template, parameters):
+    """WhatsApp a la duena; como el push, un fallo no tumba los otros canales."""
+    try:
+        return whatsapp_notices.notify_admins(order, key, template, parameters)
+    except Exception:
+        logger.exception('no se pudo mandar el WhatsApp %s del pedido %s', key, order.id)
+        return 0
 
 
 def notify_paid_order_on_commit(order):
@@ -227,27 +244,36 @@ def dispatch_deadline(order):
 
 
 def orders_to_warn(now=None):
-    """Pedidos pagados, sin despachar y con el plazo cerca o vencido.
+    """Pedidos pagados que siguen sin despachar y a los que les toca recordatorio.
 
-    Se avisa una sola vez por pedido (`dispatch_warned_at`): el objetivo es que
-    el aviso signifique algo, y un recordatorio cada hora se vuelve ruido que se
-    ignora. Un pedido ya vencido entra igual, porque la condicion es "queda
-    menos de DISPATCH_WARN_HOURS", y para uno vencido queda tiempo negativo.
+    El recordatorio se repite cada DISPATCH_REMIND_HOURS desde el pago hasta que
+    el pedido pasa a "enviado" (o se cancela): el primero a las 24 h, el
+    siguiente a las 48 h, etc. `dispatch_warned_at` guarda el ultimo.
+
+    El timer corre cada hora con un retraso al azar; la holgura de media hora
+    evita que ese retraso empuje cada recordatorio una hora mas tarde que el
+    anterior.
     """
     now = now or timezone.now()
-    margin = timedelta(
-        hours=settings.DISPATCH_SLA_HOURS - settings.DISPATCH_WARN_HOURS)
+    due = (now - timedelta(hours=settings.DISPATCH_REMIND_HOURS)
+           + timedelta(minutes=30))
     return (
         Order.objects
         .filter(
             status=Order.OrderStatus.processed,
             paid_at__isnull=False,
-            paid_at__lte=now - margin,
-            dispatch_warned_at__isnull=True,
+            paid_at__lte=due,
         )
+        .filter(Q(dispatch_warned_at__isnull=True) | Q(dispatch_warned_at__lte=due))
         .select_related('shipping_id', 'user')
         .order_by('paid_at')
     )
+
+
+def reminder_number(order, now):
+    """Que recordatorio es este (1 = el de las primeras 24 h, 2 = 48 h...)."""
+    step = settings.DISPATCH_REMIND_HOURS * 3600
+    return max(1, round((now - order.paid_at).total_seconds() / step))
 
 
 def _time_left_text(deadline, now):
@@ -268,21 +294,21 @@ def _time_left_text(deadline, now):
 
 
 def notify_pending_dispatch(order, now=None):
-    """Avisa que a un pedido pagado se le vence el plazo de despacho.
+    """Recuerda que un pedido pagado sigue sin despachar.
 
     Devuelve True si el aviso salio por algun canal. Si no salio por ninguno
-    (sin correos configurados y sin aparatos registrados) devuelve False, y
-    quien llama no debe marcar el pedido como avisado: si no, el aviso se
-    perderia en silencio para siempre.
+    (sin correos, sin aparatos y sin WhatsApp) devuelve False, y quien llama no
+    debe marcar el pedido como avisado: si no, el aviso se perderia en silencio.
     """
     now = now or timezone.now()
     deadline = dispatch_deadline(order)
     items = list(OrderItem.objects.select_related('product').filter(order=order))
     left = _time_left_text(deadline, now)
     vencido = deadline < now
+    who = (order.full_name or '').strip() or 'Sin nombre'
 
     sent = send_admin_mail(
-        subject=(f'{"Plazo vencido" if vencido else "Plazo por vencer"} — '
+        subject=(f'{"Plazo vencido" if vencido else "Falta despachar"} — '
                  f'pedido #{order.id} ({left})'),
         template='notifications/admin_pending_dispatch.txt',
         context={
@@ -291,7 +317,7 @@ def notify_pending_dispatch(order, now=None):
             'deadline': deadline,
             'headline': (
                 f'El plazo para despachar este pedido {left}.' if vencido
-                else f'Para despachar este pedido {left}.'
+                else f'Este pedido sigue sin despachar: {left} de plazo.'
             ),
             'admin_url': order_admin_url(order),
             'customer_email': customer_email(order),
@@ -300,10 +326,17 @@ def notify_pending_dispatch(order, now=None):
     try:
         pushed = push_admins(
             title=f'{"Plazo vencido" if vencido else "Falta despachar"} — pedido #{order.id}',
-            body=f'{(order.full_name or "Sin nombre").strip()} · {left}',
+            body=f'{who} · {left}',
             data={'type': 'pending_dispatch', 'order_id': order.id},
         )
     except Exception:
         logger.exception('no se pudo pushear el plazo del pedido %s', order.id)
         pushed = 0
-    return sent or bool(pushed)
+    # La clave lleva el numero de recordatorio: uno por dia y por telefono,
+    # aunque el timer corra dos veces seguidas.
+    texted = _whatsapp_admins(
+        order, f'admin_remind:{reminder_number(order, now)}',
+        whatsapp_notices.TEMPLATE_ADMIN_PENDING,
+        {'pedido': str(order.id), 'cliente': who, 'plazo': left},
+    )
+    return sent or bool(pushed) or bool(texted)
