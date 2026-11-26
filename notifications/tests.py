@@ -374,10 +374,11 @@ class PaidOrderPushTests(APITestCase):
     EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
     BACKEND_BASE_URL='https://api.piedrasdelrayadito.cl',
     DISPATCH_SLA_HOURS=72,
-    DISPATCH_WARN_HOURS=24,
+    DISPATCH_REMIND_HOURS=24,
+    ADMIN_WHATSAPP_PHONES=[],
 )
 class PendingDispatchTests(APITestCase):
-    """Aviso de plazo: con SLA 72 h y aviso 24 h antes, sale a las 48 h."""
+    """Recordatorio de despacho: cada 24 h desde el pago hasta "enviado"."""
 
     def setUp(self):
         self.category = Category.objects.create(name='Anillos', ProductType='Joya')
@@ -419,10 +420,10 @@ class PendingDispatchTests(APITestCase):
         self.assertEqual(len(mail.outbox), 1)
         message = mail.outbox[0]
         self.assertIn(f'#{order.id}', message.subject)
-        self.assertIn('Plazo por vencer', message.subject)
+        self.assertIn('Falta despachar', message.subject)
         self.assertIn('quedan 22 horas', message.subject)
         self.assertIn('Ana Ríos', message.body)
-        self.assertIn('Para despachar este pedido quedan 22 horas.', message.body)
+        self.assertIn('sigue sin despachar: quedan 22 horas de plazo.', message.body)
         order.refresh_from_db()
         self.assertIsNotNone(order.dispatch_warned_at)
 
@@ -437,13 +438,49 @@ class PendingDispatchTests(APITestCase):
         self.assertIn('El plazo para despachar este pedido venció hace 28 horas.',
                       mail.outbox[0].body)
 
-    def test_an_order_is_only_warned_about_once(self):
+    def test_the_first_reminder_comes_a_day_after_the_payment(self):
+        self._order(hours_ago=23)
+        self._run()
+        self.assertEqual(len(mail.outbox), 0)
+
+        self._order(hours_ago=24)
+        self._run()
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_running_twice_in_a_row_reminds_once(self):
         self._order(hours_ago=50)
 
         self._run()
         self._run()
 
         self.assertEqual(len(mail.outbox), 1)
+
+    def test_the_reminder_repeats_every_day_until_shipped(self):
+        order = self._order(hours_ago=25)
+        paid_at = order.paid_at
+
+        # Un dia por corrida, con el atraso al azar del timer (unos minutos).
+        for day in range(1, 4):
+            run_at = paid_at + timedelta(hours=24 * day, minutes=7)
+            for o in notify.orders_to_warn(run_at):
+                self.assertTrue(notify.notify_pending_dispatch(o, now=run_at))
+                o.dispatch_warned_at = run_at
+                o.save(update_fields=['dispatch_warned_at'])
+            # A mitad del dia no toca otro.
+            self.assertEqual(
+                list(notify.orders_to_warn(run_at + timedelta(hours=12))), [])
+        self.assertEqual(len(mail.outbox), 3)
+
+        order.status = Order.OrderStatus.shipping
+        order.save(update_fields=['status'])
+        self.assertEqual(list(notify.orders_to_warn(paid_at + timedelta(days=5))), [])
+
+    def test_a_cancelled_order_is_left_alone(self):
+        self._order(hours_ago=50, status=Order.OrderStatus.cancelled)
+
+        self._run()
+
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_a_dispatched_order_is_left_alone(self):
         self._order(hours_ago=50, status=Order.OrderStatus.shipping)

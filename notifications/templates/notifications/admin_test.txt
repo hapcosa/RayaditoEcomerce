@@ -1,0 +1,4 @@
+Este es un aviso de prueba de {{ store.name }}.
+
+Si lo estás leyendo, los avisos de venta y los recordatorios de despacho
+llegan a este correo.
